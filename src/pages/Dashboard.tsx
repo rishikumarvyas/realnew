@@ -10,13 +10,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Mock data for user properties
-const mockUserProperties = [
+const mockUserProperties: (PropertyCardProps & { status: string })[] = [
   {
     id: "prop1",
     title: "Modern 3BHK with Sea View",
     price: 7500000,
     location: "Bandra West, Mumbai",
-    type: "buy",
+    type: "buy", // Explicitly using "buy" instead of generic string
     bedrooms: 3,
     bathrooms: 3,
     area: 1450,
@@ -28,7 +28,7 @@ const mockUserProperties = [
     title: "Luxury 4BHK Penthouse",
     price: 12500000,
     location: "Worli, Mumbai",
-    type: "buy",
+    type: "buy", // Explicitly using "buy" instead of generic string
     bedrooms: 4,
     bathrooms: 4,
     area: 2100,

@@ -18,10 +18,10 @@ import {
   ChevronRight,
   Wifi,
   Car,
-  Pool,
   Tv,
   Wind,
-  Lock
+  Lock,
+  Droplets // Replacing Pool with Droplets for water-related amenities
 } from "lucide-react";
 import { ContactForm } from "@/components/ContactForm";
 import { PropertyCardProps } from "@/components/PropertyCard";
@@ -284,7 +284,7 @@ const PropertyDetail = () => {
                     <div key={index} className="flex items-center gap-2">
                       {amenity.includes("WiFi") && <Wifi className="text-real-blue" size={18} />}
                       {amenity.includes("Parking") && <Car className="text-real-blue" size={18} />}
-                      {amenity.includes("Pool") && <Pool className="text-real-blue" size={18} />}
+                      {amenity.includes("Pool") && <Droplets className="text-real-blue" size={18} />}
                       {amenity.includes("TV") && <Tv className="text-real-blue" size={18} />}
                       {amenity.includes("Air") && <Wind className="text-real-blue" size={18} />}
                       {amenity.includes("Security") && <Lock className="text-real-blue" size={18} />}
