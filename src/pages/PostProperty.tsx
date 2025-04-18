@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,11 +21,11 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, X, Plus } from "lucide-react";
-
+import { useAuth } from "@/contexts/AuthContext";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+   const { user } = useAuth();
   // Form states
   const [propertyType, setPropertyType] = useState("");
   const [category, setCategory] = useState("");
@@ -37,6 +36,7 @@ const PostProperty = () => {
   const [city, setCity] = useState("");
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
+  const [balcony, setBalcony] = useState(""); // Added balcony state
   const [area, setArea] = useState("");
   const [ownerType, setOwnerType] = useState("");
   const [amenities, setAmenities] = useState<string[]>([]);
@@ -98,6 +98,73 @@ const PostProperty = () => {
     setImageURLs(newImageURLs);
   };
 
+  // Helper functions to map UI selections to API IDs
+  const mapCategoryToId = (type: string) => {
+    const categoryMap: Record<string, number> = {
+      'buy': 1,
+      'rent': 2,
+      'sell': 3
+    };
+    return categoryMap[type] || 1;
+  };
+
+  const mapPropertyTypeToId = (type: string) => {
+    const propertyTypeMap: Record<string, number> = {
+      'apartment': 3,
+      'villa': 4,
+      'house': 2,
+      'plot': 5,
+      'commercial': 6
+    };
+    return propertyTypeMap[type] || 1;
+  };
+
+  const mapCityToId = (cityName: string) => {
+    // This would ideally fetch from an API, but for now we'll use hardcoded values
+    const cityMap: Record<string, number> = {
+      'Indore': 1,
+      'Bhopal': 2,
+      'Pune': 3
+    };
+    return cityMap[cityName] || 1;
+  };
+
+  const getCityStateId = (cityId: number) => {
+    // Map city to state (simplified)
+    const cityStateMap: Record<number, number> = {
+      1: 1, // Indore -> Madhya Pradesh
+      2: 1, // Bhopal -> Madhya Pradesh
+      3: 2  // Pune -> Maharashtra
+    };
+    return cityStateMap[cityId] || 1;
+  };
+
+  const mapOwnerTypeToId = (type: string) => {
+    const ownerTypeMap: Record<string, number> = {
+      'owner': 1,
+      'broker': 2,
+      'builder': 3,
+      'dealer': 2 // No direct mapping, using broker as fallback
+    };
+    return ownerTypeMap[type] || 1;
+  };
+
+  const mapAmenityToId = (amenity: string) => {
+    const amenityMap: Record<string, number> = {
+      'Lift': 1,
+      'Swimming Pool': 2,
+      'Club House': 3,
+      'Garden': 4,
+      '24x7 Security': 5,
+      'Power Backup': 6,
+      'Parking': 7,
+      'WiFi': 8,
+      'Air Conditioning': 9,
+      'Children\'s Play Area': 10
+    };
+    return amenityMap[amenity] || 1;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -123,8 +190,68 @@ const PostProperty = () => {
     setLoading(true);
     
     try {
-      // Simulate API call to backend
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Map your form selections to API IDs
+      const categoryId = mapCategoryToId(propertyType);
+      const propertyTypeId = mapPropertyTypeToId(category);
+      const cityId = mapCityToId(city);
+      const stateId = getCityStateId(cityId);
+      const userTypeId = mapOwnerTypeToId(ownerType);
+      
+      // Map selected amenities to their IDs
+      const amenityIds = amenities.map(amenity => mapAmenityToId(amenity));
+      
+      // Create FormData for file uploads
+      const formData = new FormData();
+      
+      // Add account ID
+      // formData.append('AccountId', '6e823914-1f1c-40c9-b9e8-5d9bf94409ce');
+      // Use dynamic accountId from the logged-in user
+      if (!user || !user.userId) {
+        toast({
+          title: "User Not Logged In",
+          description: "Please log in to post your property.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      formData.append('AccountId', user.userId); // Dynamically set the AccountId
+      // Add property details
+      formData.append('SuperCategoryId', categoryId.toString()); // Changed from CategoryId to SuperCategoryId
+      formData.append('PropertyTypeId', propertyTypeId.toString());
+      formData.append('Title', title);
+      formData.append('Description', description);
+      formData.append('Price', price);
+      formData.append('Area', area);
+      if (bedrooms) formData.append('Bedroom', bedrooms);
+      if (bathrooms) formData.append('Bathroom', bathrooms);
+      if (balcony) formData.append('Balcony', balcony); // Added balcony field
+      formData.append('Address', address);
+      formData.append('CityId', cityId.toString());
+      formData.append('StateId', stateId.toString());
+      formData.append('UserTypeId', userTypeId.toString());
+      
+      // Add amenities (multiple values with same key)
+      amenityIds.forEach(id => {
+        formData.append('AmenityIds', id.toString());
+      });
+      
+      // Add images (multiple files with same key)
+      images.forEach(image => {
+        formData.append('Images', image);
+      });
+      
+      // API call
+      const response = await fetch('https://homeyatraapi.azurewebsites.net/api/Account/AddProperty', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const result = await response.json();
       
       toast({
         title: "Property Posted Successfully!",
@@ -133,6 +260,7 @@ const PostProperty = () => {
       
       navigate("/dashboard");
     } catch (error) {
+      console.error("Error posting property:", error);
       toast({
         title: "Failed to Post Property",
         description: "There was an error posting your property. Please try again.",
@@ -160,7 +288,7 @@ const PostProperty = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="propertyType">Property Type*</Label>
+                  <Label htmlFor="propertyType">Category*</Label>
                   <Select 
                     value={propertyType} 
                     onValueChange={setPropertyType}
@@ -177,7 +305,7 @@ const PostProperty = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category*</Label>
+                  <Label htmlFor="category">Property Type*</Label>
                   <Select 
                     value={category} 
                     onValueChange={setCategory}
@@ -272,6 +400,26 @@ const PostProperty = () => {
                       {[1, 2, 3, 4, 5].map((num) => (
                         <SelectItem key={num} value={num.toString()}>
                           {num === 5 ? "5+" : num}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Added Balcony field */}
+                <div className="space-y-2">
+                  <Label htmlFor="balcony">Balcony</Label>
+                  <Select 
+                    value={balcony} 
+                    onValueChange={setBalcony}
+                  >
+                    <SelectTrigger id="balcony">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[0, 1, 2, 3, 4].map((num) => (
+                        <SelectItem key={num} value={num.toString()}>
+                          {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
                         </SelectItem>
                       ))}
                     </SelectContent>

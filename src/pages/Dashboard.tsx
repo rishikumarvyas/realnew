@@ -1,41 +1,33 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PropertyCardProps } from "@/components/PropertyCard";
+import PropertyCard, { PropertyCardProps } from "@/components/PropertyCard";
 import { PlusCircle, Edit, Trash2, Eye, Home, Building, MessageSquare, Settings } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Mock data for user properties
-const mockUserProperties: (PropertyCardProps & { status: string })[] = [
-  {
-    id: "prop1",
-    title: "Modern 3BHK with Sea View",
-    price: 7500000,
-    location: "Bandra West, Mumbai",
-    type: "buy", // Explicitly using "buy" instead of generic string
-    bedrooms: 3,
-    bathrooms: 3,
-    area: 1450,
-    image: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+interface DashboardProperty extends PropertyCardProps {
+  status: string;
+}
+
+// Function to convert API property to dashboard format
+const convertToPropertyCard = (property: any): DashboardProperty => {
+  return {
+    id: property.id || `prop-${Math.random().toString(36).substring(7)}`,
+    title: property.title || "Untitled Property",
+    price: property.price || 0,
+    location: property.location || "Unknown Location",
+    type: property.superCategory?.toLowerCase() === 'buy' ? 'buy' : 
+           property.superCategory?.toLowerCase() === 'rent' ? 'rent' : 'sell',
+    bedrooms: property.bedroom || 0,
+    bathrooms: property.bathroom || 0,
+    area: property.area || 0,
+    image: property.image || "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
     status: "active"
-  },
-  {
-    id: "prop2",
-    title: "Luxury 4BHK Penthouse",
-    price: 12500000,
-    location: "Worli, Mumbai",
-    type: "buy", // Explicitly using "buy" instead of generic string
-    bedrooms: 4,
-    bathrooms: 4,
-    area: 2100,
-    image: "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
-    status: "pending"
-  },
-];
+  };
+};
 
 // Mock data for messages
 const mockMessages = [
@@ -61,19 +53,67 @@ const mockMessages = [
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("properties");
-  const [properties, setProperties] = useState<(PropertyCardProps & { status: string })[]>([]);
+  const [properties, setProperties] = useState<DashboardProperty[]>([]);
   const [messages, setMessages] = useState<typeof mockMessages>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
+  // This useEffect logs the user object to verify userId is available
   useEffect(() => {
-    // Simulate API fetch for user's properties
-    setTimeout(() => {
-      setProperties(mockUserProperties);
-      setMessages(mockMessages);
-    }, 500);
-  }, []);
+    console.log("Current user in Dashboard:", user);
+  }, [user]);
+
+  // Fetch user properties when component mounts or user changes
+  useEffect(() => {
+    const fetchUserProperties = async () => {
+      if (!user?.userId) {
+        console.log("No userId available, skipping fetch");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Fetching properties for userId:", user.userId);
+
+      try {
+        setLoading(true);
+        const response = await fetch(`${BASE_URL}/api/Account/GetUserDetails?userId=${user.userId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user details: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("User properties data:", data);
+        
+        if (data.statusCode === 200 && data.userDetails && Array.isArray(data.userDetails)) {
+          // Convert API properties to dashboard format
+          const formattedProperties = data.userDetails.map(convertToPropertyCard);
+          setProperties(formattedProperties);
+        } else {
+          // If no properties or wrong format, set empty array
+          setProperties([]);
+        }
+      } catch (error) {
+        console.error("Error fetching user properties:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load your properties. Please try again later.",
+          variant: "destructive"
+        });
+        setProperties([]);
+      } finally {
+        setLoading(false);
+        // Always load mock messages for now
+        setMessages(mockMessages);
+      }
+    };
+
+    fetchUserProperties();
+  }, [user?.userId, toast]);
 
   const handleDeleteProperty = (id: string) => {
     if (window.confirm("Are you sure you want to delete this property?")) {
@@ -93,6 +133,14 @@ const Dashboard = () => {
 
   // Count unread messages
   const unreadCount = messages.filter(msg => !msg.read).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-real-blue"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -202,12 +250,12 @@ const Dashboard = () => {
                           </div>
                           <div className="ml-3">
                             <div className="font-medium text-gray-900 line-clamp-1">{property.title}</div>
-                            <div className="text-gray-500 text-sm line-clamp-1">{property.location}</div>
+                            <div className="text-gray-500 text-sm line-clamp-1">{property.location || 'No location specified'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4 hidden sm:table-cell">
-                        <div className="text-gray-900">₹{property.price.toLocaleString()}</div>
+                        <div className="text-gray-900">₹{property.price > 0 ? property.price.toLocaleString() : 'Not specified'}</div>
                         <div className="text-gray-500 text-sm">{property.type === 'rent' ? '/month' : ''}</div>
                       </td>
                       <td className="py-4 px-4 hidden md:table-cell">
@@ -327,6 +375,10 @@ const Dashboard = () => {
                     <div>
                       <label className="text-sm text-gray-500">Phone Number</label>
                       <p className="font-medium">{user?.phone || "-"}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">User ID</label>
+                      <p className="font-medium text-xs truncate">{user?.userId || "-"}</p>
                     </div>
                   </div>
                 </div>

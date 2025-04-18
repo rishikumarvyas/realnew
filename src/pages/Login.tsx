@@ -1,39 +1,43 @@
-
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { OtpInput } from "@/components/OtpInput";
-import { useToast } from "@/components/ui/use-toast";
+import { PhoneStep } from "@/components/login/PhoneStep";
+import { OtpStep } from "@/components/login/OtpStep";
 
 const Login = () => {
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
-  const { requestOtp, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { requestOtp, login, isAuthenticated, user } = useAuth();
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!phone.trim() || phone.length < 10) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid phone number.",
-        variant: "destructive",
-      });
-      return;
+  // Log the user object whenever it changes
+  useEffect(() => {
+    console.log("Current auth state in Login:", { isAuthenticated, user });
+  }, [isAuthenticated, user]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("User is authenticated, redirecting to dashboard");
+      navigate("/dashboard", { replace: true });
     }
-    
+  }, [isAuthenticated, navigate]);
+
+  const handlePhoneSubmit = async (phoneNumber: string) => {
     setLoading(true);
     
     try {
-      const success = await requestOtp(phone);
+      // Set phone state for OTP step
+      setPhone(phoneNumber);
+      
+      // Send OTP API call
+      const success = await requestOtp(phoneNumber);
       
       if (success) {
         toast({
@@ -54,15 +58,19 @@ const Login = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+      console.error("OTP request error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOtpComplete = async (otp: string) => {
+  const handleOtpSubmit = async (otp: string) => {
     setLoading(true);
     
     try {
+      console.log(`Submitting login with phone: ${phone}, OTP: ${otp}`);
+      
+      // Call the login function
       const success = await login(phone, otp);
       
       if (success) {
@@ -70,11 +78,14 @@ const Login = () => {
           title: "Login Successful",
           description: "You have been logged in successfully.",
         });
-        navigate("/");
+        
+        // Direct navigation without delay 
+        console.log("Login successful, redirecting to dashboard");
+        navigate("/dashboard", { replace: true });
       } else {
         toast({
-          title: "Invalid OTP",
-          description: "The verification code you entered is incorrect. Please try again.",
+          title: "Login Failed",
+          description: "The verification code may be incorrect or expired. Please try again.",
           variant: "destructive",
         });
       }
@@ -84,15 +95,20 @@ const Login = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+      console.error("OTP verification error:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResendOtp = async () => {
+    return handlePhoneSubmit(phone);
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="relative">
           {step === "otp" && (
             <Button
               variant="ghost"
@@ -102,64 +118,35 @@ const Login = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
-          <CardTitle>Log in to PropVerse</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-center text-2xl">Login to HomeYatra</CardTitle>
+          <CardDescription className="text-center">
             {step === "phone"
-              ? "Enter your phone number to receive a verification code"
-              : `Enter the verification code sent to ${phone}`}
+              ? "Enter your phone number to continue"
+              : `Enter the verification code sent to +91 ${phone}`}
           </CardDescription>
         </CardHeader>
         
         <CardContent>
           {step === "phone" ? (
-            <form onSubmit={handlePhoneSubmit}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    placeholder="Enter your phone number"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    type="tel"
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full bg-real-blue hover:bg-blue-600"
-                  disabled={loading}
-                >
-                  {loading ? "Sending OTP..." : "Continue"}
-                </Button>
-              </div>
-            </form>
+            <PhoneStep 
+              onSubmit={handlePhoneSubmit}
+              loading={loading}
+            />
           ) : (
-            <div className="space-y-6">
-              <div className="space-y-2 text-center">
-                <p className="text-sm text-gray-500">
-                  A 6-digit code has been sent to your phone
-                </p>
-              </div>
-              <OtpInput onComplete={handleOtpComplete} className="mb-6" />
-              <div className="text-center">
-                <Button 
-                  variant="link" 
-                  onClick={handlePhoneSubmit}
-                  disabled={loading}
-                  className="text-real-blue"
-                >
-                  {loading ? "Resending..." : "Resend Code"}
-                </Button>
-              </div>
-            </div>
+            <OtpStep
+              phone={phone}
+              onSubmit={handleOtpSubmit}
+              onResendOtp={handleResendOtp}
+              loading={loading}
+            />
           )}
         </CardContent>
         
         <CardFooter className="flex justify-center border-t p-6">
           <div className="text-sm text-gray-500">
             Don't have an account?{" "}
-            <Link to="/signup" className="text-real-blue hover:underline font-medium">
-              Sign Up
+            <Link to="/signup" className="text-blue-600 hover:underline font-medium">
+              Sign up
             </Link>
           </div>
         </CardFooter>
