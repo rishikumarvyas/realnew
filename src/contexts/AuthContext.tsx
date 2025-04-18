@@ -301,6 +301,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+
+
+  //Login Code
+
   const login = async (phoneNumber: string, otp: string): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
@@ -349,7 +353,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('Login response data:', data);
         
         // Try to get userId from login response
-        const apiUserId = data.userId || data.id || (data.user && data.user.userId);
+        const apiUserId = data.token.userId;
+        console.log("UserId from login:", apiUserId);
         
         // PRIORITIZE STORING API USER ID
         if (apiUserId) {
