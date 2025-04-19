@@ -27,6 +27,7 @@ interface UserDetailsResponse {
   statusCode: number;
   message: string;
   userId: string;
+  name:string;
   userDetails: UserProperty[];
 }
 
@@ -135,18 +136,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('User details:', data);
       
       if (data.statusCode === 200) {
-        // If the API returns a userId and it's different from what we have, update our records
+        // If the API returns a userId and user exists with a phone
         if (data.userId && user && user.phone) {
           // Always store the API-provided userId for this phone number
           storePersistentUserId(user.phone, data.userId);
           
-          // Update user state if userId is different
-          if (user.userId !== data.userId) {
-            const updatedUser = { ...user, userId: data.userId };
-            setUser(updatedUser);
-            localStorage.setItem('auth', JSON.stringify(updatedUser));
-            console.log(`Updated userId from '${user.userId}' to '${data.userId}'`);
-          }
+          // Update user state with userId, name, and any other fields from API
+          const updatedUser = { 
+            ...user, 
+            userId: data.userId,
+            name: data.name || user.name // Keep the name if it exists
+          };
+          setUser(updatedUser);
+          localStorage.setItem('auth', JSON.stringify(updatedUser));
+          console.log(`Updated user with API data: userId=${data.userId}, name=${data.name || user.name}`);
         }
         
         setUserProperties(data.userDetails || []);
@@ -159,7 +162,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return false;
     }
   };
-
   const requestOtp = async (phoneNumber: string): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
@@ -190,12 +192,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
-
+  
       console.log("Attempting signup with:", { phone: formattedPhone, name: fullName, otp });
-      
-      // First check if we already have a userId for this phone number
-      const existingUserId = getPersistentUserId(formattedPhone);
-      console.log("Existing userId for this phone:", existingUserId);
       
       const signupResponse = await fetch(`${BASE_URL}/api/Auth/SignUp`, {
         method: 'POST',
@@ -206,104 +204,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           otp
         }),
       });
-
+  
       console.log("Signup response status:", signupResponse.status);
       
-      if (signupResponse.status >= 200 && signupResponse.status < 300) {
-        try {
-          const data = await signupResponse.json();
-          console.log("Signup response data:", data);
-          
-          // Extract userId and token from response
-          const apiUserId = data.userId || data.id || (data.user && data.user.userId);
-          const token = typeof data.token === 'string' ? data.token : data.token?.token;
-          
-          // If API provided a userId, ALWAYS use it and store it for future use
-          if (apiUserId) {
-            // Store this as the persistent userId for this phone number
-            storePersistentUserId(formattedPhone, apiUserId);
-            
-            // Store complete signup data temporarily
-            const signupData = {
-              userId: apiUserId,
-              phone: formattedPhone,
-              name: fullName,
-              token
-            };
-            
-            localStorage.setItem('signupData', JSON.stringify(signupData));
-            console.log("Stored API-provided userId for future use:", apiUserId);
-            return true;
-          } 
-          // If API didn't provide userId but we have one stored, use that
-          else if (existingUserId) {
-            const signupData = {
-              userId: existingUserId,
-              phone: formattedPhone,
-              name: fullName,
-              token
-            };
-            
-            localStorage.setItem('signupData', JSON.stringify(signupData));
-            console.log("Using existing stored userId:", existingUserId);
-            return true;
-          }
-          // As last resort, use a generated ID - THIS SHOULD RARELY HAPPEN
-          else {
-            console.warn("API did not provide userId and no stored userId exists. Using fallback.");
-            const fallbackId = `user_${formattedPhone}`;
-            storePersistentUserId(formattedPhone, fallbackId);
-            
-            const signupData = {
-              userId: fallbackId,
-              phone: formattedPhone,
-              name: fullName,
-              token
-            };
-            
-            localStorage.setItem('signupData', JSON.stringify(signupData));
-            return true;
-          }
-        } catch (e) {
-          console.error("Error parsing signup response:", e);
-          
-          // For 204 No Content or parse error, use existing ID if available
-          if (existingUserId) {
-            const signupData = {
-              userId: existingUserId,
-              phone: formattedPhone,
-              name: fullName
-            };
-            
-            localStorage.setItem('signupData', JSON.stringify(signupData));
-            return true;
-          }
-          
-          // Last resort fallback - should rarely happen
-          const fallbackId = `user_${formattedPhone}`;
-          storePersistentUserId(formattedPhone, fallbackId);
-          
-          const signupData = {
-            userId: fallbackId,
-            phone: formattedPhone,
-            name: fullName
-          };
-          
-          localStorage.setItem('signupData', JSON.stringify(signupData));
-          return true;
-        }
+      if (!signupResponse.ok) {
+        console.error("Signup failed with status:", signupResponse.status);
+        return false;
       }
       
-      return false;
+      try {
+        const data = await signupResponse.json();
+        console.log("Signup response data:", data);
+        
+        // Extract userId and token from response
+        const userId = data.userId || data.id || (data.user && data.user.userId);
+        const token = typeof data.token === 'string' ? data.token : data.token?.token;
+        
+        // If API didn't provide a userId, we can't proceed
+        if (!userId) {
+          console.error("API did not provide a userId during signup");
+          return false;
+        }
+        
+        // Store this as the persistent userId for this phone number
+        storePersistentUserId(formattedPhone, userId);
+        
+        // Create user data object
+        const userData = {
+          userId,
+          phone: formattedPhone,
+          name: fullName,
+          token
+        };
+        
+        // Store user data for immediate use
+        setUser(userData);
+        localStorage.setItem('auth', JSON.stringify(userData));
+        
+        return true;
+      } catch (e) {
+        console.error("Error parsing signup response:", e);
+        return false;
+      }
     } catch (error) {
       console.error('Error during signup:', error);
       return false;
     }
   };
-
-
-
-  //Login Code
 
   const login = async (phoneNumber: string, otp: string): Promise<boolean> => {
     try {
@@ -311,25 +258,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!formattedPhone) return false;
       
       console.log("Starting login process for phone:", formattedPhone);
-      
-      // CRITICAL: First check if we have a known userId for this phone number
-      const existingUserId = getPersistentUserId(formattedPhone);
-      console.log("Existing stored userId for this phone:", existingUserId);
-      
-      // Check if we have recent signup data with the same phone number
-      let signupData = null;
-      try {
-        const storedSignupData = localStorage.getItem('signupData');
-        if (storedSignupData) {
-          const parsedData = JSON.parse(storedSignupData);
-          if (parsedData.phone === formattedPhone) {
-            signupData = parsedData;
-            console.log("Found signup data:", signupData);
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing signup data:', e);
-      }
       
       const loginResponse = await fetch(`${BASE_URL}/api/Auth/Login`, {
         method: 'POST',
@@ -339,98 +267,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           otp 
         }),
       });
-
+  
       console.log("Login response status:", loginResponse.status);
       
       if (!loginResponse.ok) return false;
-      
-      let userId = null;
-      let token = null;
-      let name = null;
       
       try {
         const data = await loginResponse.json();
         console.log('Login response data:', data);
         
-        // Try to get userId from login response
-        const apiUserId = data.token.userId;
-        console.log("UserId from login:", apiUserId);
+        // Get userId directly from API response - don't fallback to generating one
+        const userId = data.userId || data.id || (data.user && data.user.userId) || (data.token && data.token.userId);
         
-        // PRIORITIZE STORING API USER ID
-        if (apiUserId) {
-          // If API returns a userId during login, store it
-          userId = apiUserId;
-          storePersistentUserId(formattedPhone, userId);
-          console.log("Using and storing API login userId:", userId);
-        }
-        // NEXT USE EXISTING STORED ID FROM PREVIOUS SIGNUP
-        else if (existingUserId) {
-          userId = existingUserId;
-          console.log("Using existing stored userId:", userId);
-        }
-        // NEXT USE ID FROM RECENT SIGNUP DATA
-        else if (signupData?.userId) {
-          userId = signupData.userId;
-          storePersistentUserId(formattedPhone, userId);
-          console.log("Using userId from recent signup:", userId);
-        }
-        // LAST RESORT - SHOULD RARELY HAPPEN
-        else {
-          console.warn("No userId from any source! Using fallback generated ID.");
-          userId = `user_${formattedPhone}`;
-          storePersistentUserId(formattedPhone, userId);
+        if (!userId) {
+          console.error("API did not provide a userId. Cannot proceed with login.");
+          return false;
         }
         
         // Get token from response
-        token = typeof data.token === 'string' ? data.token : data.token?.token;
+        const token = typeof data.token === 'string' ? data.token : data.token?.token;
         
-        // Get name from response or signup data
-        name = data.name || (data.user && data.user.name) || signupData?.name;
+        // Get name from response
+        const name = data.name || (data.user && data.user.name);
+        
+        // Store the mapping
+        storePersistentUserId(formattedPhone, userId);
+        
+        // Create user data with API values
+        const userData = {
+          userId,
+          phone: formattedPhone,
+          token,
+          name
+        };
+        
+        console.log("Final user data for login:", userData);
+        setUser(userData);
+        localStorage.setItem('auth', JSON.stringify(userData));
+        
+        // Clear signup data after successful login
+        localStorage.removeItem('signupData');
+        
+        // Fetch user details with userId
+        await fetchUserDetails(userId);
+        
+        return true;
       } catch (e) {
         console.error("Error parsing login response:", e);
-        
-        // Use existing stored userId as fallback
-        if (existingUserId) {
-          userId = existingUserId;
-          console.log("Using existing stored userId after parse error:", userId);
-        } 
-        // Or use signup data if available
-        else if (signupData?.userId) {
-          userId = signupData.userId;
-          console.log("Using signup data userId after parse error:", userId);
-        }
-        // Last resort
-        else {
-          userId = `user_${formattedPhone}`;
-          storePersistentUserId(formattedPhone, userId);
-          console.warn("Generated fallback userId after parse error:", userId);
-        }
-        
-        token = signupData?.token;
-        name = signupData?.name;
+        return false;
       }
-      
-      // We should have a userId by now one way or another
-      const userData = {
-        userId,
-        phone: formattedPhone,
-        token,
-        name
-      };
-      
-      console.log("Final user data for login:", userData);
-      setUser(userData);
-      localStorage.setItem('auth', JSON.stringify(userData));
-      
-      // Clear signup data after successful login
-      localStorage.removeItem('signupData');
-      
-      // Fetch user details with userId
-      if (userId) {
-        await fetchUserDetails(userId);
-      }
-      
-      return true;
     } catch (error) {
       console.error('Error during login:', error);
       return false;

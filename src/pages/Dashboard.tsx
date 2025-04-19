@@ -18,13 +18,13 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
     id: property.id || `prop-${Math.random().toString(36).substring(7)}`,
     title: property.title || "Untitled Property",
     price: property.price || 0,
-    location: property.location || "Unknown Location",
+    location: property.address ? `${property.address}, ${property.city || ''}` : "Unknown Location",
     type: property.superCategory?.toLowerCase() === 'buy' ? 'buy' : 
            property.superCategory?.toLowerCase() === 'rent' ? 'rent' : 'sell',
     bedrooms: property.bedroom || 0,
     bathrooms: property.bathroom || 0,
     area: property.area || 0,
-    image: property.image || "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+    image: property.mainImageDetail?.url || "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
     status: "active"
   };
 };
@@ -56,15 +56,22 @@ const Dashboard = () => {
   const [properties, setProperties] = useState<DashboardProperty[]>([]);
   const [messages, setMessages] = useState<typeof mockMessages>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [userName, setUserName] = useState<string>("User");
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
-
+  
   // This useEffect logs the user object to verify userId is available
   useEffect(() => {
     console.log("Current user in Dashboard:", user);
+    
+    // Update userName from user object when it changes
+    if (user && user.name) {
+      setUserName(user.name);
+      console.log("Setting user name to:", user.name);
+    }
   }, [user]);
 
   // Fetch user properties when component mounts or user changes
@@ -88,6 +95,12 @@ const Dashboard = () => {
         
         const data = await response.json();
         console.log("User properties data:", data);
+        
+        // Update the user name if available in the API response
+        if (data.name) {
+          setUserName(data.name);
+          console.log("Updated user name from API:", data.name);
+        }
         
         if (data.statusCode === 200 && data.userDetails && Array.isArray(data.userDetails)) {
           // Convert API properties to dashboard format
@@ -148,7 +161,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-gray-500 mt-1">
-            Welcome back, {user?.name || "User"}
+            Welcome back, {userName}
           </p>
         </div>
         <Button 
@@ -370,23 +383,23 @@ const Dashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm text-gray-500">Name</label>
-                      <p className="font-medium">{user?.name || "User"}</p>
+                      <p className="font-medium">{userName}</p>
                     </div>
                     <div>
                       <label className="text-sm text-gray-500">Phone Number</label>
                       <p className="font-medium">{user?.phone || "-"}</p>
                     </div>
-                    <div>
+                    {/* <div>
                       <label className="text-sm text-gray-500">User ID</label>
                       <p className="font-medium text-xs truncate">{user?.userId || "-"}</p>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
                 
                 <div className="pt-4 border-t">
                   <h4 className="font-medium mb-4">Notification Preferences</h4>
                   <div className="space-y-2">
-                    <div className="flex items-center">
+                    {/* <div className="flex items-center">
                       <input 
                         type="checkbox" 
                         id="email-notifications" 
@@ -396,7 +409,7 @@ const Dashboard = () => {
                       <label htmlFor="email-notifications" className="ml-2 block text-sm">
                         Email notifications for new messages
                       </label>
-                    </div>
+                    </div> */}
                     <div className="flex items-center">
                       <input 
                         type="checkbox" 
