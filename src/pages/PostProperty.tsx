@@ -42,6 +42,7 @@ const PostProperty = () => {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [imageURLs, setImageURLs] = useState<string[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null); // Track selected main image
   const [loading, setLoading] = useState(false);
 
   const availableAmenities = [
@@ -84,6 +85,12 @@ const PostProperty = () => {
       // Generate preview URLs
       const newImageURLs = newFiles.map(file => URL.createObjectURL(file));
       setImageURLs([...imageURLs, ...newImageURLs]);
+
+      // If no main image is selected, select the first one by default
+      if (mainImageIndex === null && newImageURLs.length > 0) {
+        setMainImageIndex(0);
+      }
+
     }
   };
 
@@ -96,6 +103,15 @@ const PostProperty = () => {
     
     setImages(newImages);
     setImageURLs(newImageURLs);
+
+    // Adjust mainImageIndex if needed
+    if (mainImageIndex !== null) {
+      if (index === mainImageIndex) {
+        setMainImageIndex(null); // Removed main image
+      } else if (index < mainImageIndex) {
+        setMainImageIndex(mainImageIndex - 1); // Shift index left
+      }
+    }
   };
 
   // Helper functions to map UI selections to API IDs
@@ -186,6 +202,15 @@ const PostProperty = () => {
       });
       return;
     }
+
+    if (mainImageIndex === null || mainImageIndex < 0 || mainImageIndex >= images.length) {
+      toast({
+        title: "Main Image Not Selected",
+        description: "Please select a main image for your property.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setLoading(true);
     
@@ -236,10 +261,13 @@ const PostProperty = () => {
         formData.append('AmenityIds', id.toString());
       });
       
-      // Add images (multiple files with same key)
-      images.forEach(image => {
-        formData.append('Images', image);
-      });
+      // Upload images and mark main image
+    images.forEach((image, index) => {
+      formData.append("Images", image);
+      if (index === mainImageIndex) {
+        formData.append("MainImageIndex", index.toString());
+      }
+    });
       
       // API call
       const response = await fetch('https://homeyatraapi.azurewebsites.net/api/Account/AddProperty', {
@@ -544,8 +572,21 @@ const PostProperty = () => {
                     >
                       <X className="h-3 w-3" />
                     </Button>
+                  <div className="mt-2 flex items-center justify-center">
+                    <input
+                      type="radio"
+                      id={`mainImage-${index}`}
+                      name="mainImage"
+                      checked={mainImageIndex === index}
+                      onChange={() => setMainImageIndex(index)}
+                      className="mr-2"
+                    />
+                    <label htmlFor={`mainImage-${index}`} className="text-xs text-gray-700">
+                      Set as main image
+                    </label>
                   </div>
-                ))}
+                </div>
+              ))}
                 
                 {imageURLs.length < 6 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-md h-24 flex flex-col items-center justify-center cursor-pointer hover:border-real-blue transition-colors">
