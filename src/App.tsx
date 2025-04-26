@@ -14,10 +14,12 @@ import Dashboard from "./pages/Dashboard";
 import PropertyListing from "./pages/PropertyListing";
 import PropertyDetail from "./pages/PropertyDetail";
 import PostProperty from "./pages/PostProperty";
+import EditProperty from "./pages/EditProperty";
 import NotFound from "./pages/NotFound";
 import { Layout } from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ContactUs from "./pages/ContactUs";
+import ScrollToTop from "./components/ScrollToTop"; // Import the combined component
 
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({
@@ -36,6 +38,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop /> {/* Combined component for both functionalities */}
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
@@ -48,6 +51,7 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="post-property" element={<PostProperty />} />
+                <Route path="/edit-property/:propertyId" element={<EditProperty />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />

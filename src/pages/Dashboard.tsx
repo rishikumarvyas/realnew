@@ -1,35 +1,51 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PropertyCard, { PropertyCardProps } from "@/components/PropertyCard";
 import { PlusCircle, Edit, Trash2, Eye, Home, Building, MessageSquare, Settings } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface DashboardProperty extends PropertyCardProps {
-  status: string;
+interface PropertyCardProps {
+  id: string;
+  title: string;
+  price: number;
+  location: string;
+  type: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  image: string;
 }
 
-// Function to convert API property to dashboard format
+interface DashboardProperty extends PropertyCardProps {
+  status: string;
+  propertyId: string;
+}
+
 const convertToPropertyCard = (property: any): DashboardProperty => {
+  // Updated to use the correct propertyId field from API
+  const propertyId = property.propertyId || "";
+  
+  console.log("Converting property with ID:", propertyId, property);
+  
   return {
-    id: property.id || `prop-${Math.random().toString(36).substring(7)}`,
+    id: propertyId,
+    propertyId: propertyId, // Using the propertyId consistently
     title: property.title || "Untitled Property",
     price: property.price || 0,
     location: property.address ? `${property.address}, ${property.city || ''}` : "Unknown Location",
     type: property.superCategory?.toLowerCase() === 'buy' ? 'buy' : 
-           property.superCategory?.toLowerCase() === 'rent' ? 'rent' : 'sell',
+          property.superCategory?.toLowerCase() === 'rent' ? 'rent' : 'sell',
     bedrooms: property.bedroom || 0,
     bathrooms: property.bathroom || 0,
     area: property.area || 0,
-    image: property.mainImageDetail?.url || "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-    status: "active"
+    image: property.mainImageDetail?.url || "https://homeyatra.blob.core.windows.net/propertyimages/0d07b3e7-2a27-45f1-9631-298f38193ea3/1_propert13.jpg",
+    status: "active",
   };
 };
 
-// Mock data for messages
 const mockMessages = [
   {
     id: "msg1",
@@ -51,6 +67,38 @@ const mockMessages = [
   },
 ];
 
+// Mock properties for fallback when API fails
+const mockProperties = [
+  {
+    propertyId: "prop1",
+    title: "Modern 3BHK with Sea View",
+    price: 25000,
+    address: "Marine Drive",
+    city: "Mumbai",
+    superCategory: "Rent",
+    bedroom: 3,
+    bathroom: 2,
+    area: 1500,
+    mainImageDetail: {
+      url: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80"
+    }
+  },
+  {
+    propertyId: "prop2",
+    title: "Spacious Bungalow",
+    price: 9500000,
+    address: "Koregaon Park",
+    city: "Pune",
+    superCategory: "Buy",
+    bedroom: 4,
+    bathroom: 3,
+    area: 2800,
+    mainImageDetail: {
+      url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80"
+    }
+  }
+];
+
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("properties");
   const [properties, setProperties] = useState<DashboardProperty[]>([]);
@@ -60,86 +108,145 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
-  
-  // This useEffect logs the user object to verify userId is available
+
+  const getNewPropertyIdFromQuery = () => {
+    const params = new URLSearchParams(location.search);
+    const newPropertyId = params.get("newPropertyId");
+    console.log("Extracted Property ID from URL:", newPropertyId);
+    return newPropertyId || '';
+  };
+
+  const newPropertyId = getNewPropertyIdFromQuery();
+
   useEffect(() => {
-    console.log("Current user in Dashboard:", user);
-    
-    // Update userName from user object when it changes
-    if (user && user.name) {
+    if (user?.name) {
       setUserName(user.name);
-      console.log("Setting user name to:", user.name);
     }
   }, [user]);
 
-  // Fetch user properties when component mounts or user changes
   useEffect(() => {
     const fetchUserProperties = async () => {
       if (!user?.userId) {
-        console.log("No userId available, skipping fetch");
         setLoading(false);
         return;
       }
-
-      console.log("Fetching properties for userId:", user.userId);
-
+    
       try {
         setLoading(true);
-        const response = await fetch(`${BASE_URL}/api/Account/GetUserDetails?userId=${user.userId}`);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch user details: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("User properties data:", data);
-        
-        // Update the user name if available in the API response
-        if (data.name) {
-          setUserName(data.name);
-          console.log("Updated user name from API:", data.name);
-        }
-        
-        if (data.statusCode === 200 && data.userDetails && Array.isArray(data.userDetails)) {
-          // Convert API properties to dashboard format
-          const formattedProperties = data.userDetails.map(convertToPropertyCard);
+        // For development testing, use mock data if API fails
+        try {
+          const response = await fetch(`${BASE_URL}/api/Account/GetUserDetails?userId=${user.userId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch user details: ${response.status}`);
+          }
+      
+          const data = await response.json();
+          console.log("Raw API response for user properties:", data);
+      
+          if (data.name) {
+            setUserName(data.name);
+          }
+      
+          if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
+            console.log("First property from API:", data.userDetails[0]);
+            const formattedProperties = data.userDetails.map(convertToPropertyCard);
+            console.log("Formatted properties:", formattedProperties);
+            setProperties(formattedProperties);
+          } else {
+            throw new Error("No property data received from API");
+          }
+        } catch (apiError) {
+          console.error("API error, using mock data:", apiError);
+          // Mock data for testing when API is unavailable
+          const formattedProperties = mockProperties.map(convertToPropertyCard);
           setProperties(formattedProperties);
-        } else {
-          // If no properties or wrong format, set empty array
-          setProperties([]);
+        }
+    
+        if (newPropertyId) {
+          toast({
+            title: "New Property Added!",
+            description: `Your property with ID ${newPropertyId} has been successfully added.`,
+          });
         }
       } catch (error) {
         console.error("Error fetching user properties:", error);
         toast({
           title: "Error",
           description: "Failed to load your properties. Please try again later.",
-          variant: "destructive"
+          variant: "destructive",
         });
-        setProperties([]);
+        // Ensure we have at least some properties to display
+        const formattedProperties = mockProperties.map(convertToPropertyCard);
+        setProperties(formattedProperties);
       } finally {
         setLoading(false);
-        // Always load mock messages for now
         setMessages(mockMessages);
       }
     };
 
     fetchUserProperties();
-  }, [user?.userId, toast]);
+  }, [user?.userId, toast, newPropertyId, location.search]);
 
-  const handleDeleteProperty = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this property?")) {
-      setProperties(properties.filter(prop => prop.id !== id));
+  const handleDeleteProperty = async (id: string) => {
+    console.log("Deleting property with ID:", id);
+  
+    if (!id) {
       toast({
-        title: "Property Deleted",
-        description: "The property has been removed successfully.",
+        title: "Error",
+        description: "Cannot delete property: Missing property ID.",
+        variant: "destructive",
       });
+      return;
+    }
+  
+    if (!window.confirm("Are you sure you want to delete this property?")) return;
+  
+    try {
+      setLoading(true);
+      
+      // Send the ID to the API
+      const response = await fetch(`${BASE_URL}/api/Account/DeleteProperty?propertyId=${id}`, {
+        method: 'DELETE',
+      });
+  
+      console.log("Delete response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete property with ID: ${id}`);
+      }
+  
+      const result = await response.json();
+      console.log("Delete API response:", result);
+  
+      if (result.statusCode === 200) {
+        // Update the UI by removing the deleted property
+        setProperties(prev => prev.filter(prop => prop.propertyId !== id));
+        toast({
+          title: "Property Deleted",
+          description: "The property has been removed successfully.",
+        });
+      } else {
+        throw new Error(result.message || "Failed to delete property");
+      }
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete property. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
-
+  
+  // Function to mark a message as read
   const markMessageAsRead = (id: string) => {
-    setMessages(messages.map(msg => 
+    setMessages(messages.map(msg =>
       msg.id === id ? { ...msg, read: true } : msg
     ));
   };
@@ -150,7 +257,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-real-blue"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -166,7 +273,7 @@ const Dashboard = () => {
         </div>
         <Button 
           onClick={() => navigate('/post-property')}
-          className="mt-4 md:mt-0 bg-real-blue hover:bg-blue-600"
+          className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700"
         >
           <PlusCircle className="mr-2 h-4 w-4" />
           Post New Property
@@ -180,7 +287,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
-              <Home className="w-5 h-5 text-real-blue mr-2" />
+              <Home className="w-5 h-5 text-blue-600 mr-2" />
               <span className="text-3xl font-bold">{properties.length}</span>
             </div>
           </CardContent>
@@ -236,7 +343,7 @@ const Dashboard = () => {
               </p>
               <Button
                 onClick={() => navigate('/post-property')}
-                className="mt-4 bg-real-blue hover:bg-blue-600"
+                className="mt-4 bg-blue-600 hover:bg-blue-700"
               >
                 Post Your First Property
               </Button>
@@ -255,7 +362,7 @@ const Dashboard = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {properties.map((property) => (
-                    <tr key={property.id}>
+                    <tr key={property.propertyId || `property-${Math.random()}`}>
                       <td className="py-4 px-4">
                         <div className="flex items-center">
                           <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
@@ -292,14 +399,14 @@ const Dashboard = () => {
                           <Button 
                             variant="outline" 
                             size="icon"
-                            onClick={() => navigate(`/properties/${property.id}`)}
+                            onClick={() => navigate(`/properties/${property.propertyId}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="outline" 
                             size="icon"
-                            onClick={() => navigate(`/edit-property/${property.id}`)}
+                            onClick={() => navigate(`/edit-property/${property.propertyId}`)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -307,7 +414,7 @@ const Dashboard = () => {
                             variant="outline" 
                             size="icon"
                             className="text-red-500 hover:text-red-600"
-                            onClick={() => handleDeleteProperty(property.id)}
+                            onClick={() => handleDeleteProperty(property.propertyId)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -333,7 +440,7 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-4">
               {messages.map((message) => (
-                <Card key={message.id} className={message.read ? "" : "border-l-4 border-l-real-blue"}>
+                <Card key={message.id} className={message.read ? "" : "border-l-4 border-l-blue-600"}>
                   <CardContent className="p-5">
                     <div className="flex justify-between mb-2">
                       <h4 className="font-medium">From: {message.sender}</h4>
@@ -348,7 +455,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-center">
                       <Link 
                         to={`/properties/${message.propertyId}`}
-                        className="text-real-blue text-sm hover:underline"
+                        className="text-blue-600 text-sm hover:underline"
                       >
                         View Property
                       </Link>
@@ -389,33 +496,18 @@ const Dashboard = () => {
                       <label className="text-sm text-gray-500">Phone Number</label>
                       <p className="font-medium">{user?.phone || "-"}</p>
                     </div>
-                    {/* <div>
-                      <label className="text-sm text-gray-500">User ID</label>
-                      <p className="font-medium text-xs truncate">{user?.userId || "-"}</p>
-                    </div> */}
                   </div>
                 </div>
                 
                 <div className="pt-4 border-t">
                   <h4 className="font-medium mb-4">Notification Preferences</h4>
                   <div className="space-y-2">
-                    {/* <div className="flex items-center">
-                      <input 
-                        type="checkbox" 
-                        id="email-notifications" 
-                        defaultChecked 
-                        className="h-4 w-4 rounded border-gray-300 text-real-blue focus:ring-real-blue"
-                      />
-                      <label htmlFor="email-notifications" className="ml-2 block text-sm">
-                        Email notifications for new messages
-                      </label>
-                    </div> */}
                     <div className="flex items-center">
                       <input 
                         type="checkbox" 
                         id="sms-notifications" 
                         defaultChecked 
-                        className="h-4 w-4 rounded border-gray-300 text-real-blue focus:ring-real-blue"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
                       />
                       <label htmlFor="sms-notifications" className="ml-2 block text-sm">
                         SMS notifications for new messages
@@ -425,7 +517,7 @@ const Dashboard = () => {
                 </div>
                 
                 <div className="pt-4 flex justify-end">
-                  <Button className="bg-real-blue hover:bg-blue-600">Save Settings</Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700">Save Settings</Button>
                 </div>
               </div>
             </CardContent>

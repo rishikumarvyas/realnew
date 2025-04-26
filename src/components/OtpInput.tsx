@@ -1,5 +1,4 @@
-import React, { useState, useRef, KeyboardEvent } from "react";
-import { cn } from "@/lib/utils";
+import React, { useState, useRef } from "react";
 
 interface OtpInputProps {
   value: string;
@@ -24,26 +23,30 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const newValue = e.target.value.replace(/[^0-9]/g, "");
-    if (newValue === "") return;
-
+    
     // Update the value with the single digit
     const newOtp = value.split("");
     newOtp[index] = newValue.slice(-1);
     onChange(newOtp.join(""));
 
-    // Move focus to next input if available
+    // Move focus to next input if available and there is a value
     if (index < length - 1 && newValue) {
       inputRefs.current[index + 1]?.focus();
       setActiveInput(index + 1);
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace") {
       if (!value[index] && index > 0) {
         // If current input is empty and backspace is pressed, focus previous input
         inputRefs.current[index - 1]?.focus();
         setActiveInput(index - 1);
+      } else if (value[index]) {
+        // If there's a value, clear it but stay in the current input
+        const newOtp = value.split("");
+        newOtp[index] = "";
+        onChange(newOtp.join(""));
       }
     } else if (e.key === "ArrowLeft" && index > 0) {
       inputRefs.current[index - 1]?.focus();
@@ -54,16 +57,22 @@ export const OtpInput: React.FC<OtpInputProps> = ({
     }
   };
 
-  const handlePaste = (e: React.ClipboardEvent) => {
+  const handleFocus = (index: number) => {
+    setActiveInput(index);
+    // Select the content when focused for easy replacement
+    inputRefs.current[index]?.select();
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, length);
     
     if (!pastedData) return;
     
     // Fill the inputs with pasted data
-    const newOtp = value.split("");
-    for (let i = 0; i < pastedData.length; i++) {
-      newOtp[i] = pastedData[i];
+    const newOtp = Array(length).fill("");
+    for (let i = 0; i < length; i++) {
+      newOtp[i] = i < pastedData.length ? pastedData[i] : (value[i] || "");
     }
     
     onChange(newOtp.join(""));
@@ -75,7 +84,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   };
 
   return (
-    <div className={cn("flex justify-center gap-2", className)}>
+    <div className={`flex gap-2 ${className || ""}`}>
       {Array(length)
         .fill(0)
         .map((_, index) => (
@@ -90,8 +99,9 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             onChange={(e) => handleChange(e, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             onPaste={handlePaste}
+            onFocus={() => handleFocus(index)}
+            onClick={() => handleFocus(index)}
             className="h-12 w-12 rounded-md border border-input bg-background text-center text-xl focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            onFocus={() => setActiveInput(index)}
           />
         ))}
     </div>
