@@ -121,127 +121,116 @@ const Index = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-  {/* Hero Section with Slider - Removed opacity overlay for clearer images */}
-  <section className="relative h-screen overflow-hidden">
-    {/* Slider with clearer images */}
-    <div className="absolute inset-0 z-0">
-      {sliderImages.map((image, index) => (
-        <div 
-          key={index}
-          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
-            index === currentSlide ? "opacity-100" : "opacity-0"
-          }`}
-          style={{ backgroundImage: `url(${image})` }}
-        />
-      ))}
-      {/* Removed white overlay completely for full clarity of images */}
-      {/* Optional: Very light overlay to ensure text readability */}
-      <div className="absolute inset-0 bg-black/10"></div>
-    </div>
-    
-    {/* Slider Controls */}
-    <button 
-      onClick={prevSlide} 
-      className="absolute left-4 top-1/2 z-20 -translate-y-1/2 bg-black/20 hover:bg-black/40 rounded-full p-3 transition-all duration-300"
-    >
-      <ChevronLeft className="h-8 w-8 text-white" />
-    </button>
-    <button 
-      onClick={nextSlide} 
-      className="absolute right-4 top-1/2 z-20 -translate-y-1/2 bg-black/20 hover:bg-black/40 rounded-full p-3 transition-all duration-300"
-    >
-      <ChevronRight className="h-8 w-8 text-white" />
-    </button>
-    
-    {/* Slide Indicators */}
-    <div className="absolute bottom-8 left-0 right-0 flex justify-center z-20 gap-2">
-      {sliderImages.map((_, index) => (
-        <button
-          key={index}
-          onClick={() => setCurrentSlide(index)}
-          className={`w-3 h-3 rounded-full transition-all duration-300 ${
-            index === currentSlide ? "bg-white w-8" : "bg-white/70"
-          }`}
-        />
-      ))}
-    </div>
-    
-    {/* Hero Content - With background for readability but not covering images */}
-    <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 z-10 h-full flex flex-col justify-center items-center">
-      <div className="animate-fade-in text-center">
-        {/* <div className="flex items-center justify-center mb-8">
-          <div className="p-3 bg-white/90 rounded-2xl mr-4 shadow-xl">
-            <Home className="h-12 w-12 text-blue-600" />
-          </div>
-          <h1 className="text-5xl font-bold tracking-tight text-white drop-shadow-lg">HOME<span className="text-blue-500">YATRA</span></h1>
-        </div> */}
-        
-        <div className="bg-white/70 backdrop-blur-sm p-8 rounded-3xl shadow-lg max-w-4xl mx-auto">
-          <h2 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8 tracking-tight text-black">
-            <span>Find Your </span>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
-              Dream Home
-            </span>
-          </h2>
-          
-          {/* <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto text-gray-800">
-            Discover the perfect place to call home with our exclusive selection of premium properties across India.
-          </p> */}
-          
-          <form onSubmit={handleSearch} className="mt-10 relative max-w-3xl mx-auto">
-            <div className="relative flex shadow-2xl">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none">
-                <Search className="h-6 w-6 text-gray-600" />
+    {/* Hero Section with Slider - Optimized for mobile */}
+    <section className="relative h-screen sm:h-screen overflow-hidden">
+      {/* Slider with clearer images */}
+      <div className="absolute inset-0 z-0">
+        {sliderImages.map((image, index) => (
+          <div 
+            key={index}
+            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
+              index === currentSlide ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ backgroundImage: `url(${image})` }}
+          />
+        ))}
+        {/* Light overlay for text readability */}
+        <div className="absolute inset-0 bg-black/10"></div>
+      </div>
+      
+      {/* Slider Controls - Smaller for mobile */}
+      <button 
+        onClick={prevSlide} 
+        className="absolute left-2 sm:left-4 top-1/2 z-20 -translate-y-1/2 bg-black/20 hover:bg-black/40 rounded-full p-2 sm:p-3 transition-all duration-300"
+      >
+        <ChevronLeft className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
+      </button>
+      <button 
+        onClick={nextSlide} 
+        className="absolute right-2 sm:right-4 top-1/2 z-20 -translate-y-1/2 bg-black/20 hover:bg-black/40 rounded-full p-2 sm:p-3 transition-all duration-300"
+      >
+        <ChevronRight className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
+      </button>
+      
+      {/* Slide Indicators - Smaller for mobile */}
+      <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex justify-center z-20 gap-1 sm:gap-2">
+        {sliderImages.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentSlide(index)}
+            className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+              index === currentSlide ? "bg-white w-6 sm:w-8" : "bg-white/70"
+            }`}
+          />
+        ))}
+      </div>
+      
+      {/* Hero Content - Responsive padding and sizing */}
+      <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 z-10 h-full flex flex-col justify-center items-center">
+        <div className="animate-fade-in text-center w-full">
+          <div className="bg-white/70 backdrop-blur-sm p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl shadow-lg mx-4 sm:mx-auto">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 sm:mb-6 tracking-tight text-black">
+              <span>Find Your </span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
+                Dream Home
+              </span>
+            </h2>
+            
+            <form onSubmit={handleSearch} className="mt-4 sm:mt-6 relative mx-auto">
+              <div className="relative flex shadow-xl">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                </div>
+                <Input
+                  type="text"
+                  className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                  placeholder="Search location, property..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Button 
+                  type="submit" 
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full py-1.5 sm:py-2 md:py-3 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+                >
+                  Search
+                </Button>
               </div>
-              <Input
-                type="text"
-                className="block w-full rounded-full pl-14 pr-32 py-6 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-                placeholder="Search by location, property type..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Button 
-                type="submit" 
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full py-5 px-8 text-lg shadow-lg"
-              >
-                Search
-              </Button>
-            </div>
-          </form>
-        </div>
-        
-        <div className="mt-14 flex flex-wrap gap-6 justify-center">
-          <Button 
-            variant="outline" 
-            size="lg"
-            className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-lg group transition-all duration-300 px-10 py-6 rounded-full shadow-xl"
-            onClick={() => navigate('/properties?type=buy')}
-          >
-            <Home className="h-5 w-5 mr-3" />
-            Buy Properties
-          </Button>
-          <Button 
-            variant="outline"
-            size="lg"
-            className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-lg group transition-all duration-300 px-10 py-6 rounded-full shadow-xl"
-            onClick={() => navigate('/properties?type=rent')}
-          >
-            <Key className="h-5 w-5 mr-3" />
-            Rent Properties
-          </Button>
-          <Button 
-            variant="outline"
-            size="lg"
-            className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-lg group transition-all duration-300 px-10 py-6 rounded-full shadow-xl"
-            onClick={() => navigate('/properties?type=sell')}
-          >
-            <TrendingUp className="h-5 w-5 mr-3" />
-            Sell Your Property
-          </Button>
+            </form>
+          </div>
+          
+          <div className="mt-6 sm:mt-10 flex flex-wrap gap-2 sm:gap-4 justify-center px-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
+              onClick={() => navigate('/properties?type=buy')}
+            >
+              <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Buy
+            </Button>
+            <Button 
+              variant="outline"
+              size="sm"
+              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
+              onClick={() => navigate('/properties?type=rent')}
+            >
+              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Rent
+            </Button>
+            <Button 
+              variant="outline"
+              size="sm"
+              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
+              onClick={() => navigate('/properties?type=sell')}
+            >
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Sell
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+
 
    
 

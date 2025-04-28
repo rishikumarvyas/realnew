@@ -41,10 +41,10 @@ const PostProperty = () => {
   const [balcony, setBalcony] = useState("");
   const [area, setArea] = useState("");
   const [ownerType, setOwnerType] = useState("");
-  const [amenities, setAmenities] = useState<string[]>([]);
-  const [images, setImages] = useState<File[]>([]);
-  const [imageURLs, setImageURLs] = useState<string[]>([]);
-  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null);
+  const [amenities, setAmenities] = useState([]);
+  const [images, setImages] = useState([]);
+  const [imageURLs, setImageURLs] = useState([]);
+  const [mainImageIndex, setMainImageIndex] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const availableAmenities = [
@@ -64,7 +64,7 @@ const PostProperty = () => {
   const [priceValidation, setPriceValidation] = useState(true);
   const [areaValidation, setAreaValidation] = useState(true);
 
-  const handleAmenityToggle = (amenity: string) => {
+  const handleAmenityToggle = (amenity) => {
     if (amenities.includes(amenity)) {
       setAmenities(amenities.filter((item) => item !== amenity));
     } else {
@@ -72,7 +72,7 @@ const PostProperty = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
       
@@ -99,7 +99,7 @@ const PostProperty = () => {
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeImage = (index) => {
     const newImages = [...images];
     const newImageURLs = [...imageURLs];
     
@@ -120,7 +120,7 @@ const PostProperty = () => {
   };
 
   // Validate price as a number with two decimal places
-  const validatePrice = (value: string) => {
+  const validatePrice = (value) => {
     // Allow empty value during typing
     if (!value) return true;
     
@@ -130,7 +130,7 @@ const PostProperty = () => {
   };
 
   // Handle price change with validation
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePriceChange = (e) => {
     const value = e.target.value;
     const isValid = validatePrice(value);
     setPriceValidation(isValid);
@@ -138,7 +138,7 @@ const PostProperty = () => {
   };
 
   // Handle area change with validation
-  const handleAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAreaChange = (e) => {
     const value = e.target.value;
     const isValid = !value || (parseFloat(value) > 0);
     setAreaValidation(isValid);
@@ -146,8 +146,8 @@ const PostProperty = () => {
   };
 
   // Helper functions to map UI selections to API IDs
-  const mapCategoryToId = (type: string) => {
-    const categoryMap: Record<string, number> = {
+  const mapCategoryToId = (type) => {
+    const categoryMap = {
       'buy': 1,
       'rent': 2,
       'sell': 3
@@ -155,8 +155,8 @@ const PostProperty = () => {
     return categoryMap[type] || 1;
   };
 
-  const mapPropertyTypeToId = (type: string) => {
-    const propertyTypeMap: Record<string, number> = {
+  const mapPropertyTypeToId = (type) => {
+    const propertyTypeMap = {
       'apartment': 3,
       'villa': 4,
       'house': 2,
@@ -166,8 +166,8 @@ const PostProperty = () => {
     return propertyTypeMap[type] || 1;
   };
 
-  const mapCityToId = (cityName: string) => {
-    const cityMap: Record<string, number> = {
+  const mapCityToId = (cityName) => {
+    const cityMap = {
       'Indore': 1,
       'Bhopal': 2,
       'Pune': 3
@@ -175,8 +175,8 @@ const PostProperty = () => {
     return cityMap[cityName] || 1;
   };
 
-  const getCityStateId = (cityId: number) => {
-    const cityStateMap: Record<number, number> = {
+  const getCityStateId = (cityId) => {
+    const cityStateMap = {
       1: 1, // Indore -> Madhya Pradesh
       2: 1, // Bhopal -> Madhya Pradesh
       3: 2  // Pune -> Maharashtra
@@ -184,18 +184,17 @@ const PostProperty = () => {
     return cityStateMap[cityId] || 1;
   };
 
-  const mapOwnerTypeToId = (type: string) => {
-    const ownerTypeMap: Record<string, number> = {
+  const mapOwnerTypeToId = (type) => {
+    const ownerTypeMap = {
       'owner': 1,
       'broker': 2,
       'builder': 3,
-      'dealer': 2
-    };
+ };
     return ownerTypeMap[type] || 1;
   };
 
-  const mapAmenityToId = (amenity: string) => {
-    const amenityMap: Record<string, number> = {
+  const mapAmenityToId = (amenity) => {
+    const amenityMap = {
       'Lift': 1,
       'Swimming Pool': 2,
       'Club House': 3,
@@ -210,7 +209,7 @@ const PostProperty = () => {
     return amenityMap[amenity] || 1;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
   
     // Basic validation
@@ -305,58 +304,56 @@ const PostProperty = () => {
         formData.append('AmenityIds', id.toString());
       });
   
-      // Upload images and mark main image
+      // Upload images with fixed format to match API expectations
       images.forEach((image, index) => {
-        formData.append("Images", image);
-        if (index === mainImageIndex) {
-          formData.append("MainImageIndex", index.toString());
-        }
+        formData.append(`Images[${index}].File`, image);
+        formData.append(`Images[${index}].IsMain`, index === mainImageIndex ? "true" : "false");
       });
   
       // API call
-const response = await fetch('https://homeyatraapi.azurewebsites.net/api/Account/AddProperty', {
-  method: 'POST',
-  body: formData,
-});
+      const response = await fetch('https://homeyatraapi.azurewebsites.net/api/Account/AddProperty', {
+        method: 'POST',
+        body: formData,
+      });
 
-if (!response.ok) {
-  throw new Error(`Error: ${response.status}`);
-}
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
 
-const result = await response.json();
+      const result = await response.json();
 
-// Extract the propertyId from the response, checking both possible field names
-// This handles the API inconsistency where sometimes it returns 'propetyId' (with typo)
-const newPropertyId = result?.propertyId || result?.propetyId;
+      // Extract the propertyId from the response, checking both possible field names
+      // This handles the API inconsistency where sometimes it returns 'propetyId' (with typo)
+      const newPropertyId = result?.propertyId || result?.propetyId;
 
-if (!newPropertyId) {
-  toast({
-    title: "Failed to retrieve Property ID",
-    description: "We could not retrieve the Property ID after posting.",
-    variant: "destructive",
-  });
-  return;
-}
+      if (!newPropertyId) {
+        toast({
+          title: "Failed to retrieve Property ID",
+          description: "We could not retrieve the Property ID after posting.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-console.log("New Property ID from API response:", newPropertyId);
+      console.log("New Property ID from API response:", newPropertyId);
 
-toast({
-  title: "Property Posted Successfully!",
-  description: "Your property has been submitted for review.",
-});
+      toast({
+        title: "Property Posted Successfully!",
+        description: "Your property has been submitted for review.",
+      });
 
-// Navigate to the Dashboard page with the PropertyId
-navigate(`/dashboard?newPropertyId=${newPropertyId}`);
-} catch (error) {
-  console.error("Error posting property:", error);
-  toast({
-    title: "Failed to Post Property",
-    description: "There was an error posting your property. Please try again.",
-    variant: "destructive",
-  });
-} finally {
-  setLoading(false);
-}
+      // Navigate to the Dashboard page with the PropertyId
+      navigate(`/dashboard?newPropertyId=${newPropertyId}`);
+    } catch (error) {
+      console.error("Error posting property:", error);
+      toast({
+        title: "Failed to Post Property",
+        description: "There was an error posting your property. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -664,7 +661,7 @@ navigate(`/dashboard?newPropertyId=${newPropertyId}`);
                   <SelectContent>
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="broker">Broker</SelectItem>
-                    <SelectItem value="dealer">Dealer</SelectItem>
+                
                     <SelectItem value="builder">Builder</SelectItem>
                   </SelectContent>
                 </Select>

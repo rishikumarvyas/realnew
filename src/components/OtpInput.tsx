@@ -15,12 +15,12 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 }) => {
   const [activeInput, setActiveInput] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
+  
   // Initialize refs array
   if (inputRefs.current.length === 0) {
     inputRefs.current = Array(length).fill(null);
   }
-
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const newValue = e.target.value.replace(/[^0-9]/g, "");
     
@@ -28,14 +28,14 @@ export const OtpInput: React.FC<OtpInputProps> = ({
     const newOtp = value.split("");
     newOtp[index] = newValue.slice(-1);
     onChange(newOtp.join(""));
-
+    
     // Move focus to next input if available and there is a value
     if (index < length - 1 && newValue) {
       inputRefs.current[index + 1]?.focus();
       setActiveInput(index + 1);
     }
   };
-
+  
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace") {
       if (!value[index] && index > 0) {
@@ -56,13 +56,13 @@ export const OtpInput: React.FC<OtpInputProps> = ({
       setActiveInput(index + 1);
     }
   };
-
+  
   const handleFocus = (index: number) => {
     setActiveInput(index);
     // Select the content when focused for easy replacement
     inputRefs.current[index]?.select();
   };
-
+  
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").replace(/[^0-9]/g, "").slice(0, length);
@@ -82,9 +82,9 @@ export const OtpInput: React.FC<OtpInputProps> = ({
     inputRefs.current[lastFilledIndex]?.focus();
     setActiveInput(lastFilledIndex);
   };
-
+  
   return (
-    <div className={`flex gap-2 ${className || ""}`}>
+    <div className={`flex gap-1 sm:gap-2 ${className || ""}`}>
       {Array(length)
         .fill(0)
         .map((_, index) => (
@@ -101,7 +101,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             onPaste={handlePaste}
             onFocus={() => handleFocus(index)}
             onClick={() => handleFocus(index)}
-            className="h-12 w-12 rounded-md border border-input bg-background text-center text-xl focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded border border-input bg-background text-center text-sm sm:text-lg md:text-xl focus:border-primary focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/20"
           />
         ))}
     </div>

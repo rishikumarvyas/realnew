@@ -1,10 +1,11 @@
+// Signup.js - Modified Component
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X, User, Phone, Key, Home } from "lucide-react";
 import { OtpInput } from "@/components/OtpInput";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,14 +13,25 @@ import { useAuth } from "@/contexts/AuthContext";
 const Signup = () => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
-  const [step, setStep] = useState<"form" | "otp">("form");
+  const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [otpValue, setOtpValue] = useState("");
+  const [isVisible, setIsVisible] = useState(true); // Set to true by default to show modal right away
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, signup } = useAuth();
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleClose = () => {
+    // First hide the modal with animation
+    setIsVisible(false);
+    
+    // Then navigate away after animation completes
+    setTimeout(() => {
+      navigate("/");
+    }, 300);
+  };
+
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -69,7 +81,7 @@ const Signup = () => {
     }
   };
 
-  const handleOtpChange = (value: string) => {
+  const handleOtpChange = (value) => {
     setOtpValue(value);
   };
 
@@ -119,112 +131,156 @@ const Signup = () => {
     }
   };
 
+  const popupClasses = isVisible
+    ? "opacity-100 translate-y-0"
+    : "opacity-0 translate-y-10 pointer-events-none";
+
+  const backdropClasses = isVisible
+    ? "opacity-50"
+    : "opacity-0 pointer-events-none";
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="relative">
-          {step === "otp" && (
-            <Button
-              variant="ghost"
-              className="p-0 h-8 w-8 absolute left-4 top-4"
-              onClick={() => setStep("form")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <CardTitle className="text-center text-2xl">Sign up for HomeYatra</CardTitle>
-          <CardDescription className="text-center">
-            {step === "form"
-              ? "Create an account to start your real estate journey"
-              : `Enter the verification code sent to +91 ${phone}`}
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
-          {step === "form" ? (
-            <form onSubmit={handleFormSubmit}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="flex">
-                    <div className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
-                      +91
-                    </div>
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      {/* Backdrop */}
+      <div 
+        className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
+        onClick={handleClose}
+      ></div>
+
+      {/* Popup card */}
+      <div className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}>
+        <Card className="w-full shadow-xl border-none overflow-hidden">
+          {/* House icon at the top */}
+          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-5 shadow-lg">
+              <Home className="h-8 w-8 text-white" />
+            </div>
+          </div>
+
+          {/* Close button */}
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          <CardHeader className="relative pt-12">
+            {step === "otp" && (
+              <Button
+                variant="ghost"
+                className="p-0 h-8 w-8 absolute left-4 top-4"
+                onClick={() => setStep("form")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <CardTitle className="text-center text-2xl bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+              Sign up for HomeYatra
+            </CardTitle>
+            <CardDescription className="text-center">
+              {step === "form"
+                ? "Create an account to start your real estate journey"
+                : `Enter the verification code sent to +91 ${phone}`}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {step === "form" ? (
+              <form onSubmit={handleFormSubmit} className="transition-all duration-300">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-500" />
+                      Full Name
+                    </Label>
                     <Input
-                      id="phone"
-                      placeholder="Enter 10 digit phone number"
-                      value={phone}
-                      onChange={(e) => {
-                        // Allow only numbers and limit to 10 digits
-                        const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-                        setPhone(value);
-                      }}
-                      type="tel"
-                      className="rounded-l-none"
-                      inputMode="numeric"
+                      id="name"
+                      placeholder="Enter your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="border-blue-100 focus:border-blue-300"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-blue-500" />
+                      Phone Number
+                    </Label>
+                    <div className="flex">
+                      <div className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-blue-50 text-blue-600 font-medium">
+                        +91
+                      </div>
+                      <Input
+                        id="phone"
+                        placeholder="Enter 10 digit phone number"
+                        value={phone}
+                        onChange={(e) => {
+                          // Allow only numbers and limit to 10 digits
+                          const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setPhone(value);
+                        }}
+                        type="tel"
+                        className="rounded-l-none border-blue-100 focus:border-blue-300"
+                        inputMode="numeric"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
+                    disabled={loading || phone.length !== 10}
+                  >
+                    {loading ? "Sending OTP..." : "Continue"}
+                  </Button>
                 </div>
+              </form>
+            ) : (
+              <div className="space-y-6 transition-all duration-300">
+                <div className="space-y-2 text-center">
+                  <div className="flex justify-center mb-2">
+                    <Key className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    A 6-digit code has been sent to your phone
+                  </p>
+                </div>
+                <OtpInput 
+                  value={otpValue}
+                  onChange={handleOtpChange}
+                  className="mb-6" 
+                />
                 <Button 
-                  type="submit" 
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={loading || phone.length !== 10}
+                  onClick={handleOtpSubmit}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
+                  disabled={loading || otpValue.length !== 6}
                 >
-                  {loading ? "Sending OTP..." : "Continue"}
+                  {loading ? "Verifying..." : "Verify & Register"}
                 </Button>
+                <div className="text-center mt-4">
+                  <Button 
+                    variant="link" 
+                    onClick={handleFormSubmit}
+                    disabled={loading}
+                    className="text-blue-600"
+                  >
+                    {loading ? "Resending..." : "Resend Code"}
+                  </Button>
+                </div>
               </div>
-            </form>
-          ) : (
-            <div className="space-y-6">
-              <div className="space-y-2 text-center">
-                <p className="text-sm text-gray-500">
-                  A 6-digit code has been sent to your phone
-                </p>
-              </div>
-              <OtpInput 
-                value={otpValue}
-                onChange={handleOtpChange}
-                className="mb-6" 
-              />
-              <Button 
-                onClick={handleOtpSubmit}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={loading || otpValue.length !== 6}
-              >
-                {loading ? "Verifying..." : "Verify & Register"}
-              </Button>
-              <div className="text-center mt-4">
-                <Button 
-                  variant="link" 
-                  onClick={handleFormSubmit}
-                  disabled={loading}
-                  className="text-blue-600"
-                >
-                  {loading ? "Resending..." : "Resend Code"}
-                </Button>
-              </div>
+            )}
+          </CardContent>
+          
+          <CardFooter className="flex justify-center border-t p-6">
+            <div className="text-sm text-gray-500">
+              Already have an account?{" "}
+              <Link to="/login" className="text-blue-600 hover:underline font-medium">
+                Log in
+              </Link>
             </div>
-          )}
-        </CardContent>
-        
-        <CardFooter className="flex justify-center border-t p-6">
-          <div className="text-sm text-gray-500">
-            Already have an account?{" "}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
-              Log in
-            </Link>
-          </div>
-        </CardFooter>
-      </Card>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };

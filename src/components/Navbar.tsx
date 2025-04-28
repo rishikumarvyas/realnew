@@ -57,12 +57,12 @@ export function Navbar() {
               >
                 Rent
               </Link>
-              <Link
+              {/* <Link
                 to="/properties?type=sell"
                 className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
               >
                 Sell
-              </Link>
+              </Link> */}
             
               <Link
                 to="/contactus"
@@ -105,18 +105,18 @@ export function Navbar() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="hover:bg-blue-50">
+                    {/* <DropdownMenuItem asChild className="hover:bg-blue-50">
                       <Link to="/my-properties" className="cursor-pointer flex items-center py-1">
                         <Building className="mr-2 h-4 w-4 text-blue-500" />
                         My Properties
                       </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="hover:bg-blue-50">
+                    </DropdownMenuItem> */}
+                    {/* <DropdownMenuItem asChild className="hover:bg-blue-50">
                       <Link to="/favorites" className="cursor-pointer flex items-center py-1">
                         <MapPin className="mr-2 h-4 w-4 text-blue-500" />
                         Saved Locations
                       </Link>
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer hover:bg-red-50 flex items-center py-1">
                       <LogOut className="mr-2 h-4 w-4 text-red-500" />
@@ -177,13 +177,13 @@ export function Navbar() {
           >
             Rent
           </Link>
-          <Link
+          {/* <Link
             to="/properties?type=sell"
             className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
             onClick={() => setIsOpen(false)}
           >
             Sell
-          </Link>
+          </Link> */}
       
           <Link
             to="/contactus"

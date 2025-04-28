@@ -1,44 +1,51 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+// Login.js - Modified Component
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Home } from "lucide-react";
+import { ArrowLeft, X, Phone, Key, Home } from "lucide-react";
+import { OtpInput } from "@/components/OtpInput";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { PhoneStep } from "@/components/login/PhoneStep";
-import { OtpStep } from "@/components/login/OtpStep";
-import { motion, AnimatePresence } from "framer-motion";
 
 const Login = () => {
   const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState("phone");
   const [loading, setLoading] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [isVisible, setIsVisible] = useState(true); // Set to true by default to show modal right away
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { requestOtp, login, isAuthenticated, user } = useAuth();
+  const { requestOtp, login } = useAuth();
 
-  // Log the user object whenever it changes
-  useEffect(() => {
-    console.log("Current auth state in Login:", { isAuthenticated, user });
-  }, [isAuthenticated, user]);
+  const handleClose = () => {
+    // First hide the modal with animation
+    setIsVisible(false);
+    
+    // Then navigate away after animation completes
+    setTimeout(() => {
+      navigate("/");
+    }, 300);
+  };
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log("User is authenticated, redirecting to dashboard");
-      navigate("/dashboard", { replace: true });
+  const handlePhoneSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!phone.trim() || phone.length !== 10) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid 10-digit phone number.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [isAuthenticated, navigate]);
-
-  const handlePhoneSubmit = async (phoneNumber: string) => {
+    
     setLoading(true);
     
     try {
-      // Set phone state for OTP step
-      setPhone(phoneNumber);
-      
-      // Send OTP API call
-      const success = await requestOtp(phoneNumber);
+      const success = await requestOtp(phone);
       
       if (success) {
         toast({
@@ -59,30 +66,41 @@ const Login = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("OTP request error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOtpSubmit = async (otp: string) => {
+  const handleOtpChange = (value) => {
+    setOtpValue(value);
+  };
+
+  const handleOtpSubmit = async () => {
+    if (loading) return;
+    
+    if (!otpValue || otpValue.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter a valid 6-digit OTP.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      console.log(`Submitting login with phone: ${phone}, OTP: ${otp}`);
+      console.log(`Submitting login with phone: ${phone}, OTP: ${otpValue}`);
       
       // Call the login function
-      const success = await login(phone, otp);
+      const success = await login(phone, otpValue);
       
       if (success) {
         toast({
           title: "Login Successful",
           description: "You have been logged in successfully.",
         });
-        
-        // Direct navigation without delay 
-        console.log("Login successful, redirecting to dashboard");
-        navigate("/dashboard", { replace: true });
+        navigate("/dashboard");
       } else {
         toast({
           title: "Login Failed",
@@ -102,120 +120,142 @@ const Login = () => {
     }
   };
 
-  const handleResendOtp = async () => {
-    return handlePhoneSubmit(phone);
-  };
+  const popupClasses = isVisible
+    ? "opacity-100 translate-y-0"
+    : "opacity-0 translate-y-10 pointer-events-none";
+
+  const backdropClasses = isVisible
+    ? "opacity-50"
+    : "opacity-0 pointer-events-none";
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image with Overlay */}
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat" 
-        style={{ 
-          backgroundImage: "url('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1950&q=80')",
-          filter: "brightness(0.7)"
-        }}
-      />
-      
-      {/* Content Container */}
-      <div className="relative z-10 w-full max-w-5xl px-4 flex flex-col md:flex-row items-center gap-8">
-        
-        {/* Left Content */}
-        <div className="w-full md:w-1/2 text-white mb-6 md:mb-0">
-          <div className="flex items-center mb-6">
-            <Home className="h-8 w-8 mr-2 text-blue-400" />
-            <h1 className="text-3xl font-bold">HomeYatra</h1>
-          </div>
-          <h2 className="text-4xl font-bold mb-4">Find Your Dream Home</h2>
-          <p className="text-lg mb-8 text-gray-100">
-            Join thousands of users who have found their perfect property with HomeYatra. Sign in to continue your journey.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <div className="bg-white bg-opacity-20 backdrop-blur-sm p-4 rounded-lg flex-1 min-w-[120px]">
-              <p className="text-2xl font-bold">10,000+</p>
-              <p className="text-sm">Properties</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-sm p-4 rounded-lg flex-1 min-w-[120px]">
-              <p className="text-2xl font-bold">5,000+</p>
-              <p className="text-sm">Happy Customers</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-sm p-4 rounded-lg flex-1 min-w-[120px]">
-              <p className="text-2xl font-bold">500+</p>
-              <p className="text-sm">Cities</p>
+        className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
+        onClick={handleClose}
+      ></div>
+
+      {/* Popup card */}
+      <div className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}>
+        <Card className="w-full shadow-xl border-none overflow-hidden">
+          {/* House icon at the top */}
+          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-5 shadow-lg">
+              <Home className="h-8 w-8 text-white" />
             </div>
           </div>
-        </div>
-        
-        {/* Right Content - Login Card */}
-        <AnimatePresence mode="wait">
-          <motion.div 
-            key={step}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="w-full md:w-1/2"
+
+          {/* Close button */}
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
           >
-            <Card className="w-full backdrop-blur-md bg-white bg-opacity-95 shadow-xl">
-              <CardHeader className="relative space-y-2 pb-2">
-                {step === "otp" && (
-                  <Button
-                    variant="ghost"
-                    className="p-0 h-8 w-8 absolute left-4 top-4"
-                    onClick={() => setStep("phone")}
+            <X className="h-5 w-5" />
+          </button>
+
+          <CardHeader className="relative pt-12">
+            {step === "otp" && (
+              <Button
+                variant="ghost"
+                className="p-0 h-8 w-8 absolute left-4 top-4"
+                onClick={() => setStep("phone")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <CardTitle className="text-center text-2xl bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+              Login to HomeYatra
+            </CardTitle>
+            <CardDescription className="text-center">
+              {step === "phone"
+                ? "Enter your phone number to continue"
+                : `Enter the verification code sent to +91 ${phone}`}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            {step === "phone" ? (
+              <form onSubmit={handlePhoneSubmit} className="transition-all duration-300">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-blue-500" />
+                      Phone Number
+                    </Label>
+                    <div className="flex">
+                      <div className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-blue-50 text-blue-600 font-medium">
+                        +91
+                      </div>
+                      <Input
+                        id="phone"
+                        placeholder="Enter 10 digit phone number"
+                        value={phone}
+                        onChange={(e) => {
+                          // Allow only numbers and limit to 10 digits
+                          const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setPhone(value);
+                        }}
+                        type="tel"
+                        className="rounded-l-none border-blue-100 focus:border-blue-300"
+                        inputMode="numeric"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
+                    disabled={loading || phone.length !== 10}
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    {loading ? "Sending OTP..." : "Continue"}
                   </Button>
-                )}
-                <CardTitle className="text-center text-2xl font-bold">
-                  {step === "phone" ? "Welcome Back" : "Verify Your Phone"}
-                </CardTitle>
-                <CardDescription className="text-center">
-                  {step === "phone"
-                    ? "Enter your phone number to continue"
-                    : `Enter the verification code sent to +91 ${phone}`}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="pt-6">
-                {step === "phone" ? (
-                  <PhoneStep 
-                    onSubmit={handlePhoneSubmit}
-                    loading={loading}
-                  />
-                ) : (
-                  <OtpStep
-                    phone={phone}
-                    onSubmit={handleOtpSubmit}
-                    onResendOtp={handleResendOtp}
-                    loading={loading}
-                  />
-                )}
-              </CardContent>
-              
-              <CardFooter className="flex justify-center border-t p-6">
-                <div className="text-sm text-gray-500">
-                  Don't have an account?{" "}
-                  <Link to="/signup" className="text-blue-600 hover:underline font-medium">
-                    Sign up
-                  </Link>
                 </div>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-      
-      {/* Trust Signals */}
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-        <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-full px-6 py-2 flex items-center space-x-4">
-          <span className="text-xs text-gray-600">Trusted by</span>
-          <div className="flex items-center space-x-6">
-            <span className="text-sm font-semibold text-gray-800">MakeMyHome</span>
-            <span className="text-sm font-semibold text-gray-800">PropertyHub</span>
-            <span className="text-sm font-semibold text-gray-800">HomeFinance</span>
-          </div>
-        </div>
+              </form>
+            ) : (
+              <div className="space-y-6 transition-all duration-300">
+                <div className="space-y-2 text-center">
+                  <div className="flex justify-center mb-2">
+                    <Key className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    A 6-digit code has been sent to your phone
+                  </p>
+                </div>
+                <OtpInput 
+                  value={otpValue}
+                  onChange={handleOtpChange}
+                  className="mb-6" 
+                />
+                <Button 
+                  onClick={handleOtpSubmit}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
+                  disabled={loading || otpValue.length !== 6}
+                >
+                  {loading ? "Verifying..." : "Verify & Login"}
+                </Button>
+                <div className="text-center mt-4">
+                  <Button 
+                    variant="link" 
+                    onClick={handlePhoneSubmit}
+                    disabled={loading}
+                    className="text-blue-600"
+                  >
+                    {loading ? "Resending..." : "Resend Code"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+          
+          <CardFooter className="flex justify-center border-t p-6">
+            <div className="text-sm text-gray-500">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-blue-600 hover:underline font-medium">
+                Sign up
+              </Link>
+            </div>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

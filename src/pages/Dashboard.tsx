@@ -321,17 +321,31 @@ const Dashboard = () => {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="properties">
-            My Properties
-          </TabsTrigger>
-          <TabsTrigger value="messages">
-            Messages {unreadCount > 0 && <span className="ml-1 bg-red-500 text-white rounded-full w-5 h-5 inline-flex items-center justify-center text-xs">{unreadCount}</span>}
-          </TabsTrigger>
-          <TabsTrigger value="account">
-            Account Settings
-          </TabsTrigger>
-        </TabsList>
+  <TabsList className="mb-4 sm:mb-6 w-full flex overflow-x-auto no-scrollbar">
+    <TabsTrigger 
+      value="properties"
+      className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
+    >
+      <span className="block truncate">My Properties</span>
+    </TabsTrigger>
+    <TabsTrigger 
+      value="messages"
+      className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
+    >
+      <span className="block truncate">Messages</span>
+      {unreadCount > 0 && (
+        <span className="ml-1 bg-red-500 text-white rounded-full w-4 h-4 sm:w-5 sm:h-5 inline-flex items-center justify-center text-xs">
+          {unreadCount}
+        </span>
+      )}
+    </TabsTrigger>
+    <TabsTrigger 
+      value="account"
+      className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
+    >
+      <span className="block truncate">Account</span>
+    </TabsTrigger>
+  </TabsList>
         
         <TabsContent value="properties">
           {properties.length === 0 ? (
