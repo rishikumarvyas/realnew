@@ -24,28 +24,84 @@ interface DashboardProperty extends PropertyCardProps {
   propertyId: string;
 }
 
+// 1. Updated convertToPropertyCard function with better image handling
 const convertToPropertyCard = (property: any): DashboardProperty => {
-  // Updated to use the correct propertyId field from API
-  const propertyId = property.propertyId || "";
+  // Get the property ID correctly
+  const propertyId = property.propertyId || property.id || "";
   
-  console.log("Converting property with ID:", propertyId, property);
+  // Initialize with a reliable fallback image
+  let mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
+  
+  try {
+    // Log the property for debugging
+    console.log(`Processing property ${propertyId}:`, property);
+    
+    // Check if the property has imageDetails array
+    if (property.imageDetails && Array.isArray(property.imageDetails) && property.imageDetails.length > 0) {
+      console.log(`Property ${propertyId} has ${property.imageDetails.length} images`);
+      
+      // Try to find main image first
+      const mainImageObj = property.imageDetails.find((img: any) => img.isMainImage === true);
+      
+      if (mainImageObj) {
+        // Make sure we're using the correct property for the URL
+        mainImage = mainImageObj.imageUrl || mainImageObj.url || mainImageObj.path || mainImage;
+        console.log(`Using main image for property ${propertyId}:`, mainImage);
+      } else {
+        // Use first image as fallback
+        const firstImg = property.imageDetails[0];
+        mainImage = firstImg.imageUrl || firstImg.url || firstImg.path || mainImage;
+        console.log(`Using first image for property ${propertyId}:`, mainImage);
+      }
+    } 
+    // Check if there's a mainImageDetail object
+    else if (property.mainImageDetail) {
+      mainImage = property.mainImageDetail.url || property.mainImageDetail.imageUrl || 
+                 property.mainImageDetail.path || mainImage;
+      console.log(`Using mainImageDetail for property ${propertyId}:`, mainImage);
+    }
+    // Check if there's a simple image property
+    else if (property.image) {
+      mainImage = property.image;
+      console.log(`Using direct image property for ${propertyId}:`, mainImage);
+    }
+    
+    // If the image URL doesn't start with http or https, it might be a relative path
+    if (mainImage && !mainImage.startsWith('http')) {
+      // Add base URL for relative paths
+      if (!mainImage.startsWith('/')) {
+        mainImage = '/' + mainImage;
+      }
+      mainImage = `https://homeyatraapi.azurewebsites.net${mainImage}`;
+      console.log(`Converted relative path to absolute URL: ${mainImage}`);
+    }
+    
+    // Extra check to ensure image URL is valid
+    if (mainImage && !mainImage.match(/^(https?:\/\/)/)) {
+      console.warn(`Invalid image URL format: ${mainImage}, using fallback`);
+      mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
+    }
+    
+  } catch (error) {
+    console.error("Error processing image for property:", error);
+    mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
+  }
   
   return {
     id: propertyId,
-    propertyId: propertyId, // Using the propertyId consistently
+    propertyId: propertyId,
     title: property.title || "Untitled Property",
     price: property.price || 0,
     location: property.address ? `${property.address}, ${property.city || ''}` : "Unknown Location",
-    type: property.superCategory?.toLowerCase() === 'buy' ? 'buy' : 
-          property.superCategory?.toLowerCase() === 'rent' ? 'rent' : 'sell',
+    type: property.superCategory?.toLowerCase() === 'buy' ? 'buy' :
+           property.superCategory?.toLowerCase() === 'rent' ? 'rent' : 'sell',
     bedrooms: property.bedroom || 0,
     bathrooms: property.bathroom || 0,
     area: property.area || 0,
-    image: property.mainImageDetail?.url || "https://homeyatra.blob.core.windows.net/propertyimages/0d07b3e7-2a27-45f1-9631-298f38193ea3/1_propert13.jpg",
-    status: "active",
+    image: mainImage,
+    status: property.status || "active",
   };
 };
-
 const mockMessages = [
   {
     id: "msg1",

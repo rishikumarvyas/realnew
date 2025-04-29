@@ -1,28 +1,28 @@
 /**
  * Format a phone number to ensure it has the country code
  */
+// Update this function in your utils/auth.ts file
 export const formatPhoneNumber = (phoneNumber: string): string | null => {
-  // Remove any non-digit characters
-  const digitsOnly = phoneNumber.replace(/\D/g, '');
+  if (!phoneNumber) return null;
   
-  // Check if the phone number is valid
-  if (digitsOnly.length < 10) {
-    return null;
+  // Remove all non-digit characters except for the leading plus sign
+  let cleaned = phoneNumber.replace(/[^\d+]/g, "");
+  
+  // Check if the phone number starts with +
+  const startsWithPlus = cleaned.startsWith("+");
+  
+  // If it doesn't start with +, but starts with 91, add the +
+  if (!startsWithPlus && cleaned.startsWith("91")) {
+    cleaned = "+" + cleaned;
   }
   
-  // If it's already in international format (starting with +91), return it
-  if (digitsOnly.startsWith('91') && digitsOnly.length >= 12) {
-    return digitsOnly;
+  // If it doesn't start with + or 91, add +91
+  if (!startsWithPlus && !cleaned.startsWith("91")) {
+    cleaned = "+91" + cleaned;
   }
   
-  // Otherwise, add +91 prefix if it's a 10-digit Indian mobile number
-  if (digitsOnly.length === 10) {
-    return `91${digitsOnly}`;
-  }
-  
-  return digitsOnly;
+  return cleaned;
 };
-
 /**
  * Parse JWT token to extract payload
  */

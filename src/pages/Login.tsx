@@ -1,4 +1,4 @@
-// Login.js - Modified Component
+// Login.js - Refactored with OtpStep Component
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, X, Phone, Key, Home } from "lucide-react";
-import { OtpInput } from "@/components/OtpInput";
+import { OtpStep } from "@/components/login/OtpStep";// Import the new component
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,7 +14,6 @@ const Login = () => {
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState("phone");
   const [loading, setLoading] = useState(false);
-  const [otpValue, setOtpValue] = useState("");
   const [isVisible, setIsVisible] = useState(true); // Set to true by default to show modal right away
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -31,7 +30,7 @@ const Login = () => {
   };
 
   const handlePhoneSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     if (!phone.trim() || phone.length !== 10) {
       toast({
@@ -71,22 +70,7 @@ const Login = () => {
     }
   };
 
-  const handleOtpChange = (value) => {
-    setOtpValue(value);
-  };
-
-  const handleOtpSubmit = async () => {
-    if (loading) return;
-    
-    if (!otpValue || otpValue.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter a valid 6-digit OTP.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  const handleOtpSubmit = async (otpValue) => {
     setLoading(true);
     
     try {
@@ -170,7 +154,7 @@ const Login = () => {
             <CardDescription className="text-center">
               {step === "phone"
                 ? "Enter your phone number to continue"
-                : `Enter the verification code sent to +91 ${phone}`}
+                : "Enter the verification code sent to your phone"}
             </CardDescription>
           </CardHeader>
           
@@ -212,38 +196,12 @@ const Login = () => {
                 </div>
               </form>
             ) : (
-              <div className="space-y-6 transition-all duration-300">
-                <div className="space-y-2 text-center">
-                  <div className="flex justify-center mb-2">
-                    <Key className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    A 6-digit code has been sent to your phone
-                  </p>
-                </div>
-                <OtpInput 
-                  value={otpValue}
-                  onChange={handleOtpChange}
-                  className="mb-6" 
-                />
-                <Button 
-                  onClick={handleOtpSubmit}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
-                  disabled={loading || otpValue.length !== 6}
-                >
-                  {loading ? "Verifying..." : "Verify & Login"}
-                </Button>
-                <div className="text-center mt-4">
-                  <Button 
-                    variant="link" 
-                    onClick={handlePhoneSubmit}
-                    disabled={loading}
-                    className="text-blue-600"
-                  >
-                    {loading ? "Resending..." : "Resend Code"}
-                  </Button>
-                </div>
-              </div>
+              <OtpStep
+                phone={phone}
+                onSubmit={handleOtpSubmit}
+                onResendOtp={handlePhoneSubmit}
+                loading={loading}
+              />
             )}
           </CardContent>
           

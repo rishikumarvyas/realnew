@@ -50,14 +50,19 @@ const PostProperty = () => {
   const availableAmenities = [
     "Swimming Pool",
     "Gym",
-    "24x7 Security",
+    "Security",
     "Power Backup",
     "Parking",
-    "WiFi",
-    "Air Conditioning",
-    "Children's Play Area",
+    "Garden",
     "Lift",
     "Club House",
+  ];
+
+  // Available cities
+  const availableCities = [
+    { id: 1, name: "Indore" },
+    { id: 2, name: "Bhopal" },
+    { id: 3, name: "Pune" },
   ];
 
   // Form validation states
@@ -93,8 +98,8 @@ const PostProperty = () => {
       setImageURLs([...imageURLs, ...newImageURLs]);
 
       // If no main image is selected, select the first one by default
-      if (mainImageIndex === null && newImageURLs.length > 0) {
-        setMainImageIndex(0);
+      if (mainImageIndex === null && newImages.length > 0) {
+        setMainImageIndex(images.length); // Set to the first of the newly added images
       }
     }
   };
@@ -150,29 +155,19 @@ const PostProperty = () => {
     const categoryMap = {
       'buy': 1,
       'rent': 2,
-      'sell': 3
     };
     return categoryMap[type] || 1;
   };
 
   const mapPropertyTypeToId = (type) => {
     const propertyTypeMap = {
-      'apartment': 3,
-      'villa': 4,
-      'house': 2,
-      'plot': 5,
-      'commercial': 6
+      'Row House': 3,
+      'shop': 2,
+      'Plot': 4,
+      'Bunglow': 5,
+      'Flat': 1
     };
     return propertyTypeMap[type] || 1;
-  };
-
-  const mapCityToId = (cityName) => {
-    const cityMap = {
-      'Indore': 1,
-      'Bhopal': 2,
-      'Pune': 3
-    };
-    return cityMap[cityName] || 1;
   };
 
   const getCityStateId = (cityId) => {
@@ -189,7 +184,7 @@ const PostProperty = () => {
       'owner': 1,
       'broker': 2,
       'builder': 3,
- };
+    };
     return ownerTypeMap[type] || 1;
   };
 
@@ -199,12 +194,10 @@ const PostProperty = () => {
       'Swimming Pool': 2,
       'Club House': 3,
       'Garden': 4,
-      '24x7 Security': 5,
-      'Power Backup': 6,
-      'Parking': 7,
-      'WiFi': 8,
-      'Air Conditioning': 9,
-      'Children\'s Play Area': 10
+      'Gym': 5,
+      'Security': 6,
+      'Parking': 8,
+      'Power Backup': 7,
     };
     return amenityMap[amenity] || 1;
   };
@@ -264,7 +257,7 @@ const PostProperty = () => {
       // Map your form selections to API IDs
       const categoryId = mapCategoryToId(propertyType);
       const propertyTypeId = mapPropertyTypeToId(category);
-      const cityId = mapCityToId(city);
+      const cityId = parseInt(city); // Use the direct city ID from the dropdown
       const stateId = getCityStateId(cityId);
       const userTypeId = mapOwnerTypeToId(ownerType);
   
@@ -289,7 +282,18 @@ const PostProperty = () => {
       formData.append('PropertyTypeId', propertyTypeId.toString());
       formData.append('Title', title);
       formData.append('Description', description);
-      formData.append('Price', parseFloat(price).toString()); // Convert string to float for consistent format
+      
+      // Fix for price format - ensure it's a valid number and has 2 decimal places
+      // Make sure the price is not empty and is converted to a float
+      const parsedPrice = parseFloat(price || "0");
+      // Format with exactly 2 decimal places
+      const formattedPrice = parsedPrice.toFixed(2);
+      // Append as string to formData
+      formData.append('Price', formattedPrice);
+      
+      // For debugging - log the price being sent
+      console.log("Sending price to API:", formattedPrice, "Type:", typeof formattedPrice);
+      
       formData.append('Area', area);
       if (bedrooms) formData.append('Bedroom', bedrooms);
       if (bathrooms) formData.append('Bathroom', bathrooms);
@@ -309,6 +313,12 @@ const PostProperty = () => {
         formData.append(`Images[${index}].File`, image);
         formData.append(`Images[${index}].IsMain`, index === mainImageIndex ? "true" : "false");
       });
+      
+      // For debugging - log the entire FormData
+      // This will help verify that the price is being included correctly
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
   
       // API call
       const response = await fetch('https://homeyatraapi.azurewebsites.net/api/Account/AddProperty', {
@@ -386,7 +396,7 @@ const PostProperty = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="propertyType" className="text-gray-700 font-medium">
-                    Category <span className="text-red-500">*</span>
+                    Property Type <span className="text-red-500">*</span>
                   </Label>
                   <Select 
                     value={propertyType} 
@@ -396,16 +406,15 @@ const PostProperty = () => {
                       <SelectValue placeholder="Select Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="buy">For Sale</SelectItem>
-                      <SelectItem value="rent">For Rent</SelectItem>
-                      <SelectItem value="sell">Selling</SelectItem>
+                      <SelectItem value="buy">Buy</SelectItem>
+                      <SelectItem value="rent">Rent</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="category" className="text-gray-700 font-medium">
-                    Property Type <span className="text-red-500">*</span>
+                    Category <span className="text-red-500">*</span>
                   </Label>
                   <Select 
                     value={category} 
@@ -415,11 +424,11 @@ const PostProperty = () => {
                       <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="apartment">Apartment</SelectItem>
-                      <SelectItem value="villa">Villa</SelectItem>
-                      <SelectItem value="house">House</SelectItem>
-                      <SelectItem value="plot">Plot</SelectItem>
-                      <SelectItem value="commercial">Commercial</SelectItem>
+                      <SelectItem value="Flat">Flat</SelectItem>
+                      <SelectItem value="Bunglow">Bunglow</SelectItem>
+                      <SelectItem value="Row House">House</SelectItem>
+                      <SelectItem value="Plot">Plot</SelectItem>
+                      <SelectItem value="shop">Shop</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -466,6 +475,9 @@ const PostProperty = () => {
                       value={price}
                       onChange={handlePriceChange}
                       className={`bg-white border-2 pl-8 focus:ring-2 focus:ring-blue-100 ${!priceValidation ? 'border-red-500' : ''}`}
+                      type="number" // Change to number type for better mobile input
+                      step="0.01" // Allow decimal input with 2 decimal places
+                      min="0" // Prevent negative values
                     />
                   </div>
                   {!priceValidation && (
@@ -484,6 +496,8 @@ const PostProperty = () => {
                       value={area}
                       onChange={handleAreaChange}
                       className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${!areaValidation ? 'border-red-500' : ''}`}
+                      type="number" // Change to number type
+                      min="0" // Prevent negative values
                     />
                     <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">sq.ft</span>
                   </div>
@@ -584,13 +598,21 @@ const PostProperty = () => {
                   <Label htmlFor="city" className="text-gray-700 font-medium">
                     City <span className="text-red-500">*</span>
                   </Label>
-                  <Input 
-                    id="city" 
-                    placeholder="Enter city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                  />
+                  <Select 
+                    value={city} 
+                    onValueChange={setCity}
+                  >
+                    <SelectTrigger id="city" className="bg-white border-2 focus:ring-2 focus:ring-blue-100">
+                      <SelectValue placeholder="Select City" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCities.map((cityOption) => (
+                        <SelectItem key={cityOption.id} value={cityOption.id.toString()}>
+                          {cityOption.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -661,7 +683,6 @@ const PostProperty = () => {
                   <SelectContent>
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="broker">Broker</SelectItem>
-                
                     <SelectItem value="builder">Builder</SelectItem>
                   </SelectContent>
                 </Select>

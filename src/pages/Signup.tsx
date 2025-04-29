@@ -1,61 +1,40 @@
-// Signup.js - Modified Component
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { X, ArrowLeft, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, X, User, Phone, Key, Home } from "lucide-react";
-import { OtpInput } from "@/components/OtpInput";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { OtpStep } from "@/components/login/OtpStep";
+import { FormStep } from "@/components/login/FormStep";
 
 const Signup = () => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
-  const [otpValue, setOtpValue] = useState("");
-  const [isVisible, setIsVisible] = useState(true); // Set to true by default to show modal right away
+  const [isVisible, setIsVisible] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, signup } = useAuth();
 
   const handleClose = () => {
-    // First hide the modal with animation
     setIsVisible(false);
-    
-    // Then navigate away after animation completes
     setTimeout(() => {
       navigate("/");
     }, 300);
   };
 
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
+  const handleFormSubmit = async (formData) => {
+    const { name: fullName, phone: phoneNumber } = formData;
     
-    if (!name.trim()) {
-      toast({
-        title: "Name Required",
-        description: "Please enter your name.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!phone.trim() || phone.length !== 10) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid 10-digit phone number.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    setName(fullName);
+    setPhone(phoneNumber);
     setLoading(true);
     
     try {
-      const success = await requestOtp(phone);
+      // Skip formatPhoneNumber and directly pass the correctly formatted number
+      const success = await requestOtp("+91" + phoneNumber);
       
       if (success) {
         toast({
@@ -81,36 +60,20 @@ const Signup = () => {
     }
   };
 
-  const handleOtpChange = (value) => {
-    setOtpValue(value);
-  };
-
-  const handleOtpSubmit = async () => {
-    if (loading) return;
-    
-    if (!otpValue || otpValue.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter a valid 6-digit OTP.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  const handleOtpSubmit = async (otp) => {
     setLoading(true);
     
     try {
-      console.log(`Submitting signup with phone: ${phone}, name: ${name}, OTP: ${otpValue}`);
+      // Skip formatPhoneNumber and directly pass the correctly formatted number
+      console.log(`Submitting signup with phone: +91${phone}, name: ${name}, OTP: ${otp}`);
       
-      // Call the signup function - this will use consistent userId behind the scenes
-      const success = await signup(phone, name, otpValue);
+      const success = await signup("+91" + phone, name, otp);
       
       if (success) {
         toast({
           title: "Registration Successful",
           description: "Your account has been created successfully. Please log in to continue.",
         });
-        // Navigate to login instead of dashboard
         navigate("/login");
       } else {
         toast({
@@ -126,6 +89,36 @@ const Signup = () => {
         variant: "destructive",
       });
       console.error("OTP verification error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    
+    try {
+      // Skip formatPhoneNumber and directly pass the correctly formatted number
+      const success = await requestOtp("+91" + phone);
+      
+      if (success) {
+        toast({
+          title: "OTP Sent",
+          description: "A new verification code has been sent to your phone.",
+        });
+      } else {
+        toast({
+          title: "Failed to Send OTP",
+          description: "There was an error sending the verification code. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -187,87 +180,14 @@ const Signup = () => {
           
           <CardContent>
             {step === "form" ? (
-              <form onSubmit={handleFormSubmit} className="transition-all duration-300">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-blue-500" />
-                      Full Name
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter your full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="border-blue-100 focus:border-blue-300"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-blue-500" />
-                      Phone Number
-                    </Label>
-                    <div className="flex">
-                      <div className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-blue-50 text-blue-600 font-medium">
-                        +91
-                      </div>
-                      <Input
-                        id="phone"
-                        placeholder="Enter 10 digit phone number"
-                        value={phone}
-                        onChange={(e) => {
-                          // Allow only numbers and limit to 10 digits
-                          const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-                          setPhone(value);
-                        }}
-                        type="tel"
-                        className="rounded-l-none border-blue-100 focus:border-blue-300"
-                        inputMode="numeric"
-                      />
-                    </div>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
-                    disabled={loading || phone.length !== 10}
-                  >
-                    {loading ? "Sending OTP..." : "Continue"}
-                  </Button>
-                </div>
-              </form>
+              <FormStep onSubmit={handleFormSubmit} loading={loading} />
             ) : (
-              <div className="space-y-6 transition-all duration-300">
-                <div className="space-y-2 text-center">
-                  <div className="flex justify-center mb-2">
-                    <Key className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    A 6-digit code has been sent to your phone
-                  </p>
-                </div>
-                <OtpInput 
-                  value={otpValue}
-                  onChange={handleOtpChange}
-                  className="mb-6" 
-                />
-                <Button 
-                  onClick={handleOtpSubmit}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
-                  disabled={loading || otpValue.length !== 6}
-                >
-                  {loading ? "Verifying..." : "Verify & Register"}
-                </Button>
-                <div className="text-center mt-4">
-                  <Button 
-                    variant="link" 
-                    onClick={handleFormSubmit}
-                    disabled={loading}
-                    className="text-blue-600"
-                  >
-                    {loading ? "Resending..." : "Resend Code"}
-                  </Button>
-                </div>
-              </div>
+              <OtpStep 
+                phone={phone}
+                onSubmit={handleOtpSubmit}
+                onResendOtp={handleResendOtp}
+                loading={loading}
+              />
             )}
           </CardContent>
           
