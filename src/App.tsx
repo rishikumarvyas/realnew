@@ -11,6 +11,9 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import AboutUs from "./pages/About";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import PropertyListing from "./pages/PropertyListing";
 import PropertyDetail from "./pages/PropertyDetail";
 import PostProperty from "./pages/PostProperty";
@@ -44,6 +47,9 @@ const App = () => (
               <Route index element={<Index />} />
               <Route path="contactus" element={<ContactUs />} />
               <Route path="login" element={<Login />} />
+              <Route path="about" element={<AboutUs/>} />
+              <Route path="terms" element={<TermsAndConditions/>} />
+              <Route path="privacy" element={<PrivacyPolicy/>} />
               <Route path="signup" element={<Signup />} />
               <Route path="properties" element={<PropertyListing />} />
               <Route path="properties/:id" element={<PropertyDetail />} />

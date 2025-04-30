@@ -74,7 +74,7 @@ const Signup = () => {
           title: "Registration Successful",
           description: "Your account has been created successfully. Please log in to continue.",
         });
-        navigate("/login");
+        navigate("/dashboard");
       } else {
         toast({
           title: "Registration Failed",

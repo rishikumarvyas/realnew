@@ -283,18 +283,25 @@ const PostProperty = () => {
       formData.append('Title', title);
       formData.append('Description', description);
       
-      // Fix for price format - ensure it's a valid number and has 2 decimal places
-      // Make sure the price is not empty and is converted to a float
-      const parsedPrice = parseFloat(price || "0");
-      // Format with exactly 2 decimal places
-      const formattedPrice = parsedPrice.toFixed(2);
-      // Append as string to formData
-      formData.append('Price', formattedPrice);
+      // Price handling - same approach as area
+      if (price) {
+        // Ensure price is treated as a number with 2 decimal places
+        const priceValue = parseFloat(price);
+        if (!isNaN(priceValue)) {
+          // Format with exactly 2 decimal places
+          const formattedPrice = priceValue.toFixed(2);
+          formData.append('Price', formattedPrice);
+        }
+      }
       
-      // For debugging - log the price being sent
-      console.log("Sending price to API:", formattedPrice, "Type:", typeof formattedPrice);
+      // Area handling
+      if (area) {
+        const areaValue = parseFloat(area);
+        if (!isNaN(areaValue)) {
+          formData.append('Area', areaValue.toString());
+        }
+      }
       
-      formData.append('Area', area);
       if (bedrooms) formData.append('Bedroom', bedrooms);
       if (bathrooms) formData.append('Bathroom', bathrooms);
       if (balcony) formData.append('Balcony', balcony); 
@@ -315,7 +322,6 @@ const PostProperty = () => {
       });
       
       // For debugging - log the entire FormData
-      // This will help verify that the price is being included correctly
       for (let pair of formData.entries()) {
         console.log(pair[0] + ': ' + pair[1]);
       }
@@ -475,9 +481,8 @@ const PostProperty = () => {
                       value={price}
                       onChange={handlePriceChange}
                       className={`bg-white border-2 pl-8 focus:ring-2 focus:ring-blue-100 ${!priceValidation ? 'border-red-500' : ''}`}
-                      type="number" // Change to number type for better mobile input
-                      step="0.01" // Allow decimal input with 2 decimal places
-                      min="0" // Prevent negative values
+                      type="text" // Changed to text to avoid browser-specific number input behavior
+                      inputMode="decimal" // Better for mobile decimal input
                     />
                   </div>
                   {!priceValidation && (
@@ -496,8 +501,8 @@ const PostProperty = () => {
                       value={area}
                       onChange={handleAreaChange}
                       className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${!areaValidation ? 'border-red-500' : ''}`}
-                      type="number" // Change to number type
-                      min="0" // Prevent negative values
+                      type="text" // Changed to text
+                      inputMode="decimal" // Better for mobile decimal input
                     />
                     <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">sq.ft</span>
                   </div>
@@ -733,7 +738,6 @@ const PostProperty = () => {
                     </div>
                   </div>
                 ))}
-                
                 {imageURLs.length < 6 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                     <input
