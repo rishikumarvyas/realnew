@@ -79,7 +79,7 @@ export function Navbar() {
                 <Button 
                   variant="outline" 
                   onClick={() => navigate('/post-property')}
-                  className="flex items-center gap-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                  className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full"
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Post Property
