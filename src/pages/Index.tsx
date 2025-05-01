@@ -362,39 +362,7 @@ const Index = () => {
   </div>
 </section>
 
-      {/* Testimonials Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-gradient-to-b from-white to-gray-50">
-        <div className="text-center mb-16">
-          <p className="text-blue-600 font-semibold uppercase tracking-wider mb-2">WHAT CLIENTS SAY</p>
-          <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Customer Testimonials</h2>
-          <div className="w-24 h-1 bg-blue-600 mx-auto mt-4"></div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              name: "Ananya Sharma",
-              location: "Mumbai",
-              quote: "Homeyatra helped me find my dream apartment in just a week! The process was smooth and hassle-free.",
-              avatar: "/api/placeholder/100/100"
-            },
-            {
-              name: "Rajesh Patel",
-              location: "Bangalore",
-              quote: "I sold my property through Homeyatra and got a great deal. Their team is professional and responsive.",
-              avatar: "/api/placeholder/100/100"
-            },
-            {
-              name: "Priya Mehta",
-              location: "Delhi",
-              quote: "As a first-time home buyer, I was nervous. Homeyatra guided me through every step of the process with patience.",
-              avatar: "/api/placeholder/100/100"
-            }
-          ].map((testimonial, index) => (
-            <Testimonial key={index} {...testimonial} />
-          ))}
-        </div>
-      </section>
+
 
       {/* App Download Section */}
       <section className="py-24 bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-800">
