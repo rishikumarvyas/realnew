@@ -217,22 +217,10 @@ const Index = () => {
               <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Rent
             </Button>
-            <Button 
-              variant="outline"
-              size="sm"
-              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
-              onClick={() => navigate('/properties?type=sell')}
-            >
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Sell
-            </Button>
           </div>
         </div>
       </div>
     </section>
-
-
-   
 
       {/* Stats Section */}
       <section className="bg-white text-gray-800 py-20 relative">
@@ -361,9 +349,6 @@ const Index = () => {
     </div>
   </div>
 </section>
-
-
-
       {/* App Download Section */}
       <section className="py-24 bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
