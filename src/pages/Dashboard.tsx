@@ -327,13 +327,6 @@ const Dashboard = () => {
             Welcome back, {userName}
           </p>
         </div>
-        <Button 
-          onClick={() => navigate('/post-property')}
-          className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700"
-        >
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Post New Property
-        </Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
