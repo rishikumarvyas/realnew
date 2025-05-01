@@ -153,7 +153,7 @@ const Index = () => {
       </button>
       
       {/* Slide Indicators - Smaller for mobile */}
-      <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex justify-center z-20 gap-1 sm:gap-2">
+      <div className="absolute bottom-4 sm:bottom-20 left-0 right-0 flex justify-center z-20 gap-1 sm:gap-2">
         {sliderImages.map((_, index) => (
           <button
             key={index}
