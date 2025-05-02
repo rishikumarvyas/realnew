@@ -153,7 +153,7 @@ const Index = () => {
       </button>
       
       {/* Slide Indicators - Smaller for mobile */}
-      <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex justify-center z-20 gap-1 sm:gap-2">
+      <div className="absolute bottom-4 sm:bottom-20 left-0 right-0 flex justify-center z-20 gap-1 sm:gap-2">
         {sliderImages.map((_, index) => (
           <button
             key={index}
@@ -217,22 +217,10 @@ const Index = () => {
               <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Rent
             </Button>
-            <Button 
-              variant="outline"
-              size="sm"
-              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
-              onClick={() => navigate('/properties?type=sell')}
-            >
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Sell
-            </Button>
           </div>
         </div>
       </div>
     </section>
-
-
-   
 
       {/* Stats Section */}
       <section className="bg-white text-gray-800 py-20 relative">
@@ -361,41 +349,6 @@ const Index = () => {
     </div>
   </div>
 </section>
-
-      {/* Testimonials Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-gradient-to-b from-white to-gray-50">
-        <div className="text-center mb-16">
-          <p className="text-blue-600 font-semibold uppercase tracking-wider mb-2">WHAT CLIENTS SAY</p>
-          <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Customer Testimonials</h2>
-          <div className="w-24 h-1 bg-blue-600 mx-auto mt-4"></div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              name: "Ananya Sharma",
-              location: "Mumbai",
-              quote: "Homeyatra helped me find my dream apartment in just a week! The process was smooth and hassle-free.",
-              avatar: "/api/placeholder/100/100"
-            },
-            {
-              name: "Rajesh Patel",
-              location: "Bangalore",
-              quote: "I sold my property through Homeyatra and got a great deal. Their team is professional and responsive.",
-              avatar: "/api/placeholder/100/100"
-            },
-            {
-              name: "Priya Mehta",
-              location: "Delhi",
-              quote: "As a first-time home buyer, I was nervous. Homeyatra guided me through every step of the process with patience.",
-              avatar: "/api/placeholder/100/100"
-            }
-          ].map((testimonial, index) => (
-            <Testimonial key={index} {...testimonial} />
-          ))}
-        </div>
-      </section>
-
       {/* App Download Section */}
       <section className="py-24 bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

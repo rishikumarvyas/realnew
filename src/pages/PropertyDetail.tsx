@@ -520,10 +520,6 @@ const PropertyDetail = () => {
                       </div>
                     )}
                     <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Property ID</span>
-                      <span className="font-medium">{property.propertyId}</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
                       <span className="text-gray-600">Listed Date</span>
                       <span className="font-medium">April 20, 2025</span>
                     </div>
