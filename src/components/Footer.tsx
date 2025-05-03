@@ -1,9 +1,22 @@
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Twitter, MapPin, Phone, Mail, Building, Home, Key, IndianRupee, Clock, ChevronRight } from "lucide-react";
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  MapPin,
+  Phone,
+  Mail,
+  Building,
+  Home,
+  Key,
+  IndianRupee,
+  Clock,
+  ChevronRight,
+} from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
       <div className="max-w-7xl mx-auto pt-16 pb-8 px-4 sm:px-6 lg:px-8">
@@ -38,21 +51,31 @@ export function Footer() {
               </h3>
             </div>
             <p className="text-gray-300 mb-6">
-              Your trusted partner in the journey to find your perfect home. Browse, buy, sell, or rent with confidence across India.
+              Your trusted partner in the journey to find your perfect home.
+              Browse, buy, sell, or rent with confidence across India.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition duration-200">
+              <a
+                href="#"
+                className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition duration-200"
+              >
                 <Facebook size={18} className="text-blue-300" />
               </a>
-              <a href="#" className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition duration-200">
+              <a
+                href="#"
+                className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition duration-200"
+              >
                 <Instagram size={18} className="text-blue-300" />
               </a>
-              <a href="#" className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition duration-200">
+              <a
+                href="#"
+                className="bg-gray-700 hover:bg-gray-600 p-2 rounded-full transition duration-200"
+              >
                 <Twitter size={18} className="text-blue-300" />
               </a>
             </div>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-6 text-blue-200 border-b border-gray-700 pb-2">
               Quick Links
@@ -60,37 +83,52 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/properties?type=buy" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/properties?type=buy"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Buy Property
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/properties?type=rent" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/properties?type=rent"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Rent Property
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/properties?type=sell" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/properties?type=sell"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Sell Property
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/post-property" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/post-property"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Post Your Property
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/agents" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/agents"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Find Agents
                 </Link>
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-6 text-blue-200 border-b border-gray-700 pb-2">
               Company
@@ -98,37 +136,52 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/about" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/about"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   About Us
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/contact" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/contact"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Contact Us
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/careers" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/careers"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Careers
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/terms" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/terms"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Terms & Conditions
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/privacy" className="text-gray-300 hover:text-white transition duration-200">
+                <Link
+                  to="/privacy"
+                  className="text-gray-300 hover:text-white transition duration-200"
+                >
                   Privacy Policy
                 </Link>
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-semibold mb-6 text-blue-200 border-b border-gray-700 pb-2">
               Contact Information
@@ -137,7 +190,8 @@ export function Footer() {
               <li className="flex items-start">
                 <MapPin className="text-orange-400 mt-1 mr-3" size={18} />
                 <span className="text-gray-300">
-                  42 Sardar Patel Road, Connaught Place, New Delhi, 110001, India
+                  42 Sardar Patel Road, Connaught Place, New Delhi, 110001,
+                  India
                 </span>
               </li>
               <li className="flex items-center">
@@ -150,20 +204,36 @@ export function Footer() {
               </li>
               <li className="flex items-center">
                 <Clock className="text-orange-400 mr-3" size={18} />
-                <span className="text-gray-300">Monday - Saturday: 9AM - 7PM</span>
+                <span className="text-gray-300">
+                  Monday - Saturday: 9AM - 7PM
+                </span>
               </li>
             </ul>
           </div>
         </div>
-        
+
         {/* Popular cities section */}
         <div className="border-t border-gray-700 pt-8 mb-8">
-          <h3 className="text-lg font-semibold mb-4 text-blue-200">Popular Cities</h3>
+          <h3 className="text-lg font-semibold mb-4 text-blue-200">
+            Popular Cities
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            {['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 
-              'Pune', 'Ahmedabad', 'Jaipur', 'Chandigarh', 'Lucknow', 'Kochi'].map((city) => (
-              <Link 
-                key={city} 
+            {[
+              "Mumbai",
+              "Delhi",
+              "Bangalore",
+              "Hyderabad",
+              "Chennai",
+              "Kolkata",
+              "Pune",
+              "Ahmedabad",
+              "Jaipur",
+              "Chandigarh",
+              "Lucknow",
+              "Kochi",
+            ].map((city) => (
+              <Link
+                key={city}
                 to={`/properties?city=${city.toLowerCase()}`}
                 className="text-gray-400 hover:text-orange-400 text-sm transition duration-200"
               >
@@ -172,17 +242,33 @@ export function Footer() {
             ))}
           </div>
         </div>
-        
+
         {/* Bottom copyright bar */}
         <div className="border-t border-gray-700 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm mb-4 md:mb-0">
-              &copy; {currentYear} Homeyatra Real Estate Services Pvt. Ltd. All rights reserved.
+              &copy; {currentYear} Homeyatra Real Estate Services Pvt. Ltd. All
+              rights reserved.
             </p>
             <div className="flex space-x-6">
-              <Link to="/terms" className="text-gray-400 hover:text-white text-sm">Terms</Link>
-              <Link to="/privacy" className="text-gray-400 hover:text-white text-sm">Privacy</Link>
-              <Link to="/sitemap" className="text-gray-400 hover:text-white text-sm">Sitemap</Link>
+              <Link
+                to="/terms"
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Terms
+              </Link>
+              <Link
+                to="/privacy"
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Privacy
+              </Link>
+              <Link
+                to="/sitemap"
+                className="text-gray-400 hover:text-white text-sm"
+              >
+                Sitemap
+              </Link>
             </div>
           </div>
         </div>
