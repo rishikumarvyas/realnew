@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 
 /**
  * ScrollToTop Component
- * 
+ *
  * Combined functionality:
  * 1. Automatically scrolls to top when route changes (with immediate behavior)
  * 2. Shows a floating button when scrolled down that allows manual scrolling to top
@@ -26,14 +26,14 @@ const ScrollToTop = () => {
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   };
 
   // Effect for scroll button visibility
   useEffect(() => {
     window.addEventListener("scroll", toggleVisibility);
-    
+
     // Clean up the event listener
     return () => {
       window.removeEventListener("scroll", toggleVisibility);

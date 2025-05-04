@@ -4,9 +4,16 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { ArrowLeft, X, Phone, Key, Home } from "lucide-react";
-import { OtpStep } from "@/components/login/OtpStep";// Import the new component
+import { OtpStep } from "@/components/login/OtpStep"; // Import the new component
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -22,7 +29,7 @@ const Login = () => {
   const handleClose = () => {
     // First hide the modal with animation
     setIsVisible(false);
-    
+
     // Then navigate away after animation completes
     setTimeout(() => {
       navigate("/");
@@ -31,7 +38,7 @@ const Login = () => {
 
   const handlePhoneSubmit = async (e) => {
     if (e) e.preventDefault();
-    
+
     if (!phone.trim() || phone.length !== 10) {
       toast({
         title: "Invalid Phone Number",
@@ -40,12 +47,12 @@ const Login = () => {
       });
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       const success = await requestOtp(phone);
-      
+
       if (success) {
         toast({
           title: "OTP Sent",
@@ -55,7 +62,8 @@ const Login = () => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description: "There was an error sending the verification code. Please try again.",
+          description:
+            "There was an error sending the verification code. Please try again.",
           variant: "destructive",
         });
       }
@@ -72,13 +80,13 @@ const Login = () => {
 
   const handleOtpSubmit = async (otpValue) => {
     setLoading(true);
-    
+
     try {
       console.log(`Submitting login with phone: ${phone}, OTP: ${otpValue}`);
-      
+
       // Call the login function
       const success = await login(phone, otpValue);
-      
+
       if (success) {
         toast({
           title: "Login Successful",
@@ -88,7 +96,8 @@ const Login = () => {
       } else {
         toast({
           title: "Login Failed",
-          description: "The verification code may be incorrect or expired. Please try again.",
+          description:
+            "The verification code may be incorrect or expired. Please try again.",
           variant: "destructive",
         });
       }
@@ -115,13 +124,15 @@ const Login = () => {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       {/* Backdrop */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
         onClick={handleClose}
       ></div>
 
       {/* Popup card */}
-      <div className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}>
+      <div
+        className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
+      >
         <Card className="w-full shadow-xl border-none overflow-hidden">
           {/* House icon at the top */}
           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
@@ -157,10 +168,13 @@ const Login = () => {
                 : "Enter the verification code sent to your phone"}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             {step === "phone" ? (
-              <form onSubmit={handlePhoneSubmit} className="transition-all duration-300">
+              <form
+                onSubmit={handlePhoneSubmit}
+                className="transition-all duration-300"
+              >
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="flex items-center gap-2">
@@ -177,7 +191,9 @@ const Login = () => {
                         value={phone}
                         onChange={(e) => {
                           // Allow only numbers and limit to 10 digits
-                          const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 10);
                           setPhone(value);
                         }}
                         type="tel"
@@ -186,8 +202,8 @@ const Login = () => {
                       />
                     </div>
                   </div>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
                     disabled={loading || phone.length !== 10}
                   >
@@ -204,11 +220,14 @@ const Login = () => {
               />
             )}
           </CardContent>
-          
+
           <CardFooter className="flex justify-center border-t p-6">
             <div className="text-sm text-gray-500">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-600 hover:underline font-medium">
+              <Link
+                to="/signup"
+                className="text-blue-600 hover:underline font-medium"
+              >
                 Sign up
               </Link>
             </div>

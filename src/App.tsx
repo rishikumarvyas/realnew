@@ -47,19 +47,22 @@ const App = () => (
               <Route index element={<Index />} />
               <Route path="contactus" element={<ContactUs />} />
               <Route path="login" element={<Login />} />
-              <Route path="about" element={<AboutUs/>} />
-              <Route path="terms" element={<TermsAndConditions/>} />
-              <Route path="privacy" element={<PrivacyPolicy/>} />
+              <Route path="about" element={<AboutUs />} />
+              <Route path="terms" element={<TermsAndConditions />} />
+              <Route path="privacy" element={<PrivacyPolicy />} />
               <Route path="signup" element={<Signup />} />
               <Route path="properties" element={<PropertyListing />} />
               <Route path="properties/:id" element={<PropertyDetail />} />
-              
+
               <Route element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="post-property" element={<PostProperty />} />
-                <Route path="/edit-property/:propertyId" element={<EditProperty />} />
+                <Route
+                  path="/edit-property/:propertyId"
+                  element={<EditProperty />}
+                />
               </Route>
-              
+
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
