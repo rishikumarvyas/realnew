@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
+import { CONTENT } from "../constants/content";
 
 export function ContactUs() {
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -69,12 +70,11 @@ export function ContactUs() {
             <div className="animate-fade-in">
               <h1 className="text-5xl md:text-6xl font-extrabold mb-6 tracking-tight">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-blue-300">
-                  Contact Us
+                  {CONTENT.ContactUSPage.ContactUs}
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-gray-200 max-w-3xl mx-auto leading-relaxed">
-                We're here to help you find your perfect home. Reach out to our
-                team for personalized assistance.
+                {CONTENT.ContactUSPage.ContactAssistant}
               </p>
             </div>
           </div>
@@ -93,10 +93,10 @@ export function ContactUs() {
               <MapPin className="h-8 w-8 text-white" />
             </div>
             <h3 className="font-bold text-xl mb-3 text-gray-800">
-              Our Location
+              {CONTENT.ContactUSPage.OurLocation}
             </h3>
             <p className="text-gray-600">
-              42 Sardar Patel Road, Connaught Place, New Delhi, 110001, India
+              {CONTENT.ContactUSPage.DelhiAddress}
             </p>
           </div>
 
@@ -105,11 +105,13 @@ export function ContactUs() {
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Phone className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold text-xl mb-3 text-gray-800">Call Us</h3>
+            <h3 className="font-bold text-xl mb-3 text-gray-800">
+              {CONTENT.ContactUSPage.CallUs}
+            </h3>
             <p className="text-gray-600">
-              Customer Support: +91 98765 43210
+              {CONTENT.ContactUSPage.CustomerSupport}
               <br />
-              Sales Inquiries: +91 98765 43211
+              {CONTENT.ContactUSPage.SalesInquiries}
             </p>
           </div>
 
@@ -118,11 +120,13 @@ export function ContactUs() {
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Mail className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold text-xl mb-3 text-gray-800">Email Us</h3>
+            <h3 className="font-bold text-xl mb-3 text-gray-800">
+              {CONTENT.ContactUSPage.EmailUs}
+            </h3>
             <p className="text-gray-600">
-              General Inquiries: contact@homeyatra.in
+              {CONTENT.ContactUSPage.GeneralInquiries}
               <br />
-              Support: support@homeyatra.in
+              {CONTENT.ContactUSPage.SupportEmail}
             </p>
           </div>
 
@@ -132,12 +136,12 @@ export function ContactUs() {
               <Clock className="h-8 w-8 text-white" />
             </div>
             <h3 className="font-bold text-xl mb-3 text-gray-800">
-              Business Hours
+              {CONTENT.ContactUSPage.BusinessHours}
             </h3>
             <p className="text-gray-600">
-              Monday - Saturday: 9AM - 7PM
+              {CONTENT.ContactUSPage.MonSat}
               <br />
-              Sunday: 10AM - 2PM (Online Support Only)
+              {CONTENT.ContactUSPage.SundayTime}
             </p>
           </div>
         </div>
@@ -148,7 +152,7 @@ export function ContactUs() {
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="mb-8">
               <h2 className="text-3xl font-bold mb-2 text-gray-800">
-                Send Us a Message
+                {CONTENT.ContactUSPage.SendUs}
               </h2>
               <div className="w-20 h-1 bg-blue-500 rounded-full"></div>
             </div>
@@ -160,10 +164,10 @@ export function ContactUs() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-green-800 text-lg">
-                    Thank you for your message!
+                    {CONTENT.ContactUSPage.ThankMessage}
                   </h3>
                   <p className="text-green-700">
-                    We have received your inquiry and will get back to you soon.
+                    {CONTENT.ContactUSPage.ReceivedInquiry}
                   </p>
                 </div>
               </div>
@@ -175,7 +179,7 @@ export function ContactUs() {
                       htmlFor="name"
                       className="text-sm font-medium text-gray-700"
                     >
-                      Full Name*
+                      {CONTENT.ContactUSPage.FullName}
                     </Label>
                     <Input
                       type="text"
@@ -192,7 +196,7 @@ export function ContactUs() {
                       htmlFor="email"
                       className="text-sm font-medium text-gray-700"
                     >
-                      Email Address*
+                      {CONTENT.ContactUSPage.EmailAddress}
                     </Label>
                     <Input
                       type="email"
@@ -212,7 +216,7 @@ export function ContactUs() {
                       htmlFor="phone"
                       className="text-sm font-medium text-gray-700"
                     >
-                      Phone Number
+                      {CONTENT.ContactUSPage.PhoneNumber}
                     </Label>
                     <Input
                       type="tel"
@@ -228,7 +232,7 @@ export function ContactUs() {
                       htmlFor="subject"
                       className="text-sm font-medium text-gray-700"
                     >
-                      Subject*
+                      {CONTENT.ContactUSPage.Subject}
                     </Label>
                     <select
                       id="subject"
@@ -238,7 +242,9 @@ export function ContactUs() {
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                       required
                     >
-                      <option value="">Select a topic</option>
+                      <option value="">
+                        {CONTENT.ContactUSPage.SelectTopic}
+                      </option>
                       <option value="property-inquiry">Property Inquiry</option>
                       <option value="buying-assistance">
                         Buying Assistance
