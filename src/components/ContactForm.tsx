@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { CONTENT } from "../constants/content";
 
 interface ContactFormProps {
   open: boolean;
@@ -35,6 +36,7 @@ export function ContactForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
+    //  const Owner1= responses.Ok.data.Owner
     if (!message.trim()) {
       toast({
         title: "Message Required",
@@ -67,14 +69,13 @@ export function ContactForm({
       setLoading(false);
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex justify-between items-center">
             <span>
-              {contactType === "whatsapp" ? "WhatsApp " : "Email "} Owner
+              {contactType === "whatsapp" ? "WhatsApp " : "Email "} {CONTENT.ContactFormPage.Owner}
             </span>
             <Button
               variant="ghost"
@@ -86,7 +87,7 @@ export function ContactForm({
             </Button>
           </DialogTitle>
           <DialogDescription>
-            Send a message about &quot;{propertyTitle}&quot;
+            {CONTENT.ContactFormPage.SendMessage +` "${propertyTitle}"`}
           </DialogDescription>
         </DialogHeader>
         
