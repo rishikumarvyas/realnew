@@ -17,7 +17,7 @@ export const FormStep = ({ onSubmit, loading }: FormStepProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       toast({
         title: "Name Required",
@@ -26,7 +26,7 @@ export const FormStep = ({ onSubmit, loading }: FormStepProps) => {
       });
       return;
     }
-    
+
     if (!phone.trim() || phone.length !== 10) {
       toast({
         title: "Invalid Phone Number",
@@ -35,7 +35,7 @@ export const FormStep = ({ onSubmit, loading }: FormStepProps) => {
       });
       return;
     }
-    
+
     await onSubmit({ name, phone });
   };
 
@@ -79,8 +79,8 @@ export const FormStep = ({ onSubmit, loading }: FormStepProps) => {
             />
           </div>
         </div>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
           disabled={loading || phone.length !== 10 || !name.trim()}
         >

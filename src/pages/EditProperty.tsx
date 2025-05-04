@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -16,7 +22,7 @@ const EditProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -35,13 +41,13 @@ const EditProperty = () => {
     amenities: {
       parking: false,
       gym: false,
-      garden: false, 
+      garden: false,
       pool: false,
       security: false,
-      elevator: false
+      elevator: false,
     },
     propertyId: "",
-    image: ""
+    image: "",
   });
 
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
@@ -60,20 +66,24 @@ const EditProperty = () => {
 
       try {
         setLoading(true);
-        
+
         // Fetch property details
-        const response = await fetch(`${BASE_URL}/api/Property/GetPropertyById?propertyId=${propertyId}`);
-        
+        const response = await fetch(
+          `${BASE_URL}/api/Property/GetPropertyById?propertyId=${propertyId}`
+        );
+
         if (!response.ok) {
-          throw new Error(`Failed to fetch property details: ${response.status}`);
+          throw new Error(
+            `Failed to fetch property details: ${response.status}`
+          );
         }
-        
+
         const data = await response.json();
         console.log("Property details response:", data);
-        
+
         if (data.statusCode === 200 && data.propertyDetails) {
           const property = data.propertyDetails;
-          
+
           // Parse amenities from string if available
           let parsedAmenities = {
             parking: false,
@@ -81,23 +91,29 @@ const EditProperty = () => {
             garden: false,
             pool: false,
             security: false,
-            elevator: false
+            elevator: false,
           };
-          
+
           try {
-            if (property.amenities && typeof property.amenities === 'string') {
-              const amenitiesArray = property.amenities.split(',').map(item => item.trim().toLowerCase());
-              if (amenitiesArray.includes('parking')) parsedAmenities.parking = true;
-              if (amenitiesArray.includes('gym')) parsedAmenities.gym = true;
-              if (amenitiesArray.includes('garden')) parsedAmenities.garden = true;
-              if (amenitiesArray.includes('pool')) parsedAmenities.pool = true;
-              if (amenitiesArray.includes('security')) parsedAmenities.security = true;
-              if (amenitiesArray.includes('elevator')) parsedAmenities.elevator = true;
+            if (property.amenities && typeof property.amenities === "string") {
+              const amenitiesArray = property.amenities
+                .split(",")
+                .map((item) => item.trim().toLowerCase());
+              if (amenitiesArray.includes("parking"))
+                parsedAmenities.parking = true;
+              if (amenitiesArray.includes("gym")) parsedAmenities.gym = true;
+              if (amenitiesArray.includes("garden"))
+                parsedAmenities.garden = true;
+              if (amenitiesArray.includes("pool")) parsedAmenities.pool = true;
+              if (amenitiesArray.includes("security"))
+                parsedAmenities.security = true;
+              if (amenitiesArray.includes("elevator"))
+                parsedAmenities.elevator = true;
             }
           } catch (e) {
             console.error("Error parsing amenities:", e);
           }
-          
+
           // Map API response to form data
           setFormData({
             title: property.title || "",
@@ -114,7 +130,7 @@ const EditProperty = () => {
             furnished: property.furnished === true ? "yes" : "no",
             amenities: parsedAmenities,
             propertyId: property.propertyId || propertyId,
-            image: property.mainImageDetail?.url || ""
+            image: property.mainImageDetail?.url || "",
           });
         } else {
           throw new Error("Property data not found or invalid");
@@ -123,14 +139,16 @@ const EditProperty = () => {
         console.error("Error fetching property details:", error);
         toast({
           title: "Error",
-          description: "Failed to load property details. Please try again later.",
+          description:
+            "Failed to load property details. Please try again later.",
           variant: "destructive",
         });
-        
+
         // Set mock data for testing when API fails
         setFormData({
           title: "Sample Property Title",
-          description: "This is a sample property description for testing when the API is unavailable.",
+          description:
+            "This is a sample property description for testing when the API is unavailable.",
           price: "25000",
           address: "123 Test Street",
           city: "Mumbai",
@@ -147,10 +165,11 @@ const EditProperty = () => {
             garden: true,
             pool: false,
             security: true,
-            elevator: false
+            elevator: false,
           },
           propertyId: propertyId || "",
-          image: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80"
+          image:
+            "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
         });
       } finally {
         setLoading(false);
@@ -162,33 +181,33 @@ const EditProperty = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSelectChange = (name, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       amenities: {
         ...prev.amenities,
-        [name]: checked
-      }
+        [name]: checked,
+      },
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!user?.userId) {
       toast({
         title: "Authentication Error",
@@ -197,16 +216,16 @@ const EditProperty = () => {
       });
       return;
     }
-    
+
     try {
       setSaving(true);
-      
+
       // Format amenities for API
       const selectedAmenities = Object.entries(formData.amenities)
         .filter(([_, selected]) => selected)
         .map(([name]) => name)
         .join(", ");
-      
+
       // Create payload for API
       const payload = {
         propertyId: formData.propertyId,
@@ -223,33 +242,33 @@ const EditProperty = () => {
         bathroom: parseInt(formData.bathroom),
         area: parseFloat(formData.area),
         furnished: formData.furnished === "yes",
-        amenities: selectedAmenities
+        amenities: selectedAmenities,
       };
-      
+
       console.log("Updating property with payload:", payload);
-      
+
       // Send update request to API
       const response = await fetch(`${BASE_URL}/api/Property/UpdateProperty`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to update property: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log("Update API response:", result);
-      
+
       if (result.statusCode === 200) {
         toast({
           title: "Success",
           description: "Property updated successfully!",
         });
-        
+
         // Navigate back to dashboard
         navigate(`/dashboard`);
       } else {
@@ -278,9 +297,9 @@ const EditProperty = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center mb-6">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate('/dashboard')}
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/dashboard")}
           className="mr-2"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -288,7 +307,7 @@ const EditProperty = () => {
         </Button>
         <h1 className="text-2xl font-bold">Edit Property</h1>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Property Details</CardTitle>
@@ -321,7 +340,7 @@ const EditProperty = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="mt-4 space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
@@ -334,34 +353,42 @@ const EditProperty = () => {
                 />
               </div>
             </div>
-            
+
             {/* Property Type */}
             <div>
               <h3 className="font-medium text-lg mb-3">Property Type</h3>
               <div className="space-y-2">
                 <Label>Listing Type</Label>
-                <RadioGroup 
+                <RadioGroup
                   name="superCategory"
                   value={formData.superCategory}
-                  onValueChange={(value) => handleSelectChange("superCategory", value)}
+                  onValueChange={(value) =>
+                    handleSelectChange("superCategory", value)
+                  }
                   className="flex space-x-4"
                 >
                   <div className="flex items-center">
                     <RadioGroupItem value="rent" id="rent" />
-                    <Label htmlFor="rent" className="ml-2">For Rent</Label>
+                    <Label htmlFor="rent" className="ml-2">
+                      For Rent
+                    </Label>
                   </div>
                   <div className="flex items-center">
                     <RadioGroupItem value="buy" id="buy" />
-                    <Label htmlFor="buy" className="ml-2">For Sale</Label>
+                    <Label htmlFor="buy" className="ml-2">
+                      For Sale
+                    </Label>
                   </div>
                   <div className="flex items-center">
                     <RadioGroupItem value="sell" id="sell" />
-                    <Label htmlFor="sell" className="ml-2">Selling</Label>
+                    <Label htmlFor="sell" className="ml-2">
+                      Selling
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
             </div>
-            
+
             {/* Location */}
             <div>
               <h3 className="font-medium text-lg mb-3">Location</h3>
@@ -376,7 +403,7 @@ const EditProperty = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
@@ -410,17 +437,19 @@ const EditProperty = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Features */}
             <div>
               <h3 className="font-medium text-lg mb-3">Features</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="bedroom">Bedrooms</Label>
-                  <Select 
+                  <Select
                     name="bedroom"
                     value={formData.bedroom}
-                    onValueChange={(value) => handleSelectChange("bedroom", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("bedroom", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
@@ -434,13 +463,15 @@ const EditProperty = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="bathroom">Bathrooms</Label>
-                  <Select 
+                  <Select
                     name="bathroom"
                     value={formData.bathroom}
-                    onValueChange={(value) => handleSelectChange("bathroom", value)}
+                    onValueChange={(value) =>
+                      handleSelectChange("bathroom", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
@@ -454,7 +485,7 @@ const EditProperty = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="area">Area (sq.ft.)</Label>
                   <Input
@@ -467,27 +498,33 @@ const EditProperty = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="mt-4 space-y-2">
                 <Label>Furnished</Label>
-                <RadioGroup 
+                <RadioGroup
                   name="furnished"
                   value={formData.furnished}
-                  onValueChange={(value) => handleSelectChange("furnished", value)}
+                  onValueChange={(value) =>
+                    handleSelectChange("furnished", value)
+                  }
                   className="flex space-x-4"
                 >
                   <div className="flex items-center">
                     <RadioGroupItem value="yes" id="furnished-yes" />
-                    <Label htmlFor="furnished-yes" className="ml-2">Yes</Label>
+                    <Label htmlFor="furnished-yes" className="ml-2">
+                      Yes
+                    </Label>
                   </div>
                   <div className="flex items-center">
                     <RadioGroupItem value="no" id="furnished-no" />
-                    <Label htmlFor="furnished-no" className="ml-2">No</Label>
+                    <Label htmlFor="furnished-no" className="ml-2">
+                      No
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
             </div>
-            
+
             {/* Amenities */}
             <div>
               <h3 className="font-medium text-lg mb-3">Amenities</h3>
@@ -501,9 +538,11 @@ const EditProperty = () => {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="parking" className="ml-2">Parking</Label>
+                  <Label htmlFor="parking" className="ml-2">
+                    Parking
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -513,9 +552,11 @@ const EditProperty = () => {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="gym" className="ml-2">Gym</Label>
+                  <Label htmlFor="gym" className="ml-2">
+                    Gym
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -525,9 +566,11 @@ const EditProperty = () => {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="garden" className="ml-2">Garden</Label>
+                  <Label htmlFor="garden" className="ml-2">
+                    Garden
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -537,9 +580,11 @@ const EditProperty = () => {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="pool" className="ml-2">Swimming Pool</Label>
+                  <Label htmlFor="pool" className="ml-2">
+                    Swimming Pool
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -549,9 +594,11 @@ const EditProperty = () => {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="security" className="ml-2">24x7 Security</Label>
+                  <Label htmlFor="security" className="ml-2">
+                    24x7 Security
+                  </Label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -561,39 +608,42 @@ const EditProperty = () => {
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="elevator" className="ml-2">Elevator</Label>
+                  <Label htmlFor="elevator" className="ml-2">
+                    Elevator
+                  </Label>
                 </div>
               </div>
             </div>
-            
+
             {/* Property Image Preview */}
             {formData.image && (
               <div>
                 <h3 className="font-medium text-lg mb-3">Current Image</h3>
                 <div className="w-full h-48 overflow-hidden rounded-md border">
-                  <img 
-                    src={formData.image} 
-                    alt={formData.title} 
+                  <img
+                    src={formData.image}
+                    alt={formData.title}
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
-                  To update the image, please use the property image upload section
+                  To update the image, please use the property image upload
+                  section
                 </p>
               </div>
             )}
-            
+
             {/* Submit Buttons */}
             <div className="flex justify-end space-x-3 pt-4">
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate("/dashboard")}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-blue-600 hover:bg-blue-700"
                 disabled={saving}
               >

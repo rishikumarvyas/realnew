@@ -10,17 +10,22 @@ interface OtpStepProps {
   loading: boolean;
 }
 
-export const OtpStep = ({ phone, onSubmit, onResendOtp, loading }: OtpStepProps) => {
+export const OtpStep = ({
+  phone,
+  onSubmit,
+  onResendOtp,
+  loading,
+}: OtpStepProps) => {
   const [otpValue, setOtpValue] = useState("");
   const [resendTimeout, setResendTimeout] = useState(true); // Start with timeout active
   const [timeLeft, setTimeLeft] = useState(60);
   const [isResending, setIsResending] = useState(false); // Separate loading state for resend
   const { toast } = useToast();
-  
+
   // Effect for countdown timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
+
     if (resendTimeout && timeLeft > 0) {
       timer = setInterval(() => {
         setTimeLeft((prev) => prev - 1);
@@ -29,7 +34,7 @@ export const OtpStep = ({ phone, onSubmit, onResendOtp, loading }: OtpStepProps)
       setResendTimeout(false);
       setTimeLeft(60);
     }
-    
+
     return () => {
       if (timer) clearInterval(timer);
     };
@@ -37,7 +42,7 @@ export const OtpStep = ({ phone, onSubmit, onResendOtp, loading }: OtpStepProps)
 
   const handleOtpSubmit = async () => {
     if (loading) return;
-    
+
     if (!otpValue || otpValue.length !== 6) {
       toast({
         title: "Invalid OTP",
@@ -46,17 +51,17 @@ export const OtpStep = ({ phone, onSubmit, onResendOtp, loading }: OtpStepProps)
       });
       return;
     }
-    
+
     await onSubmit(otpValue);
   };
-  
+
   const handleResendOtp = async () => {
     try {
       setIsResending(true); // Show loading state for resend button only
       await onResendOtp();
       setResendTimeout(true); // Restart timeout
       setTimeLeft(60); // Reset timer to 60 seconds
-      
+
       toast({
         title: "OTP Resent",
         description: "A new OTP has been sent to your phone.",
@@ -80,12 +85,8 @@ export const OtpStep = ({ phone, onSubmit, onResendOtp, loading }: OtpStepProps)
         </p>
         <p className="font-medium">+91 {phone}</p>
       </div>
-      <OtpInput 
-        value={otpValue}
-        onChange={setOtpValue}
-        className="mb-6"
-      />
-      <Button 
+      <OtpInput value={otpValue} onChange={setOtpValue} className="mb-6" />
+      <Button
         onClick={handleOtpSubmit}
         className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
         disabled={loading || otpValue.length !== 6}
@@ -108,4 +109,4 @@ export const OtpStep = ({ phone, onSubmit, onResendOtp, loading }: OtpStepProps)
       </div>
     </div>
   );
-}
+};

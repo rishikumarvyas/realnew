@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { X, ArrowLeft, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,15 +34,15 @@ const Signup = () => {
 
   const handleFormSubmit = async (formData) => {
     const { name: fullName, phone: phoneNumber } = formData;
-    
+
     setName(fullName);
     setPhone(phoneNumber);
     setLoading(true);
-    
+
     try {
       // Skip formatPhoneNumber and directly pass the correctly formatted number
       const success = await requestOtp("+91" + phoneNumber);
-      
+
       if (success) {
         toast({
           title: "OTP Sent",
@@ -45,7 +52,8 @@ const Signup = () => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description: "There was an error sending the verification code. Please try again.",
+          description:
+            "There was an error sending the verification code. Please try again.",
           variant: "destructive",
         });
       }
@@ -62,23 +70,27 @@ const Signup = () => {
 
   const handleOtpSubmit = async (otp) => {
     setLoading(true);
-    
+
     try {
       // Skip formatPhoneNumber and directly pass the correctly formatted number
-      console.log(`Submitting signup with phone: +91${phone}, name: ${name}, OTP: ${otp}`);
-      
+      console.log(
+        `Submitting signup with phone: +91${phone}, name: ${name}, OTP: ${otp}`
+      );
+
       const success = await signup("+91" + phone, name, otp);
-      
+
       if (success) {
         toast({
           title: "Registration Successful",
-          description: "Your account has been created successfully. Please log in to continue.",
+          description:
+            "Your account has been created successfully. Please log in to continue.",
         });
         navigate("/dashboard");
       } else {
         toast({
           title: "Registration Failed",
-          description: "The verification code may be incorrect or expired. Please try again.",
+          description:
+            "The verification code may be incorrect or expired. Please try again.",
           variant: "destructive",
         });
       }
@@ -96,11 +108,11 @@ const Signup = () => {
 
   const handleResendOtp = async () => {
     setLoading(true);
-    
+
     try {
       // Skip formatPhoneNumber and directly pass the correctly formatted number
       const success = await requestOtp("+91" + phone);
-      
+
       if (success) {
         toast({
           title: "OTP Sent",
@@ -109,7 +121,8 @@ const Signup = () => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description: "There was an error sending the verification code. Please try again.",
+          description:
+            "There was an error sending the verification code. Please try again.",
           variant: "destructive",
         });
       }
@@ -135,13 +148,15 @@ const Signup = () => {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       {/* Backdrop */}
-      <div 
+      <div
         className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
         onClick={handleClose}
       ></div>
 
       {/* Popup card */}
-      <div className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}>
+      <div
+        className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
+      >
         <Card className="w-full shadow-xl border-none overflow-hidden">
           {/* House icon at the top */}
           <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
@@ -177,12 +192,12 @@ const Signup = () => {
                 : `Enter the verification code sent to +91 ${phone}`}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             {step === "form" ? (
               <FormStep onSubmit={handleFormSubmit} loading={loading} />
             ) : (
-              <OtpStep 
+              <OtpStep
                 phone={phone}
                 onSubmit={handleOtpSubmit}
                 onResendOtp={handleResendOtp}
@@ -190,11 +205,14 @@ const Signup = () => {
               />
             )}
           </CardContent>
-          
+
           <CardFooter className="flex justify-center border-t p-6">
             <div className="text-sm text-gray-500">
               Already have an account?{" "}
-              <Link to="/login" className="text-blue-600 hover:underline font-medium">
+              <Link
+                to="/login"
+                className="text-blue-600 hover:underline font-medium"
+              >
                 Log in
               </Link>
             </div>
