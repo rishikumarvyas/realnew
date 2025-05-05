@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Wifi,
   Car,
-  Tv,
   Wind,
   Lock,
   Droplets,
@@ -28,6 +27,14 @@ import {
   Share2,
   Calendar
 } from "lucide-react";
+import Resizer from "react-image-file-resizer";
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious 
+} from "@/components/ui/carousel";
 import { ContactForm } from "@/components/ContactForm";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -40,6 +47,7 @@ interface AmenityDetail {
 interface ImageDetail {
   imageId: string;
   imageUrl: string;
+  compressedUrl?: string;
   isMainImage: boolean;
 }
 
@@ -68,8 +76,49 @@ interface PropertyDetailResponse {
     userTypeId: string;
     userType: string;
     imageDetails: ImageDetail[];
+    postedBy: string;
+    phone: string;
   };
 }
+
+// Image compression utility using react-image-file-resizer
+const compressImageUrl = async (imageUrl: string, maxWidth = 1200, maxHeight = 800, quality = 80): Promise<string> => {
+  try {
+    // Skip compression for placeholder or empty images
+    if (!imageUrl || imageUrl.includes("unsplash.com") || imageUrl.includes("placeholder")) {
+      return imageUrl;
+    }
+
+    // Fetch the image
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    
+    return new Promise((resolve, reject) => {
+      // Convert blob to File
+      const file = new File([blob], "image.jpg", { type: blob.type });
+      
+      Resizer.imageFileResizer(
+        file,
+        maxWidth, // max width
+        maxHeight, // max height
+        "JPEG", // format
+        quality, // quality (0-100)
+        0, // rotation
+        (uri) => {
+          // On success
+          console.log("Image compressed successfully");
+          resolve(uri as string);
+        },
+        "base64", // output type
+        maxWidth / 2, // min width
+        maxHeight / 2, // min height
+      );
+    });
+  } catch (error) {
+    console.error("Image compression failed:", error);
+    return imageUrl; // Return original on error
+  }
+};
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -100,7 +149,26 @@ const PropertyDetail = () => {
         console.log("Raw property data:", data);
         
         if (data.statusCode === 200 && data.propertyDetail) {
-          setProperty(data.propertyDetail);
+          const propertyData = data.propertyDetail;
+          
+          // Compress images if available
+          if (propertyData.imageDetails && propertyData.imageDetails.length > 0) {
+            const compressedImages = await Promise.all(
+              propertyData.imageDetails.map(async (img) => {
+                try {
+                  const compressedUrl = await compressImageUrl(img.imageUrl);
+                  return { ...img, compressedUrl };
+                } catch (e) {
+                  console.error("Failed to compress image:", e);
+                  return img;
+                }
+              })
+            );
+            
+            propertyData.imageDetails = compressedImages;
+          }
+          
+          setProperty(propertyData);
           setError(null);
         } else {
           throw new Error(data.message || 'Failed to retrieve property details');
@@ -138,7 +206,7 @@ const PropertyDetail = () => {
       propertyTypeId: "456",
       propertyType: "Apartment",
       title: "Modern 3BHK with Sea View",
-      description: "Beautiful apartment with amazing sea views. Fully furnished with modern amenities.",
+      description: "Beautiful apartment with amazing sea views. Fully furnished with modern amenities. This luxurious property offers stunning panoramic views, modern interiors, and all essential amenities for comfortable living. Perfect for families looking for a premium lifestyle in a prime location.",
       price: 25000,
       area: 1500,
       bedroom: 3,
@@ -148,7 +216,9 @@ const PropertyDetail = () => {
         { amenityId: "1", amenity: "Wifi" },
         { amenityId: "2", amenity: "Parking" },
         { amenityId: "3", amenity: "Swimming Pool" },
-        { amenityId: "4", amenity: "Lift" }
+        { amenityId: "4", amenity: "Lift" },
+        { amenityId: "5", amenity: "Security" },
+        { amenityId: "6", amenity: "Air Conditioning" }
       ],
       address: "Marine Drive",
       cityId: "789",
@@ -157,6 +227,8 @@ const PropertyDetail = () => {
       state: "Maharashtra",
       userTypeId: "112",
       userType: "Owner",
+      postedBy: "Ram", 
+      phone: "+919999999999",
       imageDetails: [
         { 
           imageId: "img1", 
@@ -167,23 +239,14 @@ const PropertyDetail = () => {
           imageId: "img2", 
           imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80",
           isMainImage: false 
+        },
+        { 
+          imageId: "img3", 
+          imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80",
+          isMainImage: false 
         }
       ]
     };
-  };
-
-  const handlePrevImage = () => {
-    if (!property || !property.imageDetails?.length) return;
-    setActiveImageIndex((prev) => 
-      prev === 0 ? property.imageDetails.length - 1 : prev - 1
-    );
-  };
-
-  const handleNextImage = () => {
-    if (!property || !property.imageDetails?.length) return;
-    setActiveImageIndex((prev) => 
-      prev === property.imageDetails.length - 1 ? 0 : prev + 1
-    );
   };
 
   const handleContactModal = (type: "whatsapp" | "email") => {
@@ -195,10 +258,10 @@ const PropertyDetail = () => {
     setIsFavorite(!isFavorite);
   };
 
-  // Owner details using the user context from Dashboard
+  // Use posted by and phone information from the property details
   const ownerDetails = {
-    name: user?.name || "Property Owner",
-    phone: user?.phone || "+91 98765 43210",
+    name: property?.postedBy || user?.name || "Property Owner",
+    phone: property?.phone || user?.phone || "+91 98765 43210",
     email: user?.email || "contact@homeyatra.com",
     verified: true
   };
@@ -235,15 +298,18 @@ const PropertyDetail = () => {
         ? 'Selling' 
         : property.superCategory;
 
-  // Get images safely
+  // Get images safely, using compressed versions if available
   const images = property.imageDetails && property.imageDetails.length > 0 
-    ? property.imageDetails 
+    ? property.imageDetails.map(img => ({
+        ...img,
+        imageUrl: img.compressedUrl || img.imageUrl // Use compressed URL if available
+      }))
     : [];
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
       {/* Fixed top navigation bar */}
-      <div className="sticky top-0 z-10 bg-white shadow-md">
+      <div className="sticky top-0 z-10 bg-white shadow-md backdrop-blur-sm bg-white/90">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <Button 
             variant="ghost" 
@@ -260,10 +326,10 @@ const PropertyDetail = () => {
             <Button 
               variant="outline" 
               size="icon" 
-              className="rounded-full"
+              className={`rounded-full transition-all duration-300 ${isFavorite ? 'bg-red-50 border-red-200' : ''}`}
               onClick={toggleFavorite}
             >
-              <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+              <Heart className={`h-4 w-4 transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
             
             <Button 
@@ -279,82 +345,75 @@ const PropertyDetail = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         {/* Property Title and Location Section */}
-        <div className="mb-6">
+        <div className="mb-6 animate-fade-in">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{property.title}</h1>
-            <Badge 
-              variant={property.superCategory?.toLowerCase() === 'rent' ? 'outline' : 'default'}
-              className={`
-                px-3 py-1 text-sm font-medium
-                ${property.superCategory?.toLowerCase() === 'buy' ? 'bg-blue-600' : property.superCategory?.toLowerCase() === 'sell' ? 'bg-teal-600' : ''}
-              `}
-            >
-              {categoryLabel}
-            </Badge>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
+              {property.title}
+              <Badge 
+                variant={property.superCategory?.toLowerCase() === 'rent' ? 'outline' : 'default'}
+                className={`
+                  ml-3 px-3 py-1 text-sm font-medium
+                  ${property.superCategory?.toLowerCase() === 'buy' ? 'bg-blue-600' : property.superCategory?.toLowerCase() === 'sell' ? 'bg-teal-600' : ''}
+                `}
+              >
+                {categoryLabel}
+              </Badge>
+            </h1>
           </div>
           <div className="flex items-center text-gray-600">
-            <MapPin size={18} className="mr-1 flex-shrink-0 text-blue-600" />
+            <MapPin size={16} className="mr-1 flex-shrink-0 text-blue-600" />
             <span className="text-sm sm:text-base">{property.address}{property.city ? `, ${property.city}` : ''}{property.state ? `, ${property.state}` : ''}</span>
           </div>
         </div>
 
-        {/* Image Gallery with modern look */}
-        <div className="mb-8 relative bg-white rounded-xl overflow-hidden shadow-lg">
+        {/* Image Gallery with carousel component */}
+        <div className="mb-8 bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-scale-in">
           {images.length > 0 ? (
-            <>
-              <div className="aspect-[16/9] overflow-hidden">
-                <img 
-                  src={images[activeImageIndex]?.imageUrl} 
-                  alt={`Property view ${activeImageIndex + 1}`} 
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                />
-              </div>
-              
-              {/* Image Navigation (only show if more than 1 image) */}
-              {images.length > 1 && (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg border-0"
-                    onClick={handlePrevImage}
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full shadow-lg border-0"
-                    onClick={handleNextImage}
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                  
-                  {/* Image counter badge */}
-                  <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded-full">
-                    {activeImageIndex + 1} / {images.length}
-                  </div>
-                  
-                  {/* Thumbnails */}
-                  <div className="flex p-4 gap-2 overflow-x-auto pb-2 bg-gray-50">
-                    {images.map((image, index) => (
-                      <div 
-                        key={image.imageId || index}
-                        className={`w-20 h-14 sm:w-24 sm:h-16 flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all ${
-                          index === activeImageIndex ? 'ring-2 ring-blue-600 transform scale-105' : 'opacity-70 hover:opacity-100'
-                        }`}
-                        onClick={() => setActiveImageIndex(index)}
-                      >
-                        <img src={image.imageUrl} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+            <div className="relative">
+              <Carousel className="w-full" setActiveItem={setActiveImageIndex}>
+                <CarouselContent>
+                  {images.map((image, index) => (
+                    <CarouselItem key={image.imageId || index}>
+                      <div className="aspect-[16/10] overflow-hidden relative">
+                        <img 
+                          src={image.imageUrl} 
+                          alt={`Property view ${index + 1}`} 
+                          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                          loading={index === 0 ? "eager" : "lazy"}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
                       </div>
-                    ))}
-                  </div>
-                </>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="absolute left-4 bg-white/80 hover:bg-white" />
+                <CarouselNext className="absolute right-4 bg-white/80 hover:bg-white" />
+                
+                {/* Image counter badge */}
+                <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded-full z-10">
+                  {activeImageIndex + 1} / {images.length}
+                </div>
+              </Carousel>
+              
+              {/* Thumbnails */}
+              {images.length > 1 && (
+                <div className="flex p-4 gap-2 overflow-x-auto pb-2 bg-gray-50">
+                  {images.map((image, index) => (
+                    <div 
+                      key={image.imageId || index}
+                      className={`w-20 h-14 sm:w-24 sm:h-16 flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all ${
+                        index === activeImageIndex ? 'ring-2 ring-blue-600 transform scale-105' : 'opacity-70 hover:opacity-100'
+                      }`}
+                      onClick={() => setActiveImageIndex(index)}
+                    >
+                      <img src={image.imageUrl} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
               )}
-            </>
+            </div>
           ) : (
-            <div className="aspect-[16/9] bg-gray-200 rounded-lg flex items-center justify-center">
+            <div className="aspect-[16/10] bg-gray-200 rounded-lg flex items-center justify-center">
               <p className="text-gray-500">No images available</p>
             </div>
           )}
@@ -363,22 +422,32 @@ const PropertyDetail = () => {
         {/* Property Details and Sidebar layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
           {/* Main Content */}
-          <div>
+          <div className="space-y-6">
             {/* Basic Details */}
-            <div className="bg-white p-6 rounded-xl shadow-sm mb-6 hover:shadow-md transition-shadow">
+            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              {/* Price & Type Banner */}
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 -mx-6 -mt-6 px-6 py-4 mb-6 border-b border-blue-200 flex flex-wrap items-center gap-4 justify-between">
+                <div className="flex flex-col">
+                  <span className="text-sm text-blue-700 font-medium">Property Price</span>
+                  <span className="text-2xl font-bold text-blue-700">
+                    ₹{property.price?.toLocaleString() || '-'}
+                    {property.superCategory?.toLowerCase() === 'rent' ? '/month' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <Badge className="mr-2 bg-blue-600">
+                    {property.propertyType || "Residential"}
+                  </Badge>
+                  <Badge variant="outline" className="border-blue-600 text-blue-700">
+                    {property.bedroom || 0} BHK
+                  </Badge>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-6">
-                {property.price !== undefined && (
-                  <div className="flex flex-col">
-                    <span className="text-gray-500 text-sm">Price</span>
-                    <span className="text-xl font-bold text-blue-600">
-                      ₹{property.price.toLocaleString()}
-                      {property.superCategory?.toLowerCase() === 'rent' ? '/month' : ''}
-                    </span>
-                  </div>
-                )}
                 {property.bedroom !== undefined && (
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-50 p-2 rounded-lg">
+                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
                       <Bed className="text-blue-600" size={20} />
                     </div>
                     <div>
@@ -388,8 +457,8 @@ const PropertyDetail = () => {
                   </div>
                 )}
                 {property.bathroom !== undefined && (
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-50 p-2 rounded-lg">
+                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
                       <Bath className="text-blue-600" size={20} />
                     </div>
                     <div>
@@ -399,8 +468,8 @@ const PropertyDetail = () => {
                   </div>
                 )}
                 {property.area !== undefined && (
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-50 p-2 rounded-lg">
+                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
                       <Maximize2 className="text-blue-600" size={20} />
                     </div>
                     <div>
@@ -409,9 +478,9 @@ const PropertyDetail = () => {
                     </div>
                   </div>
                 )}
-                {property.balcony !== undefined && (
-                  <div className="flex items-center gap-3">
-                    <div className="bg-blue-50 p-2 rounded-lg text-blue-600 font-bold">
+                {property.balcony !== undefined && property.balcony > 0 && (
+                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors text-blue-600 font-bold">
                       B
                     </div>
                     <div>
@@ -420,8 +489,8 @@ const PropertyDetail = () => {
                     </div>
                   </div>
                 )}
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-50 p-2 rounded-lg">
+                <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
                     <User className="text-blue-600" size={20} />
                   </div>
                   <div>
@@ -432,16 +501,16 @@ const PropertyDetail = () => {
               </div>
               
               <div>
-                <h3 className="text-lg font-medium mb-3 flex items-center">
+                <h3 className="text-lg font-medium mb-3 inline-flex items-center">
                   <span className="inline-block w-4 h-4 bg-blue-600 rounded-full mr-2"></span>
-                  Description
+                  Property Description
                 </h3>
                 <p className="text-gray-600 leading-relaxed">{property.description || "No description provided"}</p>
               </div>
             </div>
             
             {/* Tabbed Details */}
-            <div className="bg-white rounded-xl shadow-sm mb-8 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <Tabs defaultValue="amenities">
                 <TabsList className="w-full border-b p-0 bg-gray-50">
                   <TabsTrigger value="amenities" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
@@ -454,23 +523,26 @@ const PropertyDetail = () => {
                 
                 <TabsContent value="amenities" className="p-6">
                   {property.amenityDetails && property.amenityDetails.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {property.amenityDetails.map((amenity, index) => {
                         let icon = null;
                         
-                        if (amenity.amenity.includes("Lift")) icon = <ArrowUpDown className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.includes("Swimming Pool")) icon = <Droplets className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.includes("Wifi")) icon = <Wifi className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.includes("Parking")) icon = <Car className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.includes("TV")) icon = <Tv className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.includes("Air")) icon = <Wind className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.includes("Security")) icon = <Lock className="text-blue-600" size={18} />;
+                        if (amenity.amenity.toLowerCase().includes("lift")) icon = <ArrowUpDown className="text-blue-600" size={18} />;
+                        else if (amenity.amenity.toLowerCase().includes("swimming")) icon = <Droplets className="text-blue-600" size={18} />;
+                        else if (amenity.amenity.toLowerCase().includes("wifi")) icon = <Wifi className="text-blue-600" size={18} />;
+                        else if (amenity.amenity.toLowerCase().includes("parking")) icon = <Car className="text-blue-600" size={18} />;
+                        else if (amenity.amenity.toLowerCase().includes("tv") || amenity.amenity.toLowerCase().includes("television")) 
+                          icon = <Bath className="text-blue-600" size={18} />;
+                        else if (amenity.amenity.toLowerCase().includes("air") || amenity.amenity.toLowerCase().includes("ac")) 
+                          icon = <Wind className="text-blue-600" size={18} />;
+                        else if (amenity.amenity.toLowerCase().includes("security") || amenity.amenity.toLowerCase().includes("guard")) 
+                          icon = <Lock className="text-blue-600" size={18} />;
                         else icon = <div className="w-2 h-2 rounded-full bg-blue-600 mt-2"></div>;
                         
                         return (
                           <div 
                             key={amenity.amenityId || index} 
-                            className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg hover:bg-blue-50 transition-colors"
+                            className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform"
                           >
                             <div className="bg-white p-2 rounded-full shadow-sm">
                               {icon}
@@ -527,22 +599,36 @@ const PropertyDetail = () => {
                 </TabsContent>
               </Tabs>
             </div>
+            
+            {/* Location Map Placeholder */}
+            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-lg font-medium mb-3 inline-flex items-center">
+                <MapPin className="text-blue-600 mr-2" size={18} />
+                Location
+              </h3>
+              <div className="bg-gray-100 rounded-lg h-[200px] flex items-center justify-center">
+                <p className="text-gray-500">Map view not available</p>
+              </div>
+              <p className="mt-3 text-sm text-gray-600">
+                {property.address}{property.city ? `, ${property.city}` : ''}{property.state ? `, ${property.state}` : ''}
+              </p>
+            </div>
           </div>
           
           {/* Sidebar - Contact Info */}
           <div>
-            <div className="bg-white p-6 rounded-xl shadow-sm mb-6 sticky top-24">
-              <h3 className="text-lg font-medium mb-5 flex items-center">
+            <div className="bg-white p-6 rounded-xl shadow-sm mb-6 sticky top-24 hover:shadow-lg transition-shadow">
+              <h3 className="text-lg font-medium mb-5 flex items-center border-b pb-3">
                 <User className="text-blue-600 mr-2" />
                 Contact {property.userType || "Owner"}
               </h3>
               
-              <div className="flex items-center gap-3 mb-6 bg-gray-50 p-4 rounded-lg">
-                <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center text-blue-600">
-                  {ownerDetails.name.charAt(0).toUpperCase()}
+              <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
+                <div className="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white shadow-inner">
+                  {property.postedBy ? property.postedBy.charAt(0).toUpperCase() : ownerDetails.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <div className="font-medium">{ownerDetails.name}</div>
+                  <div className="font-medium">{property.postedBy || ownerDetails.name}</div>
                   <div className="text-sm text-gray-500 flex items-center gap-1">
                     {property.userType || "Owner"}
                     {ownerDetails.verified && (
@@ -581,7 +667,7 @@ const PropertyDetail = () => {
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
                 >
                   <Phone className="mr-2 h-5 w-5" /> 
-                  Call {ownerDetails.phone}
+                  Call {property.phone || ownerDetails.phone}
                 </Button>
               </div>
               
@@ -597,12 +683,12 @@ const PropertyDetail = () => {
             </div>
             
             {/* Similar Properties Teaser */}
-            <div className="bg-blue-50 p-5 rounded-xl shadow-sm">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
               <h3 className="text-md font-medium mb-3 text-blue-800">Similar Properties</h3>
               <p className="text-sm text-gray-600 mb-4">Explore more properties like this one in {property.city || "this area"}.</p>
               <Button
-                variant="outline" 
-                className="w-full border-blue-600 text-blue-600 hover:bg-blue-100"
+                variant="default" 
+                className="w-full bg-blue-600 hover:bg-blue-700"
                 onClick={() => navigate("/dashboard")}
               >
                 View Similar Properties
@@ -617,7 +703,7 @@ const PropertyDetail = () => {
         onOpenChange={setContactModalOpen} 
         propertyTitle={property.title}
         contactType={contactType}
-        contactInfo={contactType === "whatsapp" ? ownerDetails.phone : ownerDetails.email}
+        contactInfo={contactType === "whatsapp" ? (property.phone || ownerDetails.phone) : ownerDetails.email}
       />
     </div>
   );
