@@ -84,7 +84,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   };
   
   return (
-    <div className={`flex gap-1 sm:gap-2 ${className || ""}`}>
+    <div className={`flex gap-1 sm:gap-4 ${className || ""}`}>
       {Array(length)
         .fill(0)
         .map((_, index) => (
