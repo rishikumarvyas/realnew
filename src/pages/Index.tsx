@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
 import { Testimonial } from "@/components/Testimonial";
 import { StatCard } from "@/components/StatCard";
+import AllProperty from "./AllProperty";
 import { 
   Search, 
   ArrowRight, 
@@ -249,7 +250,9 @@ const Index = () => {
           </div>
         </div>
       </section>
-
+      <div className="min-h-screen bg-gray-50">
+      <AllProperty />
+    </div>
       {/* Why Choose Us Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-gradient-to-b from-gray-50 to-white">
         <div className="text-center mb-16">
@@ -291,8 +294,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Featured Properties Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-white">
+      {/* <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-white">
         <div className="flex flex-col md:flex-row md:justify-between items-center mb-16">
           <div className="text-center md:text-left mb-8 md:mb-0">
             <p className="text-blue-600 font-semibold uppercase tracking-wider mb-2">EXCLUSIVE LISTINGS</p>
@@ -314,13 +316,13 @@ const Index = () => {
           ))}
         </div>
         
-        {/* Extra Featured Properties - Show on larger screens */}
         <div className="hidden lg:grid grid-cols-2 gap-8 mt-8">
           {featuredProperties.slice(3, 5).map((property) => (
             <PropertyCard key={property.id} {...property} />
           ))}
         </div>
-      </section>
+      </section> */}
+ 
 
       {/* Call to Action Section - With clearer background image */}
 <section 
