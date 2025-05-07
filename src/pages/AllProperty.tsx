@@ -291,13 +291,13 @@ const AllProperty = () => {
     <div className="max-w-7xl mx-auto px-4 py-8 bg-gray-50">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-primary mb-3">Find Your Perfect Property</h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        {/* <p className="text-gray-600 max-w-2xl mx-auto">
           Discover the perfect space that fits your lifestyle and budget with our comprehensive property listings
-        </p>
+        </p> */}
       </div>
       
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">
+        {/* <h2 className="text-xl font-semibold text-gray-800">
           {loading ? (
             <span className="flex items-center">
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -306,7 +306,7 @@ const AllProperty = () => {
           ) : (
             `${properties.length} Properties Found`
           )}
-        </h2>
+        </h2> */}
       </div>
 
       {/* Error state */}

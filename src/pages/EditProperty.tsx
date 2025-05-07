@@ -1,84 +1,88 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { 
-  ArrowLeft, Save, Loader2, Pencil, Building, Bed, Bath, 
-  MapPin, AreaChart, CheckCircle, ArrowRight, CircleCheck
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  Pencil,
+  Building,
+  Bed,
+  Bath,
+  MapPin,
+  AreaChart,
+  CheckCircle,
 } from "lucide-react";
-import { Parking, Gym, Garden, Pool, Security, Elevator } from "@/components/icons/CustomIcons";
-import { useAuth } from "@/contexts/AuthContext";
-import { motion } from "framer-motion";
+import {
+  Parking,
+  Gym,
+  Garden,
+  Pool,
+  Security,
+  Elevator,
+} from "@/components/icons/CustomIcons";
 
 const EditProperty = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     price: "",
     address: "",
     city: "",
+    cityId: "", // Default value based on the curl example
     state: "",
-    zipCode: "",
+    stateId: "", // Default value based on the curl example
     superCategory: "",
+    superCategoryId: "", // Default value based on the curl example
     propertyType: "",
+    propertyTypeId: "", // Default value based on the curl example
+    userTypeId: "", // Default value based on the curl example
     bedroom: "",
     bathroom: "",
     balcony: "",
     area: "",
-    furnished: "no",
     amenities: {
       parking: false,
       gym: false,
-      garden: false, 
+      garden: false,
       pool: false,
       security: false,
-      elevator: false
+      elevator: false,
     },
     propertyId: "",
-    images: []
+    images: [],
+    mainImageUrl: "",
   });
 
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   // Track which field is being edited
-  const [activeField, setActiveField] = useState(null);
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
-  };
+  const [activeField, setActiveField] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -94,19 +98,14 @@ const EditProperty = () => {
 
       try {
         setLoading(true);
-        
-        const response = await fetch(`${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${propertyId}`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch property details: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Property details response:", data);
-        
-        if (data.statusCode === 200 && data.propertyDetail) {
-          const property = data.propertyDetail;
-          
+
+        const response = await axios.get(
+          `${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${propertyId}`
+        );
+
+        if (response.status === 200 && response.data.propertyDetail) {
+          const property = response.data.propertyDetail;
+
           // Parse amenities from amenityDetails array
           let parsedAmenities = {
             parking: false,
@@ -114,32 +113,36 @@ const EditProperty = () => {
             garden: false,
             pool: false,
             security: false,
-            elevator: false
+            elevator: false,
           };
-          
+
           try {
-            if (property.amenityDetails && Array.isArray(property.amenityDetails)) {
-              property.amenityDetails.forEach(amenity => {
+            if (
+              property.amenityDetails &&
+              Array.isArray(property.amenityDetails)
+            ) {
+              property.amenityDetails.forEach((amenity: any) => {
                 const amenityName = amenity.amenity.toLowerCase();
-                if (amenityName.includes('parking')) parsedAmenities.parking = true;
-                if (amenityName.includes('gym')) parsedAmenities.gym = true;
-                if (amenityName.includes('garden')) parsedAmenities.garden = true;
-                if (amenityName.includes('pool')) parsedAmenities.pool = true;
-                if (amenityName.includes('security')) parsedAmenities.security = true;
-                if (amenityName.includes('elevator')) parsedAmenities.elevator = true;
+                if (amenityName.includes("parking"))
+                  parsedAmenities.parking = true;
+                if (amenityName.includes("gym")) parsedAmenities.gym = true;
+                if (amenityName.includes("garden"))
+                  parsedAmenities.garden = true;
+                if (amenityName.includes("pool")) parsedAmenities.pool = true;
+                if (amenityName.includes("security"))
+                  parsedAmenities.security = true;
+                if (amenityName.includes("elevator"))
+                  parsedAmenities.elevator = true;
               });
             }
           } catch (e) {
             console.error("Error parsing amenities:", e);
           }
-          
-          // Find main image
-          let mainImage = "";
-          if (property.imageDetails && Array.isArray(property.imageDetails)) {
-            const mainImageObj = property.imageDetails.find(img => img.isMainImage);
-            mainImage = mainImageObj ? mainImageObj.imageUrl : (property.imageDetails[0]?.imageUrl || "");
-          }
-          
+
+          // Find main image URL
+          const mainImage = property.imageDetails?.find((img: any) => img.isMainImage);
+          const mainImageUrl = mainImage ? mainImage.imageUrl : property.imageDetails?.[0]?.imageUrl || "";
+
           // Map API response to form data
           setFormData({
             title: property.title || "",
@@ -147,18 +150,22 @@ const EditProperty = () => {
             price: property.price?.toString() || "",
             address: property.address || "",
             city: property.city || "",
+            cityId: property.cityId?.toString() || "1",
             state: property.state || "",
-            zipCode: property.zipCode || "",
+            stateId: property.stateId?.toString() || "1",
             superCategory: property.superCategory?.toLowerCase() || "rent",
+            superCategoryId: property.superCategoryId?.toString() || "1",
             propertyType: property.propertyType || "",
+            propertyTypeId: property.propertyTypeId?.toString() || "1",
+            userTypeId: property.userTypeId?.toString() || "1",
             bedroom: property.bedroom?.toString() || "",
             bathroom: property.bathroom?.toString() || "",
             balcony: property.balcony?.toString() || "",
             area: property.area?.toString() || "",
-            furnished: property.furnished === true ? "yes" : "no",
             amenities: parsedAmenities,
             propertyId: property.propertyId || propertyId,
-            images: property.imageDetails || []
+            images: property.imageDetails || [],
+            mainImageUrl: mainImageUrl,
           });
         } else {
           throw new Error("Property data not found or invalid");
@@ -167,40 +174,49 @@ const EditProperty = () => {
         console.error("Error fetching property details:", error);
         toast({
           title: "Error",
-          description: "Failed to load property details. Please try again later.",
+          description:
+            "Failed to load property details. Please try again later.",
           variant: "destructive",
         });
-        
+
         // Set mock data for testing when API fails
         setFormData({
           title: "Sample Property Title",
-          description: "This is a sample property description for testing when the API is unavailable.",
+          description:
+            "This is a sample property description for testing when the API is unavailable.",
           price: "25000",
           address: "123 Test Street",
           city: "Mumbai",
+          cityId: "1",
           state: "Maharashtra",
-          zipCode: "400001",
+          stateId: "1",
           superCategory: "rent",
+          superCategoryId: "1",
           propertyType: "Apartment",
+          propertyTypeId: "1",
+          userTypeId: "1",
           bedroom: "3",
           bathroom: "2",
           balcony: "1",
           area: "1500",
-          furnished: "yes",
           amenities: {
             parking: true,
             gym: false,
             garden: true,
             pool: false,
             security: true,
-            elevator: false
+            elevator: false,
           },
           propertyId: propertyId || "",
-          images: [{
-            imageId: "sample-id",
-            imageUrl: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-            isMainImage: true
-          }]
+          images: [
+            {
+              imageId: "sample-id",
+              imageUrl:
+                "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+              isMainImage: true,
+            },
+          ],
+          mainImageUrl: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
         });
       } finally {
         setLoading(false);
@@ -210,90 +226,123 @@ const EditProperty = () => {
     fetchPropertyDetails();
   }, [propertyId, toast, navigate]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
-  const handleSelectChange = (name, value) => {
-    setFormData(prev => ({
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!user?.userId) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to update a property.",
-        variant: "destructive",
-      });
-      return;
+  const handleAmenityToggle = (amenity: keyof typeof formData.amenities) => {
+    setFormData((prev) => ({
+      ...prev,
+      amenities: {
+        ...prev.amenities,
+        [amenity]: !prev.amenities[amenity],
+      },
+    }));
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      setNewImages(prev => [...prev, ...selectedFiles]);
     }
-    
+  };
+
+  const handleSetMainImage = (index: number) => {
+    setMainImageIndex(index);
+  };
+
+  const removeImage = (index: number) => {
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+    if (mainImageIndex === index) {
+      setMainImageIndex(null);
+    } else if (mainImageIndex !== null && mainImageIndex > index) {
+      setMainImageIndex(mainImageIndex - 1);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     try {
       setSaving(true);
-      
-      // Format amenities for API
-      const selectedAmenities = Object.entries(formData.amenities)
-        .filter(([_, selected]) => selected)
-        .map(([name]) => name)
-        .join(", ");
-      
-      // Create payload for API
-      const payload = {
-        propertyId: formData.propertyId,
-        userId: user.userId,
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        superCategory: formData.superCategory.toUpperCase(),
-        bedroom: parseInt(formData.bedroom),
-        bathroom: parseInt(formData.bathroom),
-        balcony: parseInt(formData.balcony || "0"),
-        area: parseFloat(formData.area),
-        furnished: formData.furnished === "yes",
-        amenities: selectedAmenities
+
+      // Format amenities for API as array of IDs
+      const amenityMap: Record<string, string> = {
+        parking: "1",
+        gym: "2",
+        garden: "3",
+        pool: "4",
+        security: "5",
+        elevator: "6",
       };
       
-      console.log("Updating property with payload:", payload);
+      const amenityIds = Object.entries(formData.amenities)
+        .filter(([_, selected]) => selected)
+        .map(([name, _]) => amenityMap[name] || name);
+
+      // Create FormData object for the multipart/form-data request
+      const formDataObj = new FormData();
+      formDataObj.append("PropertyId", formData.propertyId);
+      formDataObj.append("Title", formData.title);
+      formDataObj.append("Description", formData.description);
+      formDataObj.append("Price", formData.price);
+      formDataObj.append("Area", formData.area);
+      formDataObj.append("Bedroom", formData.bedroom);
+      formDataObj.append("Bathroom", formData.bathroom);
+      formDataObj.append("Balcony", formData.balcony);
+      formDataObj.append("Address", formData.address);
+      formDataObj.append("CityId", formData.cityId);
+      formDataObj.append("StateId", formData.stateId);
+      formDataObj.append("SuperCategoryId", formData.superCategoryId);
+      formDataObj.append("PropertyTypeId", formData.propertyTypeId);
+      formDataObj.append("UserTypeId", formData.userTypeId);
+      formDataObj.append("MainImageUrl", formData.mainImageUrl);
       
-      // Send update request to API
-      const response = await fetch(`${BASE_URL}/api/Account/EditProperty`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+      // Add amenity IDs
+      amenityIds.forEach(id => {
+        formDataObj.append("AmenityIds", id);
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update property: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log("Update API response:", result);
-      
-      if (result.statusCode === 200) {
+
+      // Add new images if any
+      newImages.forEach((file, index) => {
+        formDataObj.append(`NewImages[${index}].File`, file);
+        formDataObj.append(
+          `NewImages[${index}].IsMain`, 
+          mainImageIndex === index ? "true" : "false"
+        );
+      });
+
+      console.log("Sending update request...");
+
+      const response = await axios.post(
+        `${BASE_URL}/api/Account/EditProperty`, 
+        formDataObj, 
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.status === 200) {
         toast({
           title: "Success!",
           description: "Property updated successfully!",
         });
-        
-        // Navigate back to dashboard
         navigate(`/dashboard`);
       } else {
-        throw new Error(result.message || "Failed to update property");
+        throw new Error(response.data.message || "Failed to update property");
       }
     } catch (error) {
       console.error("Error updating property:", error);
@@ -309,778 +358,632 @@ const EditProperty = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
         <div className="mb-4">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
         </div>
-        <h3 className="text-xl font-medium text-gray-700">Loading property details...</h3>
+        <h3 className="text-xl font-medium text-blue-800">
+          Loading property details...
+        </h3>
       </div>
     );
   }
 
   // Find main image URL
-  const mainImageUrl = formData.images.find(img => img.isMainImage)?.imageUrl || 
-                     (formData.images[0]?.imageUrl || "");
-  
+  const mainImageUrl =
+    formData.images.find((img: any) => img.isMainImage)?.imageUrl ||
+    formData.images[0]?.imageUrl ||
+    "https://via.placeholder.com/800x500?text=No+Image";
+
   // Get additional images (excluding main)
   const additionalImages = formData.images
-    .filter(img => !img.isMainImage)
+    .filter((img: any) => !img.isMainImage)
     .slice(0, 3); // Show up to 3 additional images
 
   return (
-    <motion.div 
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className="max-w-5xl mx-auto px-4 py-6 md:py-8"
-    >
-      {/* Header with fancy gradient */}
-      <motion.div 
-        variants={itemVariants}
-        className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg p-4 mb-6 shadow-lg"
-      >
+    <div className="max-w-5xl mx-auto px-4 py-6 md:py-8">
+      {/* Header with gradient */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-4 mb-6 shadow-lg">
         <div className="flex flex-col md:flex-row md:items-center justify-between">
           <div className="flex items-center mb-3 md:mb-0">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/dashboard')}
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/dashboard")}
               className="mr-2 bg-white/10 hover:bg-white/20 text-white"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              <span className="hidden md:inline">Dashboard</span>
+              <span className="inline">Back</span>
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Edit Property</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              Edit Property
+            </h1>
           </div>
           
           <div className="flex space-x-2">
             <Button 
-              type="button" 
-              variant="ghost"
-              onClick={() => navigate('/dashboard')}
-              className="bg-white/10 hover:bg-white/20 text-white"
+              variant="outline" 
+              className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+              onClick={() => navigate(`/property/${propertyId}`)}
             >
-              Cancel
+              View Property
             </Button>
             <Button 
-              onClick={handleSubmit}
-              className="bg-white text-blue-700 hover:bg-blue-50"
+              variant="default" 
+              onClick={handleSubmit} 
               disabled={saving}
+              className="bg-white text-blue-700 hover:bg-white/90"
             >
               {saving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
+                  <Save className="h-4 w-4 mr-2" /> Save Changes
                 </>
               )}
             </Button>
           </div>
         </div>
-      </motion.div>
-      
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - Main details */}
-        <motion.div variants={itemVariants} className="lg:col-span-2">
-          <Card className="shadow-md border border-gray-100 overflow-hidden">
-            <CardHeader className="bg-gray-50 border-b">
-              <CardTitle className="flex items-center text-xl text-gray-800">
-                <Building className="h-5 w-5 mr-2 text-blue-600" />
-                Main Information
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Information */}
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  <Building className="h-5 w-5 mr-2" /> Basic Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="relative group">
-                    <Label htmlFor="title" className="text-sm font-medium flex items-center mb-1">
+                    <Label htmlFor="title" className="text-sm font-medium">
                       Property Title
-                      <button 
-                        type="button"
-                        onClick={() => setActiveField(activeField === 'title' ? null : 'title')}
-                        className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                      >
-                        <Pencil className="h-3 w-3 text-blue-500" />
-                      </button>
                     </Label>
-                    
-                    {activeField === 'title' ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative"
-                      >
-                        <Input
-                          id="title"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          required
-                          className="border-blue-300 focus:border-blue-500 shadow-sm"
-                          autoFocus
-                        />
-                        <Button 
-                          type="button" 
-                          size="sm" 
-                          className="absolute right-0 top-0 h-full px-3 bg-blue-500 hover:bg-blue-600"
-                          onClick={() => setActiveField(null)}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:border-blue-300 transition-colors">
-                        {formData.title}
+                    <div className="relative">
+                      <Input
+                        id="title"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        className="pr-8 transition-all border-blue-200 focus:border-blue-500"
+                        onFocus={() => setActiveField("title")}
+                        onBlur={() => setActiveField(null)}
+                        required
+                      />
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Pencil className="h-4 w-4 text-blue-500" />
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   <div className="relative group">
-                    <Label htmlFor="price" className="text-sm font-medium flex items-center mb-1">
-                      Price (₹)
-                      <button 
-                        type="button"
-                        onClick={() => setActiveField(activeField === 'price' ? null : 'price')}
-                        className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                      >
-                        <Pencil className="h-3 w-3 text-blue-500" />
-                      </button>
-                    </Label>
-                    
-                    {activeField === 'price' ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="relative"
-                      >
-                        <Input
-                          id="price"
-                          name="price"
-                          type="number"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          required
-                          className="border-blue-300 focus:border-blue-500 shadow-sm"
-                          autoFocus
-                        />
-                        <Button 
-                          type="button" 
-                          size="sm" 
-                          className="absolute right-0 top-0 h-full px-3 bg-blue-500 hover:bg-blue-600"
-                          onClick={() => setActiveField(null)}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:border-blue-300 transition-colors">
-                        ₹{parseInt(formData.price).toLocaleString('en-IN')}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="relative group">
-                    <Label htmlFor="description" className="text-sm font-medium flex items-center mb-1">
+                    <Label htmlFor="description" className="text-sm font-medium">
                       Description
-                      <button 
-                        type="button"
-                        onClick={() => setActiveField(activeField === 'description' ? null : 'description')}
-                        className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                      >
-                        <Pencil className="h-3 w-3 text-blue-500" />
-                      </button>
                     </Label>
-                    
-                    {activeField === 'description' ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <Textarea
-                          id="description"
-                          name="description"
-                          value={formData.description}
-                          onChange={handleInputChange}
-                          rows={5}
-                          required
-                          className="border-blue-300 focus:border-blue-500 shadow-sm"
-                          autoFocus
-                        />
-                        <Button 
-                          type="button" 
-                          size="sm" 
-                          className="mt-2 px-3 bg-blue-500 hover:bg-blue-600"
-                          onClick={() => setActiveField(null)}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Apply
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:border-blue-300 transition-colors min-h-[80px] max-h-[200px] overflow-auto">
-                        {formData.description}
+                    <div className="relative">
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        className="min-h-[120px] transition-all border-blue-200 focus:border-blue-500"
+                        onFocus={() => setActiveField("description")}
+                        onBlur={() => setActiveField(null)}
+                      />
+                      <div className="absolute right-2 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Pencil className="h-4 w-4 text-blue-500" />
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Property Type - Read Only */}
-                <div className="mt-6">
-                  <h3 className="font-medium text-base mb-3 text-gray-700 flex items-center">
-                    <Building className="h-5 w-5 mr-2 text-blue-600" />
-                    Property Type
-                  </h3>
-                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Listing Type</Label>
-                      <RadioGroup 
-                        name="superCategory"
-                        value={formData.superCategory}
-                        onValueChange={(value) => handleSelectChange("superCategory", value)}
-                        className="flex flex-wrap gap-3"
-                      >
-                        <div className="flex items-center px-3 py-2 bg-white border rounded-md shadow-sm">
-                          <RadioGroupItem value="rent" id="rent" />
-                          <Label htmlFor="rent" className="ml-2">For Rent</Label>
-                        </div>
-                        <div className="flex items-center px-3 py-2 bg-white border rounded-md shadow-sm">
-                          <RadioGroupItem value="buy" id="buy" />
-                          <Label htmlFor="buy" className="ml-2">For Sale</Label>
-                        </div>
-                        <div className="flex items-center px-3 py-2 bg-white border rounded-md shadow-sm">
-                          <RadioGroupItem value="sell" id="sell" />
-                          <Label htmlFor="sell" className="ml-2">Selling</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="propertyType" className="text-sm font-medium">Property Type</Label>
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                        {formData.propertyType || "Not specified"}
-                      </div>
-                      <p className="text-xs text-gray-500 italic">Property type cannot be changed</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Location */}
-                <div className="mt-6">
-                  <h3 className="font-medium text-base mb-3 text-gray-700 flex items-center">
-                    <MapPin className="h-5 w-5 mr-2 text-blue-600" />
-                    Location
-                  </h3>
-                  
-                  <div className="space-y-4">
                     <div className="relative group">
-                      <Label htmlFor="address" className="text-sm font-medium flex items-center mb-1">
-                        Address
-                        <button 
-                          type="button"
-                          onClick={() => setActiveField(activeField === 'address' ? null : 'address')}
-                          className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                        >
-                          <Pencil className="h-3 w-3 text-blue-500" />
-                        </button>
+                      <Label htmlFor="superCategory" className="text-sm font-medium">
+                        Listing Type
                       </Label>
-                      
-                      {activeField === 'address' ? (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
+                      <Select
+                        value={formData.superCategoryId}
+                        onValueChange={(value) =>
+                          handleSelectChange("superCategoryId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="superCategoryId" 
+                          className="border-blue-200 focus:border-blue-500"
                         >
-                          <Input
-                            id="address"
-                            name="address"
-                            value={formData.address}
-                            onChange={handleInputChange}
-                            required
-                            className="border-blue-300 focus:border-blue-500 shadow-sm"
-                            autoFocus
-                          />
-                          <Button 
-                            type="button" 
-                            size="sm" 
-                            className="mt-2 px-3 bg-blue-500 hover:bg-blue-600"
-                            onClick={() => setActiveField(null)}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Apply
-                          </Button>
-                        </motion.div>
-                      ) : (
-                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:border-blue-300 transition-colors">
-                          {formData.address}
-                        </div>
-                      )}
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Buy</SelectItem>
+                          <SelectItem value="2">Sell</SelectItem>
+                          <SelectItem value="3">Rent</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="relative group">
-                        <Label htmlFor="city" className="text-sm font-medium flex items-center mb-1">
-                          City
-                          <button 
-                            type="button"
-                            onClick={() => setActiveField(activeField === 'city' ? null : 'city')}
-                            className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                          >
-                            <Pencil className="h-3 w-3 text-blue-500" />
-                          </button>
-                        </Label>
-                        
-                        {activeField === 'city' ? (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="relative"
-                          >
-                            <Input
-                              id="city"
-                              name="city"
-                              value={formData.city}
-                              onChange={handleInputChange}
-                              required
-                              className="border-blue-300 focus:border-blue-500 shadow-sm"
-                              autoFocus
-                            />
-                            <Button 
-                              type="button" 
-                              size="sm" 
-                              className="absolute right-0 top-0 h-full px-3 bg-blue-500 hover:bg-blue-600"
-                              onClick={() => setActiveField(null)}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                          </motion.div>
-                        ) : (
-                          <div className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:border-blue-300 transition-colors">
-                            {formData.city}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="relative group">
-                        <Label htmlFor="state" className="text-sm font-medium flex items-center mb-1">
-                          State
-                          <button 
-                            type="button"
-                            onClick={() => setActiveField(activeField === 'state' ? null : 'state')}
-                            className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                          >
-                            <Pencil className="h-3 w-3 text-blue-500" />
-                          </button>
-                        </Label>
-                        
-                        {activeField === 'state' ? (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="relative"
-                          >
-                            <Input
-                              id="state"
-                              name="state"
-                              value={formData.state}
-                              onChange={handleInputChange}
-                              required
-                              className="border-blue-300 focus:border-blue-500 shadow-sm"
-                              autoFocus
-                            />
-                            <Button 
-                              type="button" 
-                              size="sm" 
-                              className="absolute right-0 top-0 h-full px-3 bg-blue-500 hover:bg-blue-600"
-                              onClick={() => setActiveField(null)}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                          </motion.div>
-                        ) : (
-                          <div className="p-3 bg-gray-50 rounded-md border border-gray-200 hover:border-blue-300 transition-colors">
-                            {formData.state}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Zipcode - Read Only */}
-                      <div>
-                        <Label htmlFor="zipCode" className="text-sm font-medium">Zip Code</Label>
-                        <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                          {formData.zipCode}
-                        </div>
-                        <p className="text-xs text-gray-500 italic mt-1">ZIP code cannot be changed</p>
-                      </div>
+
+                    <div className="relative group">
+                      <Label htmlFor="propertyType" className="text-sm font-medium">
+                        Property Type
+                      </Label>
+                      <Select
+                        value={formData.propertyTypeId}
+                        onValueChange={(value) =>
+                          handleSelectChange("propertyTypeId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="propertyTypeId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select property type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Apartment</SelectItem>
+                          <SelectItem value="2">House</SelectItem>
+                          <SelectItem value="3">Villa</SelectItem>
+                          <SelectItem value="4">Commercial</SelectItem>
+                          <SelectItem value="5">Land</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
+
+                  <div className="relative group">
+                    <Label htmlFor="price" className="text-sm font-medium">
+                      Price (₹)
+                    </Label>
+                    <Input
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
+                      onFocus={() => setActiveField("price")}
+                      onBlur={() => setActiveField(null)}
+                      required
+                    />
+                  </div>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-        
-        {/* Right column - Features, Amenities, Images */}
-        <motion.div variants={itemVariants} className="space-y-6">
-          {/* Features */}
-          <Card className="shadow-md border border-gray-100 overflow-hidden">
-            <CardHeader className="bg-gray-50 border-b">
-              <CardTitle className="flex items-center text-lg text-gray-800">
-                <AreaChart className="h-5 w-5 mr-2 text-blue-600" />
-                Features
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="p-6">
-              <div className="space-y-5">
-                {/* Bedroom */}
-                <div className="relative">
-                  <Label htmlFor="bedroom" className="text-sm font-medium flex items-center mb-1">
-                    Bedrooms
-                    <button 
-                      type="button"
-                      onClick={() => setActiveField(activeField === 'bedroom' ? null : 'bedroom')}
-                      className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <Pencil className="h-3 w-3 text-blue-500" />
-                    </button>
-                  </Label>
-                  
-                  {activeField === 'bedroom' ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <Select 
+              </CardContent>
+            </Card>
+
+            {/* Property Details Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  <MapPin className="h-5 w-5 mr-2" /> Property Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="bedroom" className="text-sm font-medium">
+                        <Bed className="h-4 w-4 inline mr-1" /> Bedrooms
+                      </Label>
+                      <Input
+                        id="bedroom"
                         name="bedroom"
+                        type="number"
                         value={formData.bedroom}
-                        onValueChange={(value) => handleSelectChange("bedroom", value)}
-                      >
-                        <SelectTrigger className="border-blue-300 focus:border-blue-500">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
-                          <SelectItem value="3">3</SelectItem>
-                          <SelectItem value="4">4</SelectItem>
-                          <SelectItem value="5">5+</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        className="mt-2 px-3 bg-blue-500 hover:bg-blue-600"
-                        onClick={() => setActiveField(null)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Done
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <div className="flex items-center p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <Bed className="h-5 w-5 mr-2 text-blue-500" />
-                      <span>{formData.bedroom} {parseInt(formData.bedroom) === 1 ? 'Bedroom' : 'Bedrooms'}</span>
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                        required
+                      />
                     </div>
-                  )}
-                </div>
-                
-                {/* Bathroom */}
-                <div className="relative">
-                  <Label htmlFor="bathroom" className="text-sm font-medium flex items-center mb-1">
-                    Bathrooms
-                    <button 
-                      type="button"
-                      onClick={() => setActiveField(activeField === 'bathroom' ? null : 'bathroom')}
-                      className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <Pencil className="h-3 w-3 text-blue-500" />
-                    </button>
-                  </Label>
-                  
-                  {activeField === 'bathroom' ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <Select 
+
+                    <div className="relative group">
+                      <Label htmlFor="bathroom" className="text-sm font-medium">
+                        <Bath className="h-4 w-4 inline mr-1" /> Bathrooms
+                      </Label>
+                      <Input
+                        id="bathroom"
                         name="bathroom"
+                        type="number"
                         value={formData.bathroom}
-                        onValueChange={(value) => handleSelectChange("bathroom", value)}
-                      >
-                        <SelectTrigger className="border-blue-300 focus:border-blue-500">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
-                          <SelectItem value="3">3</SelectItem>
-                          <SelectItem value="4">4</SelectItem>
-                          <SelectItem value="5">5+</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        className="mt-2 px-3 bg-blue-500 hover:bg-blue-600"
-                        onClick={() => setActiveField(null)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Done
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <div className="flex items-center p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <Bath className="h-5 w-5 mr-2 text-blue-500" />
-                      <span>{formData.bathroom} {parseInt(formData.bathroom) === 1 ? 'Bathroom' : 'Bathrooms'}</span>
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                        required
+                      />
                     </div>
-                  )}
-                </div>
-                
-                {/* Balcony */}
-                <div className="relative">
-                  <Label htmlFor="balcony" className="text-sm font-medium flex items-center mb-1">
-                    Balconies
-                    <button 
-                      type="button"
-                      onClick={() => setActiveField(activeField === 'balcony' ? null : 'balcony')}
-                      className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <Pencil className="h-3 w-3 text-blue-500" />
-                    </button>
-                  </Label>
-                  
-                  {activeField === 'balcony' ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <Select 
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="balcony" className="text-sm font-medium">
+                        Balconies
+                      </Label>
+                      <Input
+                        id="balcony"
                         name="balcony"
+                        type="number"
                         value={formData.balcony}
-                        onValueChange={(value) => handleSelectChange("balcony", value)}
-                      >
-                        <SelectTrigger className="border-blue-300 focus:border-blue-500">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">0</SelectItem>
-                          <SelectItem value="1">1</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
-                          <SelectItem value="3">3</SelectItem>
-                          <SelectItem value="4">4+</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        className="mt-2 px-3 bg-blue-500 hover:bg-blue-600"
-                        onClick={() => setActiveField(null)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Done
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <div className="flex items-center p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <span>{formData.balcony} {parseInt(formData.balcony) === 1 ? 'Balcony' : 'Balconies'}</span>
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                      />
                     </div>
-                  )}
-                </div>
-                
-                {/* Area */}
-                <div className="relative">
-                  <Label htmlFor="area" className="text-sm font-medium flex items-center mb-1">
-                    Area (sq.ft.)
-                    <button 
-                      type="button"
-                      onClick={() => setActiveField(activeField === 'area' ? null : 'area')}
-                      className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <Pencil className="h-3 w-3 text-blue-500" />
-                    </button>
-                  </Label>
-                  
-                  {activeField === 'area' ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="relative"
-                    >
+
+                    <div className="relative group">
+                      <Label htmlFor="area" className="text-sm font-medium">
+                        <AreaChart className="h-4 w-4 inline mr-1" /> Area (sq.ft)
+                      </Label>
                       <Input
                         id="area"
                         name="area"
                         type="number"
                         value={formData.area}
                         onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
                         required
-                        className="border-blue-300 focus:border-blue-500 shadow-sm"
-                        autoFocus
                       />
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        className="absolute right-0 top-0 h-full px-3 bg-blue-500 hover:bg-blue-600"
-                        onClick={() => setActiveField(null)}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                    </motion.div>
-                  ) : (
-                    <div className="flex items-center p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <AreaChart className="h-5 w-5 mr-2 text-blue-500" />
-                      <span>{parseInt(formData.area).toLocaleString()} sq.ft</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Furnished - Read Only */}
-                <div>
-                  <Label className="text-sm font-medium">Furnished Status</Label>
-                  <div className="flex items-center p-3 bg-gray-50 rounded-md border border-gray-200">
-                    {formData.furnished === "yes" ? (
-                      <>
-                        <CircleCheck className="h-5 w-5 mr-2 text-green-500" />
-                        <span>Furnished</span>
-                      </>
-                    ) : (
-                      <span>Not Furnished</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 italic mt-1">Furnishing status cannot be changed</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Amenities - Read Only */}
-          <Card className="shadow-md border border-gray-100 overflow-hidden">
-            <CardHeader className="bg-gray-50 border-b">
-              <CardTitle className="flex items-center text-lg text-gray-800">
-                <CheckCircle className="h-5 w-5 mr-2 text-blue-600" />
-                Amenities
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className={`flex items-center p-3 rounded-md ${formData.amenities.parking ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                  <Parking className={`h-5 w-5 mr-2 ${formData.amenities.parking ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <span>Parking</span>
-                </div>
-                
-                <div className={`flex items-center p-3 rounded-md ${formData.amenities.gym ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                  <Gym className={`h-5 w-5 mr-2 ${formData.amenities.gym ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <span>Gym</span>
-                </div>
-                
-                <div className={`flex items-center p-3 rounded-md ${formData.amenities.garden ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                  <Garden className={`h-5 w-5 mr-2 ${formData.amenities.garden ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <span>Garden</span>
-                </div>
-                
-                <div className={`flex items-center p-3 rounded-md ${formData.amenities.pool ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                  <Pool className={`h-5 w-5 mr-2 ${formData.amenities.pool ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <span>Swimming Pool</span>
-                </div>
-                
-                <div className={`flex items-center p-3 rounded-md ${formData.amenities.security ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                  <Security className={`h-5 w-5 mr-2 ${formData.amenities.security ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <span>24x7 Security</span>
-                </div>
-                
-                <div className={`flex items-center p-3 rounded-md ${formData.amenities.elevator ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                  <Elevator className={`h-5 w-5 mr-2 ${formData.amenities.elevator ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <span>Elevator</span>
-                </div>
-              </div>
-              
-              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
-                <span className="text-amber-600 text-sm">To update amenities, please visit the property details page</span>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Property Images - Read Only */}
-          {mainImageUrl && (
-            <Card className="shadow-md border border-gray-100 overflow-hidden">
-              <CardHeader className="bg-gray-50 border-b">
-                <CardTitle className="flex items-center text-lg text-gray-800">
-                  Property Images
-                </CardTitle>
-              </CardHeader>
-              
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Main Image */}
-                  <div className="overflow-hidden rounded-md border border-gray-200">
-                    <div className="relative">
-                      <img 
-                        src={mainImageUrl} 
-                        alt={formData.title} 
-                        className="w-full aspect-video object-cover"
-                      />
-                      <div className="absolute top-3 left-3 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                        Main Image
-                      </div>
                     </div>
                   </div>
                   
-                  {/* Additional Images */}
-                  {additionalImages.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {additionalImages.map((img, index) => (
-                        <div key={index} className="overflow-hidden rounded-md border border-gray-200">
-                          <img 
-                            src={img.imageUrl} 
-                            alt={`Property image ${index + 2}`} 
-                            className="w-full aspect-square object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <Separator className="my-4" />
                   
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
-                    <span className="text-amber-600 text-sm">
-                      Image management is available in the property details section
-                    </span>
+                  <h3 className="font-medium text-blue-800 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" /> Amenities
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="parking"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.parking}
+                        onChange={() => handleAmenityToggle("parking")}
+                      />
+                      <Label htmlFor="parking" className="text-sm cursor-pointer">
+                        Parking
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="gym"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.gym}
+                        onChange={() => handleAmenityToggle("gym")}
+                      />
+                      <Label htmlFor="gym" className="text-sm cursor-pointer">
+                        Gym
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="garden"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.garden}
+                        onChange={() => handleAmenityToggle("garden")}
+                      />
+                      <Label htmlFor="garden" className="text-sm cursor-pointer">
+                        Garden
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="pool"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.pool}
+                        onChange={() => handleAmenityToggle("pool")}
+                      />
+                      <Label htmlFor="pool" className="text-sm cursor-pointer">
+                        Swimming Pool
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="security"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.security}
+                        onChange={() => handleAmenityToggle("security")}
+                      />
+                      <Label htmlFor="security" className="text-sm cursor-pointer">
+                        Security
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="elevator"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.elevator}
+                        onChange={() => handleAmenityToggle("elevator")}
+                      />
+                      <Label htmlFor="elevator" className="text-sm cursor-pointer">
+                        Elevator
+                      </Label>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
+
+            {/* Address Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  <MapPin className="h-5 w-5 mr-2" /> Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <Label htmlFor="address" className="text-sm font-medium">
+                      Address
+                    </Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="cityId" className="text-sm font-medium">
+                        City
+                      </Label>
+                      <Select
+                        value={formData.cityId}
+                        onValueChange={(value) =>
+                          handleSelectChange("cityId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="cityId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select city" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Indore</SelectItem>
+                          <SelectItem value="2">Bhopal</SelectItem>
+                          <SelectItem value="3">Pune</SelectItem>
+                        
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="relative group">
+                      <Label htmlFor="stateId" className="text-sm font-medium">
+                        State
+                      </Label>
+                      <Select
+                        value={formData.stateId}
+                        onValueChange={(value) =>
+                          handleSelectChange("stateId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="stateId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Madhya Pradesh</SelectItem>
+                          <SelectItem value="2">Maharashtra</SelectItem>
+                         
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Image Upload Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  Image Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                  />
+                  
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-dashed border-2 py-8 border-blue-300 text-blue-600 hover:bg-blue-50"
+                  >
+                    Click to select images
+                  </Button>
+                  
+                  {newImages.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">New Images:</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {newImages.map((file, index) => (
+                          <div key={index} className="relative group rounded overflow-hidden border">
+                            <img 
+                              src={URL.createObjectURL(file)}
+                              alt={`Upload Preview ${index}`}
+                              className="w-full h-24 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <Button 
+                                type="button" 
+                                variant="default" 
+                                onClick={() => handleSetMainImage(index)}
+                                size="sm"
+                                className={mainImageIndex === index ? "bg-green-600" : "bg-blue-600"}
+                              >
+                                {mainImageIndex === index ? "Main" : "Set Main"}
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="destructive" 
+                                onClick={() => removeImage(index)}
+                                size="sm"
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                            {mainImageIndex === index && (
+                              <div className="absolute top-1 left-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded">
+                                Main
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" /> Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Preview and Image Management Section */}
+        <div className="space-y-6">
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50 p-4">
+              <CardTitle className="text-blue-800 text-base">Property Preview</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="relative">
+                <img 
+                  src={mainImageUrl} 
+                  alt="Property Preview" 
+                  className="w-full h-48 object-cover" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
+                  <div className="text-white">
+                    <h3 className="font-bold truncate">
+                      {formData.title || "Property Title"}
+                    </h3>
+                    <p className="flex items-center text-sm">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {formData.city || "Location"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4">
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span className="flex items-center">
+                    <Bed className="h-4 w-4 mr-1" />
+                    {formData.bedroom || 0} Bed
+                  </span>
+                  <span className="flex items-center">
+                    <Bath className="h-4 w-4 mr-1" />
+                    {formData.bathroom || 0} Bath
+                  </span>
+                  <span className="flex items-center">
+                    <AreaChart className="h-4 w-4 mr-1" />
+                    {formData.area || 0} sqft
+                  </span>
+                </div>
+                
+                <div className="font-bold text-blue-600 text-lg">
+                  ₹ {Number(formData.price || 0).toLocaleString()}
+                </div>
+                
+                <Separator className="my-3" />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    ID: {formData.propertyId.substring(0, 8)}
+                  </span>
+                  <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full capitalize">
+                    {formData.superCategoryId === "1" ? "Buy" : 
+                     formData.superCategoryId === "2" ? "Sell" : "Rent"}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
-          {/* Save Changes Button */}
-          <motion.div 
-            variants={itemVariants}
-            className="sticky bottom-4 z-10"
-          >
-            <Button 
-              onClick={handleSubmit}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6"
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Saving Changes...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-5 w-5" />
-                  Save All Changes
-                </>
-              )}
-            </Button>
-          </motion.div>
-        </motion.div>
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50 p-4">
+              <CardTitle className="text-blue-800 text-base">
+                Current Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 gap-2">
+                {formData.images.length > 0 ? (
+                  formData.images.slice(0, 4).map((image: any, index: number) => (
+                    <div 
+                      key={image.imageId || index} 
+                      className="relative rounded overflow-hidden h-24"
+                    >
+                      <img 
+                        src={image.imageUrl} 
+                        alt={`Property Image ${index + 1}`} 
+                        className="h-full w-full object-cover"
+                      />
+                      {image.isMainImage && (
+                        <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded">
+                          Main
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-2 py-8 flex flex-col items-center justify-center bg-blue-50 rounded text-center">
+                    <p className="text-blue-700">No images available</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

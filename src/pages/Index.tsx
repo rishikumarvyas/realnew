@@ -223,7 +223,7 @@ const Index = () => {
       </div>
     </section>
 
-      {/* Stats Section */}
+      {/* Stats Section
       <section className="bg-white text-gray-800 py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -249,7 +249,7 @@ const Index = () => {
             />
           </div>
         </div>
-      </section>
+      </section> */}
       <div className="min-h-screen bg-gray-50">
       <AllProperty />
     </div>
