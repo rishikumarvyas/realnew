@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,32 +14,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  Pencil,
+  Building,
+  Bed,
+  Bath,
+  MapPin,
+  AreaChart,
+  CheckCircle,
+} from "lucide-react";
+import {
+  Parking,
+  Gym,
+  Garden,
+  Pool,
+  Security,
+  Elevator,
+} from "@/components/icons/CustomIcons";
 
 const EditProperty = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     price: "",
     address: "",
     city: "",
+    cityId: "", // Default value based on the curl example
     state: "",
-    zipCode: "",
+    stateId: "", // Default value based on the curl example
     superCategory: "",
+    superCategoryId: "", // Default value based on the curl example
+    propertyType: "",
+    propertyTypeId: "", // Default value based on the curl example
+    userTypeId: "", // Default value based on the curl example
     bedroom: "",
     bathroom: "",
+    balcony: "",
     area: "",
-    furnished: "no",
     amenities: {
       parking: false,
       gym: false,
@@ -47,10 +75,14 @@ const EditProperty = () => {
       elevator: false,
     },
     propertyId: "",
-    image: "",
+    images: [],
+    mainImageUrl: "",
   });
 
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
+
+  // Track which field is being edited
+  const [activeField, setActiveField] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -67,24 +99,14 @@ const EditProperty = () => {
       try {
         setLoading(true);
 
-        // Fetch property details
-        const response = await fetch(
-          `${BASE_URL}/api/Property/GetPropertyById?propertyId=${propertyId}`
+        const response = await axios.get(
+          `${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${propertyId}`
         );
 
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch property details: ${response.status}`
-          );
-        }
+        if (response.status === 200 && response.data.propertyDetail) {
+          const property = response.data.propertyDetail;
 
-        const data = await response.json();
-        console.log("Property details response:", data);
-
-        if (data.statusCode === 200 && data.propertyDetails) {
-          const property = data.propertyDetails;
-
-          // Parse amenities from string if available
+          // Parse amenities from amenityDetails array
           let parsedAmenities = {
             parking: false,
             gym: false,
@@ -95,24 +117,31 @@ const EditProperty = () => {
           };
 
           try {
-            if (property.amenities && typeof property.amenities === "string") {
-              const amenitiesArray = property.amenities
-                .split(",")
-                .map((item) => item.trim().toLowerCase());
-              if (amenitiesArray.includes("parking"))
-                parsedAmenities.parking = true;
-              if (amenitiesArray.includes("gym")) parsedAmenities.gym = true;
-              if (amenitiesArray.includes("garden"))
-                parsedAmenities.garden = true;
-              if (amenitiesArray.includes("pool")) parsedAmenities.pool = true;
-              if (amenitiesArray.includes("security"))
-                parsedAmenities.security = true;
-              if (amenitiesArray.includes("elevator"))
-                parsedAmenities.elevator = true;
+            if (
+              property.amenityDetails &&
+              Array.isArray(property.amenityDetails)
+            ) {
+              property.amenityDetails.forEach((amenity: any) => {
+                const amenityName = amenity.amenity.toLowerCase();
+                if (amenityName.includes("parking"))
+                  parsedAmenities.parking = true;
+                if (amenityName.includes("gym")) parsedAmenities.gym = true;
+                if (amenityName.includes("garden"))
+                  parsedAmenities.garden = true;
+                if (amenityName.includes("pool")) parsedAmenities.pool = true;
+                if (amenityName.includes("security"))
+                  parsedAmenities.security = true;
+                if (amenityName.includes("elevator"))
+                  parsedAmenities.elevator = true;
+              });
             }
           } catch (e) {
             console.error("Error parsing amenities:", e);
           }
+
+          // Find main image URL
+          const mainImage = property.imageDetails?.find((img: any) => img.isMainImage);
+          const mainImageUrl = mainImage ? mainImage.imageUrl : property.imageDetails?.[0]?.imageUrl || "";
 
           // Map API response to form data
           setFormData({
@@ -121,16 +150,22 @@ const EditProperty = () => {
             price: property.price?.toString() || "",
             address: property.address || "",
             city: property.city || "",
+            cityId: property.cityId?.toString() || "1",
             state: property.state || "",
-            zipCode: property.zipCode || "",
+            stateId: property.stateId?.toString() || "1",
             superCategory: property.superCategory?.toLowerCase() || "rent",
+            superCategoryId: property.superCategoryId?.toString() || "1",
+            propertyType: property.propertyType || "",
+            propertyTypeId: property.propertyTypeId?.toString() || "1",
+            userTypeId: property.userTypeId?.toString() || "1",
             bedroom: property.bedroom?.toString() || "",
             bathroom: property.bathroom?.toString() || "",
+            balcony: property.balcony?.toString() || "",
             area: property.area?.toString() || "",
-            furnished: property.furnished === true ? "yes" : "no",
             amenities: parsedAmenities,
             propertyId: property.propertyId || propertyId,
-            image: property.mainImageDetail?.url || "",
+            images: property.imageDetails || [],
+            mainImageUrl: mainImageUrl,
           });
         } else {
           throw new Error("Property data not found or invalid");
@@ -152,13 +187,18 @@ const EditProperty = () => {
           price: "25000",
           address: "123 Test Street",
           city: "Mumbai",
+          cityId: "1",
           state: "Maharashtra",
-          zipCode: "400001",
+          stateId: "1",
           superCategory: "rent",
+          superCategoryId: "1",
+          propertyType: "Apartment",
+          propertyTypeId: "1",
+          userTypeId: "1",
           bedroom: "3",
           bathroom: "2",
+          balcony: "1",
           area: "1500",
-          furnished: "yes",
           amenities: {
             parking: true,
             gym: false,
@@ -168,8 +208,15 @@ const EditProperty = () => {
             elevator: false,
           },
           propertyId: propertyId || "",
-          image:
-            "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+          images: [
+            {
+              imageId: "sample-id",
+              imageUrl:
+                "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+              isMainImage: true,
+            },
+          ],
+          mainImageUrl: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
         });
       } finally {
         setLoading(false);
@@ -179,7 +226,7 @@ const EditProperty = () => {
     fetchPropertyDetails();
   }, [propertyId, toast, navigate]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -187,97 +234,120 @@ const EditProperty = () => {
     }));
   };
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
+  const handleAmenityToggle = (amenity: keyof typeof formData.amenities) => {
     setFormData((prev) => ({
       ...prev,
       amenities: {
         ...prev.amenities,
-        [name]: checked,
+        [amenity]: !prev.amenities[amenity],
       },
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!user?.userId) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to update a property.",
-        variant: "destructive",
-      });
-      return;
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      setNewImages(prev => [...prev, ...selectedFiles]);
     }
+  };
+
+  const handleSetMainImage = (index: number) => {
+    setMainImageIndex(index);
+  };
+
+  const removeImage = (index: number) => {
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+    if (mainImageIndex === index) {
+      setMainImageIndex(null);
+    } else if (mainImageIndex !== null && mainImageIndex > index) {
+      setMainImageIndex(mainImageIndex - 1);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
     try {
       setSaving(true);
 
-      // Format amenities for API
-      const selectedAmenities = Object.entries(formData.amenities)
-        .filter(([_, selected]) => selected)
-        .map(([name]) => name)
-        .join(", ");
-
-      // Create payload for API
-      const payload = {
-        propertyId: formData.propertyId,
-        userId: user.userId,
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        superCategory: formData.superCategory.toUpperCase(),
-        bedroom: parseInt(formData.bedroom),
-        bathroom: parseInt(formData.bathroom),
-        area: parseFloat(formData.area),
-        furnished: formData.furnished === "yes",
-        amenities: selectedAmenities,
+      // Format amenities for API as array of IDs
+      const amenityMap: Record<string, string> = {
+        parking: "1",
+        gym: "2",
+        garden: "3",
+        pool: "4",
+        security: "5",
+        elevator: "6",
       };
+      
+      const amenityIds = Object.entries(formData.amenities)
+        .filter(([_, selected]) => selected)
+        .map(([name, _]) => amenityMap[name] || name);
 
-      console.log("Updating property with payload:", payload);
-
-      // Send update request to API
-      const response = await fetch(`${BASE_URL}/api/Property/UpdateProperty`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+      // Create FormData object for the multipart/form-data request
+      const formDataObj = new FormData();
+      formDataObj.append("PropertyId", formData.propertyId);
+      formDataObj.append("Title", formData.title);
+      formDataObj.append("Description", formData.description);
+      formDataObj.append("Price", formData.price);
+      formDataObj.append("Area", formData.area);
+      formDataObj.append("Bedroom", formData.bedroom);
+      formDataObj.append("Bathroom", formData.bathroom);
+      formDataObj.append("Balcony", formData.balcony);
+      formDataObj.append("Address", formData.address);
+      formDataObj.append("CityId", formData.cityId);
+      formDataObj.append("StateId", formData.stateId);
+      formDataObj.append("SuperCategoryId", formData.superCategoryId);
+      formDataObj.append("PropertyTypeId", formData.propertyTypeId);
+      formDataObj.append("UserTypeId", formData.userTypeId);
+      formDataObj.append("MainImageUrl", formData.mainImageUrl);
+      
+      // Add amenity IDs
+      amenityIds.forEach(id => {
+        formDataObj.append("AmenityIds", id);
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update property: ${response.status}`);
-      }
+      // Add new images if any
+      newImages.forEach((file, index) => {
+        formDataObj.append(`NewImages[${index}].File`, file);
+        formDataObj.append(
+          `NewImages[${index}].IsMain`, 
+          mainImageIndex === index ? "true" : "false"
+        );
+      });
 
-      const result = await response.json();
-      console.log("Update API response:", result);
+      console.log("Sending update request...");
 
-      if (result.statusCode === 200) {
+      const response = await axios.post(
+        `${BASE_URL}/api/Account/EditProperty`, 
+        formDataObj, 
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.status === 200) {
         toast({
-          title: "Success",
+          title: "Success!",
           description: "Property updated successfully!",
         });
-
-        // Navigate back to dashboard
         navigate(`/dashboard`);
       } else {
-        throw new Error(result.message || "Failed to update property");
+        throw new Error(response.data.message || "Failed to update property");
       }
     } catch (error) {
       console.error("Error updating property:", error);
       toast({
-        title: "Error",
+        title: "Update Error",
         description: "Failed to update property. Please try again later.",
         variant: "destructive",
       });
@@ -288,353 +358,508 @@ const EditProperty = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
+        <div className="mb-4">
+          <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+        </div>
+        <h3 className="text-xl font-medium text-blue-800">
+          Loading property details...
+        </h3>
       </div>
     );
   }
 
+  // Find main image URL
+  const mainImageUrl =
+    formData.images.find((img: any) => img.isMainImage)?.imageUrl ||
+    formData.images[0]?.imageUrl ||
+    "https://via.placeholder.com/800x500?text=No+Image";
+
+  // Get additional images (excluding main)
+  const additionalImages = formData.images
+    .filter((img: any) => !img.isMainImage)
+    .slice(0, 3); // Show up to 3 additional images
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="flex items-center mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/dashboard")}
-          className="mr-2"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back to Dashboard
-        </Button>
-        <h1 className="text-2xl font-bold">Edit Property</h1>
+    <div className="max-w-5xl mx-auto px-4 py-6 md:py-8">
+      {/* Header with gradient */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-4 mb-6 shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div className="flex items-center mb-3 md:mb-0">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/dashboard")}
+              className="mr-2 bg-white/10 hover:bg-white/20 text-white"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              <span className="inline">Back</span>
+            </Button>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
+              Edit Property
+            </h1>
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              className="bg-white/10 hover:bg-white/20 text-white border-white/30"
+              onClick={() => navigate(`/property/${propertyId}`)}
+            >
+              View Property
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleSubmit} 
+              disabled={saving}
+              className="bg-white text-blue-700 hover:bg-white/90"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" /> Save Changes
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Property Details</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div>
-              <h3 className="font-medium text-lg mb-3">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Property Title</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={5}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Property Type */}
-            <div>
-              <h3 className="font-medium text-lg mb-3">Property Type</h3>
-              <div className="space-y-2">
-                <Label>Listing Type</Label>
-                <RadioGroup
-                  name="superCategory"
-                  value={formData.superCategory}
-                  onValueChange={(value) =>
-                    handleSelectChange("superCategory", value)
-                  }
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center">
-                    <RadioGroupItem value="rent" id="rent" />
-                    <Label htmlFor="rent" className="ml-2">
-                      For Rent
+            {/* Basic Information Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  <Building className="h-5 w-5 mr-2" /> Basic Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <Label htmlFor="title" className="text-sm font-medium">
+                      Property Title
                     </Label>
+                    <div className="relative">
+                      <Input
+                        id="title"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        className="pr-8 transition-all border-blue-200 focus:border-blue-500"
+                        onFocus={() => setActiveField("title")}
+                        onBlur={() => setActiveField(null)}
+                        required
+                      />
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Pencil className="h-4 w-4 text-blue-500" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <RadioGroupItem value="buy" id="buy" />
-                    <Label htmlFor="buy" className="ml-2">
-                      For Sale
-                    </Label>
-                  </div>
-                  <div className="flex items-center">
-                    <RadioGroupItem value="sell" id="sell" />
-                    <Label htmlFor="sell" className="ml-2">
-                      Selling
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
 
-            {/* Location */}
-            <div>
-              <h3 className="font-medium text-lg mb-3">Location</h3>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
+                  <div className="relative group">
+                    <Label htmlFor="description" className="text-sm font-medium">
+                      Description
+                    </Label>
+                    <div className="relative">
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        className="min-h-[120px] transition-all border-blue-200 focus:border-blue-500"
+                        onFocus={() => setActiveField("description")}
+                        onBlur={() => setActiveField(null)}
+                      />
+                      <div className="absolute right-2 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Pencil className="h-4 w-4 text-blue-500" />
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="superCategory" className="text-sm font-medium">
+                        Listing Type
+                      </Label>
+                      <Select
+                        value={formData.superCategoryId}
+                        onValueChange={(value) =>
+                          handleSelectChange("superCategoryId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="superCategoryId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Buy</SelectItem>
+                          <SelectItem value="2">Sell</SelectItem>
+                          <SelectItem value="3">Rent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="relative group">
+                      <Label htmlFor="propertyType" className="text-sm font-medium">
+                        Property Type
+                      </Label>
+                      <Select
+                        value={formData.propertyTypeId}
+                        onValueChange={(value) =>
+                          handleSelectChange("propertyTypeId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="propertyTypeId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select property type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Apartment</SelectItem>
+                          <SelectItem value="2">House</SelectItem>
+                          <SelectItem value="3">Villa</SelectItem>
+                          <SelectItem value="4">Commercial</SelectItem>
+                          <SelectItem value="5">Land</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <Label htmlFor="price" className="text-sm font-medium">
+                      Price (₹)
+                    </Label>
                     <Input
-                      id="city"
-                      name="city"
-                      value={formData.city}
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={formData.price}
                       onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
+                      onFocus={() => setActiveField("price")}
+                      onBlur={() => setActiveField(null)}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State</Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Property Details Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  <MapPin className="h-5 w-5 mr-2" /> Property Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="bedroom" className="text-sm font-medium">
+                        <Bed className="h-4 w-4 inline mr-1" /> Bedrooms
+                      </Label>
+                      <Input
+                        id="bedroom"
+                        name="bedroom"
+                        type="number"
+                        value={formData.bedroom}
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                        required
+                      />
+                    </div>
+
+                    <div className="relative group">
+                      <Label htmlFor="bathroom" className="text-sm font-medium">
+                        <Bath className="h-4 w-4 inline mr-1" /> Bathrooms
+                      </Label>
+                      <Input
+                        id="bathroom"
+                        name="bathroom"
+                        type="number"
+                        value={formData.bathroom}
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="balcony" className="text-sm font-medium">
+                        Balconies
+                      </Label>
+                      <Input
+                        id="balcony"
+                        name="balcony"
+                        type="number"
+                        value={formData.balcony}
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                      />
+                    </div>
+
+                    <div className="relative group">
+                      <Label htmlFor="area" className="text-sm font-medium">
+                        <AreaChart className="h-4 w-4 inline mr-1" /> Area (sq.ft)
+                      </Label>
+                      <Input
+                        id="area"
+                        name="area"
+                        type="number"
+                        value={formData.area}
+                        onChange={handleInputChange}
+                        className="border-blue-200 focus:border-blue-500"
+                        min="0"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <Separator className="my-4" />
+                  
+                  <h3 className="font-medium text-blue-800 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" /> Amenities
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="parking"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.parking}
+                        onChange={() => handleAmenityToggle("parking")}
+                      />
+                      <Label htmlFor="parking" className="text-sm cursor-pointer">
+                        Parking
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="gym"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.gym}
+                        onChange={() => handleAmenityToggle("gym")}
+                      />
+                      <Label htmlFor="gym" className="text-sm cursor-pointer">
+                        Gym
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="garden"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.garden}
+                        onChange={() => handleAmenityToggle("garden")}
+                      />
+                      <Label htmlFor="garden" className="text-sm cursor-pointer">
+                        Garden
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="pool"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.pool}
+                        onChange={() => handleAmenityToggle("pool")}
+                      />
+                      <Label htmlFor="pool" className="text-sm cursor-pointer">
+                        Swimming Pool
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="security"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.security}
+                        onChange={() => handleAmenityToggle("security")}
+                      />
+                      <Label htmlFor="security" className="text-sm cursor-pointer">
+                        Security
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="elevator"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.elevator}
+                        onChange={() => handleAmenityToggle("elevator")}
+                      />
+                      <Label htmlFor="elevator" className="text-sm cursor-pointer">
+                        Elevator
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Address Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  <MapPin className="h-5 w-5 mr-2" /> Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <Label htmlFor="address" className="text-sm font-medium">
+                      Address
+                    </Label>
                     <Input
-                      id="state"
-                      name="state"
-                      value={formData.state}
+                      id="address"
+                      name="address"
+                      value={formData.address}
                       onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zipCode">Zip Code</Label>
-                    <Input
-                      id="zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                    />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative group">
+                      <Label htmlFor="cityId" className="text-sm font-medium">
+                        City
+                      </Label>
+                      <Select
+                        value={formData.cityId}
+                        onValueChange={(value) =>
+                          handleSelectChange("cityId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="cityId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select city" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Indore</SelectItem>
+                          <SelectItem value="2">Bhopal</SelectItem>
+                          <SelectItem value="3">Pune</SelectItem>
+                        
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="relative group">
+                      <Label htmlFor="stateId" className="text-sm font-medium">
+                        State
+                      </Label>
+                      <Select
+                        value={formData.stateId}
+                        onValueChange={(value) =>
+                          handleSelectChange("stateId", value)
+                        }
+                      >
+                        <SelectTrigger 
+                          id="stateId" 
+                          className="border-blue-200 focus:border-blue-500"
+                        >
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Madhya Pradesh</SelectItem>
+                          <SelectItem value="2">Maharashtra</SelectItem>
+                         
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Features */}
-            <div>
-              <h3 className="font-medium text-lg mb-3">Features</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bedroom">Bedrooms</Label>
-                  <Select
-                    name="bedroom"
-                    value={formData.bedroom}
-                    onValueChange={(value) =>
-                      handleSelectChange("bedroom", value)
-                    }
+            {/* Image Upload Card */}
+            <Card className="overflow-hidden border border-blue-100 shadow-md">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center text-blue-800">
+                  Image Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                  />
+                  
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-dashed border-2 py-8 border-blue-300 text-blue-600 hover:bg-blue-50"
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                      <SelectItem value="4">4</SelectItem>
-                      <SelectItem value="5">5+</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    Click to select images
+                  </Button>
+                  
+                  {newImages.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">New Images:</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {newImages.map((file, index) => (
+                          <div key={index} className="relative group rounded overflow-hidden border">
+                            <img 
+                              src={URL.createObjectURL(file)}
+                              alt={`Upload Preview ${index}`}
+                              className="w-full h-24 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <Button 
+                                type="button" 
+                                variant="default" 
+                                onClick={() => handleSetMainImage(index)}
+                                size="sm"
+                                className={mainImageIndex === index ? "bg-green-600" : "bg-blue-600"}
+                              >
+                                {mainImageIndex === index ? "Main" : "Set Main"}
+                              </Button>
+                              <Button 
+                                type="button" 
+                                variant="destructive" 
+                                onClick={() => removeImage(index)}
+                                size="sm"
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                            {mainImageIndex === index && (
+                              <div className="absolute top-1 left-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded">
+                                Main
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="bathroom">Bathrooms</Label>
-                  <Select
-                    name="bathroom"
-                    value={formData.bathroom}
-                    onValueChange={(value) =>
-                      handleSelectChange("bathroom", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                      <SelectItem value="4">4</SelectItem>
-                      <SelectItem value="5">5+</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="area">Area (sq.ft.)</Label>
-                  <Input
-                    id="area"
-                    name="area"
-                    type="number"
-                    value={formData.area}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <Label>Furnished</Label>
-                <RadioGroup
-                  name="furnished"
-                  value={formData.furnished}
-                  onValueChange={(value) =>
-                    handleSelectChange("furnished", value)
-                  }
-                  className="flex space-x-4"
-                >
-                  <div className="flex items-center">
-                    <RadioGroupItem value="yes" id="furnished-yes" />
-                    <Label htmlFor="furnished-yes" className="ml-2">
-                      Yes
-                    </Label>
-                  </div>
-                  <div className="flex items-center">
-                    <RadioGroupItem value="no" id="furnished-no" />
-                    <Label htmlFor="furnished-no" className="ml-2">
-                      No
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-
-            {/* Amenities */}
-            <div>
-              <h3 className="font-medium text-lg mb-3">Amenities</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="parking"
-                    name="parking"
-                    checked={formData.amenities.parking}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="parking" className="ml-2">
-                    Parking
-                  </Label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="gym"
-                    name="gym"
-                    checked={formData.amenities.gym}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="gym" className="ml-2">
-                    Gym
-                  </Label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="garden"
-                    name="garden"
-                    checked={formData.amenities.garden}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="garden" className="ml-2">
-                    Garden
-                  </Label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="pool"
-                    name="pool"
-                    checked={formData.amenities.pool}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="pool" className="ml-2">
-                    Swimming Pool
-                  </Label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="security"
-                    name="security"
-                    checked={formData.amenities.security}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="security" className="ml-2">
-                    24x7 Security
-                  </Label>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="elevator"
-                    name="elevator"
-                    checked={formData.amenities.elevator}
-                    onChange={handleCheckboxChange}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Label htmlFor="elevator" className="ml-2">
-                    Elevator
-                  </Label>
-                </div>
-              </div>
-            </div>
-
-            {/* Property Image Preview */}
-            {formData.image && (
-              <div>
-                <h3 className="font-medium text-lg mb-3">Current Image</h3>
-                <div className="w-full h-48 overflow-hidden rounded-md border">
-                  <img
-                    src={formData.image}
-                    alt={formData.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  To update the image, please use the property image upload
-                  section
-                </p>
-              </div>
-            )}
-
-            {/* Submit Buttons */}
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="flex justify-end space-x-4">
               <Button
                 type="button"
                 variant="outline"
@@ -642,27 +867,122 @@ const EditProperty = () => {
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700"
+              <Button 
+                type="submit" 
                 disabled={saving}
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 {saving ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    <Save className="h-4 w-4 mr-2" /> Save Changes
                   </>
                 )}
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Preview and Image Management Section */}
+        <div className="space-y-6">
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50 p-4">
+              <CardTitle className="text-blue-800 text-base">Property Preview</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="relative">
+                <img 
+                  src={mainImageUrl} 
+                  alt="Property Preview" 
+                  className="w-full h-48 object-cover" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
+                  <div className="text-white">
+                    <h3 className="font-bold truncate">
+                      {formData.title || "Property Title"}
+                    </h3>
+                    <p className="flex items-center text-sm">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {formData.city || "Location"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-4">
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span className="flex items-center">
+                    <Bed className="h-4 w-4 mr-1" />
+                    {formData.bedroom || 0} Bed
+                  </span>
+                  <span className="flex items-center">
+                    <Bath className="h-4 w-4 mr-1" />
+                    {formData.bathroom || 0} Bath
+                  </span>
+                  <span className="flex items-center">
+                    <AreaChart className="h-4 w-4 mr-1" />
+                    {formData.area || 0} sqft
+                  </span>
+                </div>
+                
+                <div className="font-bold text-blue-600 text-lg">
+                  ₹ {Number(formData.price || 0).toLocaleString()}
+                </div>
+                
+                <Separator className="my-3" />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    ID: {formData.propertyId.substring(0, 8)}
+                  </span>
+                  <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full capitalize">
+                    {formData.superCategoryId === "1" ? "Buy" : 
+                     formData.superCategoryId === "2" ? "Sell" : "Rent"}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50 p-4">
+              <CardTitle className="text-blue-800 text-base">
+                Current Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 gap-2">
+                {formData.images.length > 0 ? (
+                  formData.images.slice(0, 4).map((image: any, index: number) => (
+                    <div 
+                      key={image.imageId || index} 
+                      className="relative rounded overflow-hidden h-24"
+                    >
+                      <img 
+                        src={image.imageUrl} 
+                        alt={`Property Image ${index + 1}`} 
+                        className="h-full w-full object-cover"
+                      />
+                      {image.isMainImage && (
+                        <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded">
+                          Main
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-2 py-8 flex flex-col items-center justify-center bg-blue-50 rounded text-center">
+                    <p className="text-blue-700">No images available</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

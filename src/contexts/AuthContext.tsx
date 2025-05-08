@@ -14,6 +14,8 @@ interface User {
   phone: string;
   name?: string;
   token?: string;
+  userType?: string;
+  stateId?: string;
 }
 
 interface UserProperty {
@@ -47,7 +49,9 @@ interface AuthContextType {
   signup: (
     phoneNumber: string,
     fullName: string,
-    otp: string
+    otp: string,
+    userType: string,
+    stateId: string
   ) => Promise<boolean>;
   logout: () => void;
   fetchUserDetails: (userId: string) => Promise<boolean>;
@@ -116,11 +120,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             const tokenData = parseJwt(userData.token);
             if (tokenData && tokenData.exp * 1000 > Date.now()) {
               setUser(userData);
-
-              // Fetch user details with user's ID
-              if (userData.userId) {
-                await fetchUserDetails(userData.userId);
-              }
+              
+              // We no longer automatically call fetchUserDetails here
+              // as we want to avoid this API call by getting all needed data
+              // directly from the login response
             }
           } else {
             setUser(userData);
@@ -182,6 +185,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return false;
     }
   };
+
   const requestOtp = async (phoneNumber: string): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
@@ -211,7 +215,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const signup = async (
     phoneNumber: string,
     fullName: string,
-    otp: string
+    otp: string,
+    userType: string,
+    stateId: string
   ): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
@@ -221,6 +227,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         phone: formattedPhone,
         name: fullName,
         otp,
+        userType,
+        stateId
       });
 
       const signupResponse = await fetch(`${BASE_URL}/api/Auth/SignUp`, {
@@ -230,6 +238,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: formattedPhone,
           name: fullName,
           otp,
+          userType,
+          stateId
         }),
       });
 
@@ -265,6 +275,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: formattedPhone,
           name: fullName,
           token,
+          userType,
+          stateId
         };
 
         // Store user data for immediate use
@@ -324,8 +336,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token =
           typeof data.token === "string" ? data.token : data.token?.token;
 
-        // Get name from response
+        // Get name from response - this is important to extract and use directly
         const name = data.name || (data.user && data.user.name);
+        
+        // Get userType and stateId from response if available
+        const userType = data.userType || (data.user && data.user.userType);
+        const stateId = data.stateId || (data.user && data.user.stateId);
 
         // Store the mapping
         storePersistentUserId(formattedPhone, userId);
@@ -335,7 +351,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           userId,
           phone: formattedPhone,
           token,
-          name,
+          name, // Important: Including name from login response
+          userType,
+          stateId
         };
 
         console.log("Final user data for login:", userData);
@@ -345,8 +363,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Clear signup data after successful login
         localStorage.removeItem("signupData");
 
-        // Fetch user details with userId
-        await fetchUserDetails(userId);
+        // We're no longer calling fetchUserDetails here as we're getting
+        // all the necessary user data directly from the login response
+        
+        // Set empty user properties array (if needed, this can be fetched later on demand)
+        setUserProperties([]);
 
         return true;
       } catch (e) {

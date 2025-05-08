@@ -15,9 +15,58 @@ import { useToast } from "@/hooks/use-toast";
 import { OtpStep } from "@/components/login/OtpStep";
 import { FormStep } from "@/components/login/FormStep";
 
+// Map user types to their respective IDs
+const USER_TYPES = [
+  { id: 1, name: "Owner" },
+  { id: 2, name: "Broker" },
+  { id: 3, name: "Builder" },
+];
+
+// Map of all Indian states
+const INDIAN_STATES = [
+  { id: 1, name: "Madhya Pradesh" },
+  { id: 2, name: "Maharashtra" },
+  { id: 3, name: "Andhra Pradesh" },
+  { id: 4, name: "Arunachal Pradesh" },
+  { id: 5, name: "Assam" },
+  { id: 6, name: "Bihar" },
+  { id: 7, name: "Chhattisgarh" },
+  { id: 8, name: "Goa" },
+  { id: 9, name: "Gujarat" },
+  { id: 10, name: "Haryana" },
+  { id: 11, name: "Himachal Pradesh" },
+  { id: 12, name: "Jharkhand" },
+  { id: 13, name: "Karnataka" },
+  { id: 14, name: "Kerala" },
+  { id: 15, name: "Manipur" },
+  { id: 16, name: "Meghalaya" },
+  { id: 17, name: "Mizoram" },
+  { id: 18, name: "Nagaland" },
+  { id: 19, name: "Odisha" },
+  { id: 20, name: "Punjab" },
+  { id: 21, name: "Rajasthan" },
+  { id: 22, name: "Sikkim" },
+  { id: 23, name: "Tamil Nadu" },
+  { id: 24, name: "Telangana" },
+  { id: 25, name: "Tripura" },
+  { id: 26, name: "Uttar Pradesh" },
+  { id: 27, name: "Uttarakhand" },
+  { id: 28, name: "West Bengal" },
+  { id: 29, name: "Delhi" },
+  { id: 30, name: "Jammu and Kashmir" },
+  { id: 31, name: "Ladakh" },
+  { id: 32, name: "Puducherry" },
+  { id: 33, name: "Andaman and Nicobar Islands" },
+  { id: 34, name: "Chandigarh" },
+  { id: 35, name: "Dadra and Nagar Haveli and Daman and Diu" },
+  { id: 36, name: "Lakshadweep" },
+];
+
 const Signup = () => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
+  const [userType, setUserType] = useState(1); // Default to Owner (id: 1)
+  const [stateId, setStateId] = useState(1); // Default to Madhya Pradesh (id: 1)
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -33,10 +82,12 @@ const Signup = () => {
   };
 
   const handleFormSubmit = async (formData) => {
-    const { name: fullName, phone: phoneNumber } = formData;
+    const { name: fullName, phone: phoneNumber, userType: selectedUserType, stateId: selectedStateId } = formData;
 
     setName(fullName);
     setPhone(phoneNumber);
+    setUserType(selectedUserType);
+    setStateId(selectedStateId);
     setLoading(true);
 
     try {
@@ -72,12 +123,12 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      // Skip formatPhoneNumber and directly pass the correctly formatted number
+      // Pass user type and state ID along with other signup info
       console.log(
-        `Submitting signup with phone: +91${phone}, name: ${name}, OTP: ${otp}`
+        `Submitting signup with phone: +91${phone}, name: ${name}, userType: ${userType}, stateId: ${stateId}, OTP: ${otp}`
       );
 
-      const success = await signup("+91" + phone, name, otp);
+      const success = await signup("+91" + phone, name, otp, userType, stateId);
 
       if (success) {
         toast({
@@ -195,7 +246,14 @@ const Signup = () => {
 
           <CardContent>
             {step === "form" ? (
-              <FormStep onSubmit={handleFormSubmit} loading={loading} />
+              <FormStep 
+                onSubmit={handleFormSubmit} 
+                loading={loading}
+                userTypes={USER_TYPES}
+                states={INDIAN_STATES}
+                initialUserType={userType}
+                initialStateId={stateId}
+              />
             ) : (
               <OtpStep
                 phone={phone}

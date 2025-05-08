@@ -200,13 +200,13 @@ const PostProperty = () => {
 
   const mapAmenityToId = (amenity) => {
     const amenityMap = {
-      Lift: 1,
+      "Lift": 1,
       "Swimming Pool": 2,
       "Club House": 3,
-      Garden: 4,
-      Gym: 5,
-      Security: 6,
-      Parking: 8,
+      "Garden": 4,
+      "Gym": 5,
+      "Security": 6,
+      "Parking": 8,
       "Power Backup": 7,
     };
     return amenityMap[amenity] || 1;
