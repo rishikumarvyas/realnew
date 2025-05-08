@@ -32,6 +32,7 @@ import {
   Camera,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import imageCompression from "browser-image-compression";
 
 const PostProperty = () => {
   const navigate = useNavigate();
@@ -87,30 +88,51 @@ const PostProperty = () => {
     }
   };
 
-  const handleImageUpload = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
+  const handleImageUpload = async (e) => {
+    const imageFile = e.target.files[0];
+    const options = {
+      maxSizeMB: 0.1, // Max size in MB
+      maxWidthOrHeight: 1920,
+      useWebWorker: true,
+    };
 
-      if (images.length + newFiles.length > 6) {
-        toast({
-          title: "Maximum 6 images allowed",
-          description: "You can upload up to 6 images for a property.",
-          variant: "destructive",
-        });
-        return;
+    try {
+      const compressedFile = await imageCompression(imageFile, options);
+
+      //converting compressedFile blob type to FileList type
+      const convertedfile = new File([compressedFile], "example.txt", {
+        type: compressedFile.type,
+      }); // Convert Blob to File
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(convertedfile); // Add the file to DataTransfer
+      const fileList = dataTransfer.files; // convert to FileList type
+
+      if (fileList && fileList.length > 0) {
+        const newFiles = Array.from(fileList);
+
+        if (images.length + newFiles.length > 6) {
+          toast({
+            title: "Maximum 6 images allowed",
+            description: "You can upload up to 6 images for a property.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const newImages = [...images, ...newFiles];
+        setImages(newImages);
+
+        // Generate preview URLs
+        const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
+        setImageURLs([...imageURLs, ...newImageURLs]);
+
+        // If no main image is selected, select the first one by default
+        if (mainImageIndex === null && newImages.length > 0) {
+          setMainImageIndex(images.length); // Set to the first of the newly added images
+        }
       }
-
-      const newImages = [...images, ...newFiles];
-      setImages(newImages);
-
-      // Generate preview URLs
-      const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-      setImageURLs([...imageURLs, ...newImageURLs]);
-
-      // If no main image is selected, select the first one by default
-      if (mainImageIndex === null && newImages.length > 0) {
-        setMainImageIndex(images.length); // Set to the first of the newly added images
-      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
