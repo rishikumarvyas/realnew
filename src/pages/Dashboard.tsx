@@ -12,6 +12,7 @@ import {
   Building,
   MessageSquare,
   Settings,
+  ThumbsUp,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -196,6 +197,7 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<typeof mockMessages>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
+  const [likeCount, setLikeCount] = useState<number>(0); // New state for like count
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -243,6 +245,11 @@ const Dashboard = () => {
           if (data.name) {
             setUserName(data.name);
           }
+          
+          // Set the like count from API response
+          if (data.likedCount !== undefined) {
+            setLikeCount(data.likedCount);
+          }
 
           if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
             console.log("First property from API:", data.userDetails[0]);
@@ -259,6 +266,7 @@ const Dashboard = () => {
           // Mock data for testing when API is unavailable
           const formattedProperties = mockProperties.map(convertToPropertyCard);
           setProperties(formattedProperties);
+          setLikeCount(1); // Default like count for mock data
         }
 
         if (newPropertyId) {
@@ -278,6 +286,7 @@ const Dashboard = () => {
         // Ensure we have at least some properties to display
         const formattedProperties = mockProperties.map(convertToPropertyCard);
         setProperties(formattedProperties);
+        setLikeCount(0); // Reset like count on error
       } finally {
         setLoading(false);
         setMessages(mockMessages);
@@ -371,7 +380,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -398,6 +407,21 @@ const Dashboard = () => {
               <span className="text-3xl font-bold">
                 {properties.filter((p) => p.status === "active").length}
               </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* New Like Count Card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Likes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <ThumbsUp className="w-5 h-5 text-rose-500 mr-2" />
+              <span className="text-3xl font-bold">{likeCount}</span>
             </div>
           </CardContent>
         </Card>

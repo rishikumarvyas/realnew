@@ -1,4 +1,4 @@
-// Login.js - Refactored with OtpStep Component
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowLeft, X, Phone, Key, Home } from "lucide-react";
-import { OtpStep } from "@/components/login/OtpStep"; // Import the new component
+import { OtpStep } from "@/components/login/OtpStep";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const Login = () => {
+const Login = ({ onClose }) => {
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState("phone");
   const [loading, setLoading] = useState(false);
-  const [isVisible, setIsVisible] = useState(true); // Set to true by default to show modal right away
+  const [isVisible, setIsVisible] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, login } = useAuth();
@@ -30,9 +30,13 @@ const Login = () => {
     // First hide the modal with animation
     setIsVisible(false);
 
-    // Then navigate away after animation completes
+    // Then call the onClose prop if provided or navigate away
     setTimeout(() => {
-      navigate("/");
+      if (onClose) {
+        onClose();
+      } else {
+        navigate("/");
+      }
     }, 300);
   };
 
@@ -63,7 +67,7 @@ const Login = () => {
         toast({
           title: "Failed to Send OTP",
           description:
-            "There was an error sending the verification code. Please try again.",
+            "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }
@@ -92,12 +96,12 @@ const Login = () => {
           title: "Login Successful",
           description: "You have been logged in successfully.",
         });
-        navigate("/");
+        handleClose(); // Close modal and navigate after success
       } else {
         toast({
           title: "Login Failed",
           description:
-            "The verification code may be incorrect or expired. Please try again.",
+            "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }

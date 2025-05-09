@@ -1,3 +1,5 @@
+// Modified Signup.tsx to fix the signup call and remove stateId parameter
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -22,77 +24,60 @@ const USER_TYPES = [
   { id: 3, name: "Builder" },
 ];
 
-// Map of all Indian states
-const INDIAN_STATES = [
-  { id: 1, name: "Madhya Pradesh" },
-  { id: 2, name: "Maharashtra" },
-  { id: 3, name: "Andhra Pradesh" },
-  { id: 4, name: "Arunachal Pradesh" },
-  { id: 5, name: "Assam" },
-  { id: 6, name: "Bihar" },
-  { id: 7, name: "Chhattisgarh" },
-  { id: 8, name: "Goa" },
-  { id: 9, name: "Gujarat" },
-  { id: 10, name: "Haryana" },
-  { id: 11, name: "Himachal Pradesh" },
-  { id: 12, name: "Jharkhand" },
-  { id: 13, name: "Karnataka" },
-  { id: 14, name: "Kerala" },
-  { id: 15, name: "Manipur" },
-  { id: 16, name: "Meghalaya" },
-  { id: 17, name: "Mizoram" },
-  { id: 18, name: "Nagaland" },
-  { id: 19, name: "Odisha" },
-  { id: 20, name: "Punjab" },
-  { id: 21, name: "Rajasthan" },
-  { id: 22, name: "Sikkim" },
-  { id: 23, name: "Tamil Nadu" },
-  { id: 24, name: "Telangana" },
-  { id: 25, name: "Tripura" },
-  { id: 26, name: "Uttar Pradesh" },
-  { id: 27, name: "Uttarakhand" },
-  { id: 28, name: "West Bengal" },
-  { id: 29, name: "Delhi" },
-  { id: 30, name: "Jammu and Kashmir" },
-  { id: 31, name: "Ladakh" },
-  { id: 32, name: "Puducherry" },
-  { id: 33, name: "Andaman and Nicobar Islands" },
-  { id: 34, name: "Chandigarh" },
-  { id: 35, name: "Dadra and Nagar Haveli and Daman and Diu" },
-  { id: 36, name: "Lakshadweep" },
-];
+interface SignupProps {
+  onClose?: () => void;
+}
 
-const Signup = () => {
+const Signup = ({ onClose }: SignupProps) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [userType, setUserType] = useState(1); // Default to Owner (id: 1)
-  const [stateId, setStateId] = useState(1); // Default to Madhya Pradesh (id: 1)
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, signup } = useAuth();
 
   const handleClose = () => {
+    // First hide the modal with animation
     setIsVisible(false);
+
+    // Then call the onClose prop if provided or navigate away
     setTimeout(() => {
-      navigate("/");
+      if (onClose) {
+        onClose();
+      } else {
+        navigate("/");
+      }
     }, 300);
   };
 
-  const handleFormSubmit = async (formData) => {
-    const { name: fullName, phone: phoneNumber, userType: selectedUserType, stateId: selectedStateId } = formData;
+  const handleFormSubmit = async (formData: any) => {
+    const { name: fullName, phone: phoneNumber, userType: selectedUserType } = formData;
 
-    setName(fullName);
-    setPhone(phoneNumber);
-    setUserType(selectedUserType);
-    setStateId(selectedStateId);
     setLoading(true);
+    setPhoneError(null);
 
     try {
-      // Skip formatPhoneNumber and directly pass the correctly formatted number
-      const success = await requestOtp("+91" + phoneNumber);
+      // Check if the user already exists (we'll manually check here since we don't have checkPhoneExists)
+      const users = localStorage.getItem("homeYatra_users");
+      const existingUsers = users ? JSON.parse(users) : {};
+      const fullPhoneNumber = "+91" + phoneNumber;
+      
+      if (existingUsers[fullPhoneNumber]) {
+        setPhoneError("This number is already registered. Please login or use another number.");
+        setLoading(false);
+        return;
+      }
+      
+      setName(fullName);
+      setPhone(phoneNumber);
+      setUserType(selectedUserType);
+
+      // Request OTP for validation
+      const success = await requestOtp(fullPhoneNumber);
 
       if (success) {
         toast({
@@ -114,34 +99,36 @@ const Signup = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+      console.error("Form submission error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOtpSubmit = async (otp) => {
+  const handleOtpSubmit = async (otp: string) => {
     setLoading(true);
 
     try {
-      // Pass user type and state ID along with other signup info
-      console.log(
-        `Submitting signup with phone: +91${phone}, name: ${name}, userType: ${userType}, stateId: ${stateId}, OTP: ${otp}`
+      // Pass only the required parameters according to the API spec
+      const success = await signup(
+        "+91" + phone, 
+        name, 
+        otp, 
+        userType.toString() // Convert to string as API expects string
       );
-
-      const success = await signup("+91" + phone, name, otp, userType, stateId);
 
       if (success) {
         toast({
           title: "Registration Successful",
           description:
-            "Your account has been created successfully. Please log in to continue.",
+            "Your account has been created successfully. You are now logged in.",
         });
-        navigate("/dashboard");
+        handleClose(); // Close modal and navigate to dashboard after success
       } else {
         toast({
           title: "Registration Failed",
           description:
-            "The verification code may be incorrect or expired. Please try again.",
+            "Your number is already registered. Please sign in or use another number.",
           variant: "destructive",
         });
       }
@@ -158,8 +145,6 @@ const Signup = () => {
   };
 
   const handleResendOtp = async () => {
-    setLoading(true);
-
     try {
       // Skip formatPhoneNumber and directly pass the correctly formatted number
       const success = await requestOtp("+91" + phone);
@@ -183,9 +168,10 @@ const Signup = () => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
+      console.error("Resend OTP error:", error);
     }
+    
+    return Promise.resolve();
   };
 
   const popupClasses = isVisible
@@ -206,7 +192,7 @@ const Signup = () => {
 
       {/* Popup card */}
       <div
-        className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
+        className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform mt-8 md:mt-12 ${popupClasses}`}
       >
         <Card className="w-full shadow-xl border-none overflow-hidden">
           {/* House icon at the top */}
@@ -224,7 +210,7 @@ const Signup = () => {
             <X className="h-5 w-5" />
           </button>
 
-          <CardHeader className="relative pt-12">
+          <CardHeader className="relative pt-14 pb-3">
             {step === "otp" && (
               <Button
                 variant="ghost"
@@ -234,25 +220,25 @@ const Signup = () => {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            <CardTitle className="text-center text-2xl bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+            <CardTitle className="text-center text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
               Sign up for HomeYatra
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className="text-center text-sm mt-1">
               {step === "form"
                 ? "Create an account to start your real estate journey"
                 : `Enter the verification code sent to +91 ${phone}`}
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="px-6 py-2">
             {step === "form" ? (
               <FormStep 
                 onSubmit={handleFormSubmit} 
                 loading={loading}
                 userTypes={USER_TYPES}
-                states={INDIAN_STATES}
+                states={[]} 
                 initialUserType={userType}
-                initialStateId={stateId}
+                phoneError={phoneError}
               />
             ) : (
               <OtpStep
@@ -264,7 +250,7 @@ const Signup = () => {
             )}
           </CardContent>
 
-          <CardFooter className="flex justify-center border-t p-6">
+          <CardFooter className="flex justify-center border-t p-3">
             <div className="text-sm text-gray-500">
               Already have an account?{" "}
               <Link

@@ -27,7 +27,6 @@ import {
   Share2,
   Calendar
 } from "lucide-react";
-import Resizer from "react-image-file-resizer";
 import { 
   Carousel,
   CarouselContent,
@@ -38,96 +37,14 @@ import {
 import { ContactForm } from "@/components/ContactForm";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Define API response types
-interface AmenityDetail {
-  amenityId: string;
-  amenity: string;
-}
-
-interface ImageDetail {
-  imageId: string;
-  imageUrl: string;
-  compressedUrl?: string;
-  isMainImage: boolean;
-}
-
-interface PropertyDetailResponse {
-  statusCode: number;
-  message: string;
-  propertyDetail: {
-    propertyId: string;
-    superCategoryId: string;
-    superCategory: string;
-    propertyTypeId: string;
-    propertyType: string;
-    title: string;
-    description: string;
-    price: number;
-    area: number;
-    bedroom: number;
-    bathroom: number;
-    balcony: number;
-    amenityDetails: AmenityDetail[];
-    address: string;
-    cityId: string;
-    city: string;
-    stateId: string;
-    state: string;
-    userTypeId: string;
-    userType: string;
-    imageDetails: ImageDetail[];
-    postedBy: string;
-    phone: string;
-  };
-}
-
-// Image compression utility using react-image-file-resizer
-const compressImageUrl = async (imageUrl: string, maxWidth = 1200, maxHeight = 800, quality = 80): Promise<string> => {
-  try {
-    // Skip compression for placeholder or empty images
-    if (!imageUrl || imageUrl.includes("unsplash.com") || imageUrl.includes("placeholder")) {
-      return imageUrl;
-    }
-
-    // Fetch the image
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    
-    return new Promise((resolve, reject) => {
-      // Convert blob to File
-      const file = new File([blob], "image.jpg", { type: blob.type });
-      
-      Resizer.imageFileResizer(
-        file,
-        maxWidth, // max width
-        maxHeight, // max height
-        "JPEG", // format
-        quality, // quality (0-100)
-        0, // rotation
-        (uri) => {
-          // On success
-          console.log("Image compressed successfully");
-          resolve(uri as string);
-        },
-        "base64", // output type
-        maxWidth / 2, // min width
-        maxHeight / 2, // min height
-      );
-    });
-  } catch (error) {
-    console.error("Image compression failed:", error);
-    return imageUrl; // Return original on error
-  }
-};
-
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [property, setProperty] = useState<PropertyDetailResponse["propertyDetail"] | null>(null);
+  const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [contactType, setContactType] = useState<"whatsapp" | "email">("whatsapp");
+  const [contactType, setContactType] = useState("whatsapp");
   const [isFavorite, setIsFavorite] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -151,23 +68,8 @@ const PropertyDetail = () => {
         if (data.statusCode === 200 && data.propertyDetail) {
           const propertyData = data.propertyDetail;
           
-          // Compress images if available
-          if (propertyData.imageDetails && propertyData.imageDetails.length > 0) {
-            const compressedImages = await Promise.all(
-              propertyData.imageDetails.map(async (img) => {
-                try {
-                  const compressedUrl = await compressImageUrl(img.imageUrl);
-                  return { ...img, compressedUrl };
-                } catch (e) {
-                  console.error("Failed to compress image:", e);
-                  return img;
-                }
-              })
-            );
-            
-            propertyData.imageDetails = compressedImages;
-          }
-          
+          // Set the favorite status based on API response
+          setIsFavorite(propertyData.isLiked || false);
           setProperty(propertyData);
           setError(null);
         } else {
@@ -183,6 +85,7 @@ const PropertyDetail = () => {
           if (mockPropertyDetail) {
             console.log("Using mock data in development");
             setProperty(mockPropertyDetail);
+            setIsFavorite(mockPropertyDetail.isLiked || false);
             setError(null);
           }
         }
@@ -197,7 +100,7 @@ const PropertyDetail = () => {
   }, [id]);
 
   // Mock property data for development testing only
-  const getMockPropertyDetail = (propertyId: string) => {
+  const getMockPropertyDetail = (propertyId) => {
     console.log("Using mock data for propertyId:", propertyId);
     return {
       propertyId: propertyId,
@@ -212,6 +115,7 @@ const PropertyDetail = () => {
       bedroom: 3,
       bathroom: 2,
       balcony: 1,
+      isLiked: true, // Added isLiked property
       amenityDetails: [
         { amenityId: "1", amenity: "Wifi" },
         { amenityId: "2", amenity: "Parking" },
@@ -249,13 +153,40 @@ const PropertyDetail = () => {
     };
   };
 
-  const handleContactModal = (type: "whatsapp" | "email") => {
+  const handleContactModal = (type) => {
     setContactType(type);
     setContactModalOpen(true);
   };
 
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
+  const toggleFavorite = async () => {
+    try {
+      // Toggle the UI state immediately for better UX
+      const newFavoriteState = !isFavorite;
+      setIsFavorite(newFavoriteState);
+      
+      // Send update to the server
+      const response = await fetch(`${BASE_URL}/api/Account/UpdateProperty`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          propertyId: id,
+          isLiked: newFavoriteState
+        })
+      });
+      
+      if (!response.ok) {
+        // If server request fails, revert the UI
+        setIsFavorite(!newFavoriteState);
+        throw new Error('Failed to update favorite status');
+      }
+      
+      console.log('Property favorite status updated successfully');
+    } catch (error) {
+      console.error('Error updating favorite status:', error);
+      // Could show a toast notification here
+    }
   };
 
   // Use posted by and phone information from the property details
@@ -298,12 +229,9 @@ const PropertyDetail = () => {
         ? 'Selling' 
         : property.superCategory;
 
-  // Get images safely, using compressed versions if available
+  // Get images directly without compression
   const images = property.imageDetails && property.imageDetails.length > 0 
-    ? property.imageDetails.map(img => ({
-        ...img,
-        imageUrl: img.compressedUrl || img.imageUrl // Use compressed URL if available
-      }))
+    ? property.imageDetails 
     : [];
 
   return (
@@ -323,6 +251,7 @@ const PropertyDetail = () => {
           </Button>
           
           <div className="flex items-center gap-2">
+            {/* Like/Favorite Button - No Counter */}
             <Button 
               variant="outline" 
               size="icon" 
@@ -358,6 +287,17 @@ const PropertyDetail = () => {
               >
                 {categoryLabel}
               </Badge>
+              
+              {/* Show isLiked status badge */}
+              {isFavorite && (
+                <Badge 
+                  variant="outline"
+                  className="ml-2 px-2 py-1 text-xs font-medium border-red-300 text-red-600 bg-red-50"
+                >
+                  <Heart className="h-3 w-3 mr-1 fill-red-500 text-red-500" />
+                  Liked
+                </Badge>
+              )}
             </h1>
           </div>
           <div className="flex items-center text-gray-600">
@@ -594,6 +534,20 @@ const PropertyDetail = () => {
                     <div className="flex justify-between border-b pb-3">
                       <span className="text-gray-600">Listed Date</span>
                       <span className="font-medium">April 20, 2025</span>
+                    </div>
+                    {/* Favorite status in property details tab */}
+                    <div className="flex justify-between border-b pb-3">
+                      <span className="text-gray-600">Favorite Status</span>
+                      <span className="font-medium flex items-center">
+                        {isFavorite ? (
+                          <>
+                            <Heart className="h-4 w-4 mr-1 fill-red-500 text-red-500" />
+                            Liked
+                          </>
+                        ) : (
+                          "Not liked"
+                        )}
+                      </span>
                     </div>
                   </div>
                 </TabsContent>
