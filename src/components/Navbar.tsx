@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import NotificationIcon from "@/components/NotificationIcon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,7 +109,7 @@ export function Navbar() {
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Post Property
                 </Button>
-
+                <NotificationIcon userId={user?.userId ?? ''} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
