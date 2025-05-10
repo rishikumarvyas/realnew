@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Form,
   FormControl,
@@ -51,6 +51,8 @@ export const FormStep = ({
   initialUserType = 1,
   phoneError = null
 }: FormStepProps) => {
+  const [isFormValid, setIsFormValid] = useState(false);
+  
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,7 +60,17 @@ export const FormStep = ({
       phone: "",
       userType: initialUserType,
     },
+    mode: "onChange", // Enable validation on change
   });
+
+  // Watch form fields for validation
+  const { name, phone, userType } = form.watch();
+  
+  // Update form validity when values change
+  useEffect(() => {
+    const isValid = name.trim().length >= 2 && phoneRegex.test(phone) && userType;
+    setIsFormValid(isValid);
+  }, [name, phone, userType]);
 
   const handleSubmit = (data: any) => {
     if (onSubmit) {
@@ -67,21 +79,21 @@ export const FormStep = ({
   };
 
   return (
-    <div className="w-full mx-auto mt-2">
+    <div className="w-full mx-auto mt-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="space-y-0.5">
-                <FormLabel className="text-xs font-medium">Full Name</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-sm font-medium">Full Name</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter your full name"
                     {...field}
                     autoComplete="name"
-                    className="h-9"
+                    className="h-10 px-3 py-2"
                   />
                 </FormControl>
                 <FormMessage className="text-xs" />
@@ -93,15 +105,15 @@ export const FormStep = ({
             control={form.control}
             name="phone"
             render={({ field }) => (
-              <FormItem className="space-y-0.5">
-                <FormLabel className="text-xs font-medium">Phone Number</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-sm font-medium">Phone Number</FormLabel>
                 <div className="flex">
-                  <div className="flex items-center px-3 bg-muted border border-r-0 rounded-l h-9">
+                  <div className="flex items-center px-3 bg-muted border border-r-0 rounded-l h-10">
                     <span className="text-muted-foreground text-sm">+91</span>
                   </div>
                   <FormControl>
                     <Input
-                      className="rounded-l-none h-9"
+                      className="rounded-l-none h-10 px-3 py-2"
                       placeholder="10-digit number"
                       {...field}
                       maxLength={10}
@@ -122,14 +134,14 @@ export const FormStep = ({
             control={form.control}
             name="userType"
             render={({ field }) => (
-              <FormItem className="space-y-0.5">
-                <FormLabel className="text-xs font-medium">I am a</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-sm font-medium">I am a</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
                   defaultValue={field.value.toString()}
                 >
                   <FormControl>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-10 px-3 py-2">
                       <SelectValue placeholder="Select your user type" />
                     </SelectTrigger>
                   </FormControl>
@@ -148,8 +160,8 @@ export const FormStep = ({
 
           <Button 
             type="submit" 
-            className="w-full h-9 text-sm mt-2 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500" 
-            disabled={loading}
+            className="w-full h-10 text-sm mt-6 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-all" 
+            disabled={loading || !isFormValid}
           >
             {loading ? "Processing..." : "Continue with OTP"}
           </Button>

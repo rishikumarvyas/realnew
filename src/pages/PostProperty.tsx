@@ -30,8 +30,10 @@ import {
   Check,
   User,
   Camera,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const PostProperty = () => {
   const navigate = useNavigate();
@@ -57,6 +59,20 @@ const PostProperty = () => {
   const [mainImageIndex, setMainImageIndex] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // New states for preferences, availability, and approval
+  const [availableFrom, setAvailableFrom] = useState<Date | undefined>(undefined);
+  const [preferenceId, setPreferenceId] = useState<string>("0"); // Default to "Any"
+  const [isReraApproved, setIsReraApproved] = useState(false);
+  const [isOCApproved, setIsOCApproved] = useState(false);
+
+  // Tenant preference options
+  const preferenceOptions = [
+    { id: "2", label: "Family" },
+    { id: "1", label: "Bachelors" },
+    { id: "3", label: "Girls" },
+    { id: "4", label: "Anyone" },
+  ];
+
   const availableAmenities = [
     "Swimming Pool",
     "Gym",
@@ -66,6 +82,9 @@ const PostProperty = () => {
     "Garden",
     "Lift",
     "Club House",
+    "Furnished",
+    "Unfurnished",
+    "Semi Furnished",
   ];
 
   // Available cities
@@ -182,9 +201,9 @@ const PostProperty = () => {
 
   const getCityStateId = (cityId) => {
     const cityStateMap = {
-      1: 1, // Indore -> Madhya Pradesh
-      2: 1, // Bhopal -> Madhya Pradesh
-      3: 2, // Pune -> Maharashtra
+      140: 20, // Indore -> Madhya Pradesh
+      135: 20, // Bhopal -> Madhya Pradesh
+      184: 21, // Pune -> Maharashtra
     };
     return cityStateMap[cityId] || 1;
   };
@@ -208,6 +227,9 @@ const PostProperty = () => {
       "Security": 6,
       "Parking": 8,
       "Power Backup": 7,
+      "Furnished": 9,
+      "Unfurnished": 10,
+      "Semi Furnished": 11,
     };
     return amenityMap[amenity] || 1;
   };
@@ -329,6 +351,18 @@ const PostProperty = () => {
         formData.append("AmenityIds", id.toString());
       });
 
+      // Add RERA and OC approval status
+      formData.append("IsReraApproved", isReraApproved.toString());
+      formData.append("IsOCApproved", isOCApproved.toString());
+
+      // Add preference and available from date for rental properties
+      if (propertyType === "rent") {
+        formData.append("PreferenceId", preferenceId);
+        if (availableFrom) {
+          formData.append("AvailableFrom", availableFrom.toISOString());
+        }
+      }
+
       // Upload images with fixed format to match API expectations
       images.forEach((image, index) => {
         formData.append(`Images[${index}].File`, image);
@@ -392,6 +426,10 @@ const PostProperty = () => {
       setLoading(false);
     }
   };
+
+  // Determine if we should show bedroom, bathroom, and balcony fields
+  // Don't show for Plot category or commercial properties
+  const showBedroomBathroomBalcony = !(category === "Plot" || category === "shop");
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -472,7 +510,7 @@ const PostProperty = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-gray-700 font-medium">
-                  Property Title <span className="text-red-500">*</span>
+                  Society Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="title"
@@ -559,80 +597,166 @@ const PostProperty = () => {
                   )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bedrooms"
-                    className="text-gray-700 font-medium"
-                  >
-                    Bedrooms
+              
+              {/* RERA and OC Approval */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <Label className="text-gray-700 font-medium">
+                    RERA Approved
                   </Label>
-                  <Select value={bedrooms} onValueChange={setBedrooms}>
-                    <SelectTrigger
-                      id="bedrooms"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 1, 2, 3, 4, 5, 6].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 0 ? "Studio" : num === 6 ? "6+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center mt-1">
+                    <input
+                      type="checkbox"
+                      id="reraApproved"
+                      checked={isReraApproved}
+                      onChange={(e) => setIsReraApproved(e.target.checked)}
+                      className="mr-2"
+                    />
+                    <Label htmlFor="reraApproved" className="cursor-pointer">
+                      Yes
+                    </Label>
+                  </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bathrooms"
-                    className="text-gray-700 font-medium"
-                  >
-                    Bathrooms
+                <div>
+                  <Label className="text-gray-700 font-medium">
+                    OC Approved
                   </Label>
-                  <Select value={bathrooms} onValueChange={setBathrooms}>
-                    <SelectTrigger
-                      id="bathrooms"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 5 ? "5+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="balcony"
-                    className="text-gray-700 font-medium"
-                  >
-                    Balcony
-                  </Label>
-                  <Select value={balcony} onValueChange={setBalcony}>
-                    <SelectTrigger
-                      id="balcony"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 1, 2, 3, 4].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center mt-1">
+                    <input
+                      type="checkbox"
+                      id="ocApproved"
+                      checked={isOCApproved}
+                      onChange={(e) => setIsOCApproved(e.target.checked)}
+                      className="mr-2"
+                    />
+                    <Label htmlFor="ocApproved" className="cursor-pointer">
+                      Yes
+                    </Label>
+                  </div>
                 </div>
               </div>
+
+              {/* Preferences and Available From (Conditional Rendering) */}
+              {propertyType === "rent" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="preference"
+                      className="text-gray-700 font-medium"
+                    >
+                      Preference
+                    </Label>
+                    <Select
+                      value={preferenceId}
+                      onValueChange={setPreferenceId}
+                    >
+                      <SelectTrigger
+                        id="preference"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select Preference" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {preferenceOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="availableFrom"
+                      className="text-gray-700 font-medium flex items-center"
+                    >
+                      <Calendar className="h-4 w-4 mr-1 text-blue-600" />
+                      Available From
+                    </Label>
+                    <DatePicker
+                      date={availableFrom}
+                      setDate={setAvailableFrom}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Bedroom, Bathroom, Balcony (Conditional Rendering) */}
+              {showBedroomBathroomBalcony && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="bedrooms"
+                      className="text-gray-700 font-medium"
+                    >
+                      Bedrooms
+                    </Label>
+                    <Select value={bedrooms} onValueChange={setBedrooms}>
+                      <SelectTrigger
+                        id="bedrooms"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4, 5, 6].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 0 ? "Studio" : num === 6 ? "6+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="bathrooms"
+                      className="text-gray-700 font-medium"
+                    >
+                      Bathrooms
+                    </Label>
+                    <Select value={bathrooms} onValueChange={setBathrooms}>
+                      <SelectTrigger
+                        id="bathrooms"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 5 ? "5+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="balcony"
+                      className="text-gray-700 font-medium"
+                    >
+                      Balcony
+                    </Label>
+                    <Select value={balcony} onValueChange={setBalcony}>
+                      <SelectTrigger
+                        id="balcony"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
