@@ -14,8 +14,8 @@ interface User {
   phone: string;
   name?: string;
   token?: string;
-  userType?: string;
-  stateId?: string;
+  userTypeId?: string;
+  
 }
 
 interface UserProperty {
@@ -44,13 +44,20 @@ interface AuthContextType {
   userProperties: UserProperty[];
   isAuthenticated: boolean;
   loading: boolean;
+  // Auth modal state
+  showAuthModal: boolean;
+  modalType: 'login' | 'signup' | null;
+  openLoginModal: () => void;
+  openSignupModal: () => void;
+  closeAuthModal: () => void;
+  // Auth functions
   requestOtp: (phoneNumber: string) => Promise<boolean>;
   login: (phoneNumber: string, otp: string) => Promise<boolean>;
   signup: (
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userType: string,
+    userTypeId: string,
     stateId: string
   ) => Promise<boolean>;
   logout: () => void;
@@ -106,6 +113,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [userProperties, setUserProperties] = useState<UserProperty[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  
+  // Auth modal state
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [modalType, setModalType] = useState<'login' | 'signup' | null>(null);
+
+  // Auth modal actions
+  const openLoginModal = () => {
+    setModalType('login');
+    setShowAuthModal(true);
+  };
+
+  const openSignupModal = () => {
+    setModalType('signup');
+    setShowAuthModal(true);
+  };
+
+  const closeAuthModal = () => {
+    setShowAuthModal(false);
+    setModalType(null);
+  };
 
   // Check for existing auth on mount
   useEffect(() => {
@@ -120,10 +147,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             const tokenData = parseJwt(userData.token);
             if (tokenData && tokenData.exp * 1000 > Date.now()) {
               setUser(userData);
-              
-              // We no longer automatically call fetchUserDetails here
-              // as we want to avoid this API call by getting all needed data
-              // directly from the login response
             }
           } else {
             setUser(userData);
@@ -191,6 +214,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
+      console.log("Requesting OTP for:", formattedPhone);
+
       const response = await fetch(`${BASE_URL}/api/Message/Send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -198,7 +223,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: formattedPhone,
           templateId: 3,
           message: "Your OTP for Home Yatra login is: {{otp}}",
-          from: "HomeYatra",
+          action: "HomeYatra",
+          name: "HomeYatra",
+          userTypeId: "0" // Use "0" string value as shown in your API screenshot
         }),
       });
 
@@ -216,73 +243,73 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userType: string,
-    stateId: string
+    userTypeId: string
   ): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
-
+  
       console.log("Attempting signup with:", {
         phone: formattedPhone,
         name: fullName,
         otp,
-        userType,
-        stateId
+        userTypeId
       });
-
+  
+      // Match the API format exactly as shown in the screenshot
       const signupResponse = await fetch(`${BASE_URL}/api/Auth/SignUp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: formattedPhone,
           name: fullName,
-          otp,
-          userType,
-          stateId
+          phone: formattedPhone,
+          otp: otp,
+          userTypeId: userTypeId
         }),
       });
-
+  
       console.log("Signup response status:", signupResponse.status);
-
+  
       if (!signupResponse.ok) {
         console.error("Signup failed with status:", signupResponse.status);
         return false;
       }
-
+  
       try {
         const data = await signupResponse.json();
         console.log("Signup response data:", data);
-
+  
         // Extract userId and token from response
         const userId =
           data.userId || data.id || (data.user && data.user.userId);
         const token =
           typeof data.token === "string" ? data.token : data.token?.token;
-
+  
         // If API didn't provide a userId, we can't proceed
         if (!userId) {
           console.error("API did not provide a userId during signup");
           return false;
         }
-
+  
         // Store this as the persistent userId for this phone number
         storePersistentUserId(formattedPhone, userId);
-
+  
         // Create user data object
         const userData = {
           userId,
           phone: formattedPhone,
           name: fullName,
           token,
-          userType,
-          stateId
+          userTypeId
         };
-
+  
         // Store user data for immediate use
         setUser(userData);
         localStorage.setItem("auth", JSON.stringify(userData));
-
+        
+        // Close the auth modal after successful signup
+        closeAuthModal();
+  
         return true;
       } catch (e) {
         console.error("Error parsing signup response:", e);
@@ -339,8 +366,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Get name from response - this is important to extract and use directly
         const name = data.name || (data.user && data.user.name);
         
-        // Get userType and stateId from response if available
-        const userType = data.userType || (data.user && data.user.userType);
+        // Get userTypeId and stateId from response if available
+        const userTypeId = data.userTypeId || (data.user && data.user.userTypeId);
         const stateId = data.stateId || (data.user && data.user.stateId);
 
         // Store the mapping
@@ -352,8 +379,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: formattedPhone,
           token,
           name, // Important: Including name from login response
-          userType,
-          stateId
+          userTypeId,
+       
         };
 
         console.log("Final user data for login:", userData);
@@ -362,9 +389,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         // Clear signup data after successful login
         localStorage.removeItem("signupData");
-
-        // We're no longer calling fetchUserDetails here as we're getting
-        // all the necessary user data directly from the login response
+        
+        // Close the auth modal after successful login
+        closeAuthModal();
         
         // Set empty user properties array (if needed, this can be fetched later on demand)
         setUserProperties([]);
@@ -396,6 +423,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     userProperties,
     isAuthenticated: !!user,
     loading,
+    // Auth modal state
+    showAuthModal,
+    modalType,
+    openLoginModal,
+    openSignupModal,
+    closeAuthModal,
+    // Auth functions
     requestOtp,
     login,
     signup,

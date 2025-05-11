@@ -83,7 +83,7 @@ export const OtpStep = ({
         <p className="text-sm text-gray-500">
           A 6-digit code has been sent to your phone
         </p>
-        <p className="font-medium">+91 {phone}</p>
+        <p className="font-medium">{phone}</p>
       </div>
       <OtpInput value={otpValue} onChange={setOtpValue} className="mb-6" />
       <Button

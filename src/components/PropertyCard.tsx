@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { MapPin, Bed, Bath, Maximize2 } from "lucide-react";
+import { MapPin, Bed, Bath, Maximize2, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export interface PropertyCardProps {
@@ -13,6 +13,7 @@ export interface PropertyCardProps {
   bathrooms: number;
   area: number;
   image: string;
+  likes?: number; // Keep the likes prop for each property
 }
 
 export function PropertyCard({
@@ -25,6 +26,7 @@ export function PropertyCard({
   bathrooms,
   area,
   image,
+  likes = 0, // Default to 0 if not provided
 }: PropertyCardProps) {
   // Get badge color based on property type
   const getBadgeStyle = () => {
@@ -53,12 +55,18 @@ export function PropertyCard({
           <Badge
             className={`absolute top-3 right-3 z-20 ${getBadgeStyle()}`}
           >
-            {type === "buy" 
-              ? "For Sale" 
-              : type === "rent" 
-              ? "For Rent" 
+            {type === "buy"
+              ? "For Sale"
+              : type === "rent"
+              ? "For Rent"
               : "Selling"}
           </Badge>
+          
+          {/* Likes counter */}
+          <div className="absolute top-3 left-3 z-20 flex items-center bg-black/50 text-white px-2 py-1 rounded-md">
+            <Heart size={16} className="mr-1 fill-white text-white" />
+            <span className="text-xs font-medium">{likes}</span>
+          </div>
         </div>
         <CardContent className="p-5">
           <h3 className="font-semibold text-lg line-clamp-1 mb-2 group-hover:text-blue-600 transition-colors">

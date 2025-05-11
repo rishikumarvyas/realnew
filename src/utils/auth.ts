@@ -1,28 +1,27 @@
 /**
  * Format a phone number to ensure it has the country code
  */
-// Update this function in your utils/auth.ts file
 export const formatPhoneNumber = (phoneNumber: string): string | null => {
   if (!phoneNumber) return null;
 
-  // Remove all non-digit characters except for the leading plus sign
-  let cleaned = phoneNumber.replace(/[^\d+]/g, "");
+  // Remove all non-digit characters
+  let cleaned = phoneNumber.replace(/\D/g, "");
 
-  // Check if the phone number starts with +
-  const startsWithPlus = cleaned.startsWith("+");
-
-  // If it doesn't start with +, but starts with 91, add the +
-  if (!startsWithPlus && cleaned.startsWith("91")) {
-    cleaned = "+" + cleaned;
+  // If the phone number starts with 91 and is longer than 10 digits, remove the 91 prefix
+  if (cleaned.startsWith("91") && cleaned.length > 10) {
+    cleaned = cleaned.substring(2);
   }
 
-  // If it doesn't start with + or 91, add +91
-  if (!startsWithPlus && !cleaned.startsWith("91")) {
-    cleaned = "+91" + cleaned;
+  // Ensure the number is exactly 10 digits
+  if (cleaned.length !== 10) {
+    console.error("Phone number must be exactly 10 digits");
+    return null;
   }
 
-  return cleaned;
+  // Return with +91 prefix as requested
+  return "+91" + cleaned;
 };
+
 /**
  * Parse JWT token to extract payload
  */

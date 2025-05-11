@@ -31,8 +31,17 @@ const formSchema = z.object({
     message: "Please enter a valid 10-digit Indian phone number.",
   }),
   userType: z.coerce.number(),
-  stateId: z.coerce.number(),
 });
+
+interface FormStepProps {
+  onSubmit: (data: any) => void;
+  loading: boolean;
+  userTypes: Array<{ id: number; name: string }>;
+  states?: Array<{ id: number; name: string }>;
+  initialUserType?: number;
+  initialStateId?: number;
+  phoneError?: string | null;
+}
 
 export const FormStep = ({ 
   onSubmit, 
@@ -40,43 +49,42 @@ export const FormStep = ({
   userTypes = [], 
   states = [],
   initialUserType = 1,
-  initialStateId = 1 
-}) => {
+  phoneError = null
+}: FormStepProps) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       phone: "",
       userType: initialUserType,
-      stateId: initialStateId,
     },
   });
 
-  const handleSubmit = (data) => {
+  const handleSubmit = (data: any) => {
     if (onSubmit) {
       onSubmit(data);
     }
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4">
+    <div className="w-full mx-auto mt-2">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="text-base font-medium">Full Name</FormLabel>
+              <FormItem className="space-y-0.5">
+                <FormLabel className="text-xs font-medium">Full Name</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter your full name"
                     {...field}
                     autoComplete="name"
-                    className="h-12"
+                    className="h-9"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -85,15 +93,15 @@ export const FormStep = ({
             control={form.control}
             name="phone"
             render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="text-base font-medium">Phone Number</FormLabel>
+              <FormItem className="space-y-0.5">
+                <FormLabel className="text-xs font-medium">Phone Number</FormLabel>
                 <div className="flex">
-                  <div className="flex items-center px-3 bg-gray-100 border border-r-0 rounded-l h-12">
-                    <span className="text-gray-500">+91</span>
+                  <div className="flex items-center px-3 bg-muted border border-r-0 rounded-l h-9">
+                    <span className="text-muted-foreground text-sm">+91</span>
                   </div>
                   <FormControl>
                     <Input
-                      className="rounded-l-none h-12"
+                      className="rounded-l-none h-9"
                       placeholder="10-digit number"
                       {...field}
                       maxLength={10}
@@ -101,7 +109,11 @@ export const FormStep = ({
                     />
                   </FormControl>
                 </div>
-                <FormMessage />
+                {phoneError ? (
+                  <p className="text-destructive text-xs">{phoneError}</p>
+                ) : (
+                  <FormMessage className="text-xs" />
+                )}
               </FormItem>
             )}
           />
@@ -110,14 +122,14 @@ export const FormStep = ({
             control={form.control}
             name="userType"
             render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="text-base font-medium">I am a</FormLabel>
+              <FormItem className="space-y-0.5">
+                <FormLabel className="text-xs font-medium">I am a</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
                   defaultValue={field.value.toString()}
                 >
                   <FormControl>
-                    <SelectTrigger className="h-12">
+                    <SelectTrigger className="h-9">
                       <SelectValue placeholder="Select your user type" />
                     </SelectTrigger>
                   </FormControl>
@@ -129,40 +141,16 @@ export const FormStep = ({
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="stateId"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel className="text-base font-medium">State</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(parseInt(value))}
-                  defaultValue={field.value.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Select your state" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {states.map((state) => (
-                      <SelectItem key={state.id} value={state.id.toString()}>
-                        {state.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full h-9 text-sm mt-2 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500" 
+            disabled={loading}
+          >
             {loading ? "Processing..." : "Continue with OTP"}
           </Button>
         </form>
