@@ -15,7 +15,7 @@ export const PhoneStep = ({ onSubmit, loading }: PhoneStepProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!phone.trim() || phone.length !== 10) {
       toast({
         title: "Invalid Phone Number",
@@ -24,7 +24,7 @@ export const PhoneStep = ({ onSubmit, loading }: PhoneStepProps) => {
       });
       return;
     }
-    
+
     await onSubmit(phone);
   };
 
@@ -52,8 +52,8 @@ export const PhoneStep = ({ onSubmit, loading }: PhoneStepProps) => {
             />
           </div>
         </div>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full bg-blue-600 hover:bg-blue-700"
           disabled={loading || phone.length !== 10}
         >
