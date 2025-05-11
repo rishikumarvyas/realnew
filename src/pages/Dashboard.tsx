@@ -384,7 +384,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
-              Total Properties
+              Listed Properties
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -395,27 +395,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Active Listings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <Building className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-3xl font-bold">
-                {properties.filter((p) => p.status === "active").length}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* New Like Count Card */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
-              Total Likes
+              Liked Properties
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -447,7 +431,7 @@ const Dashboard = () => {
             value="properties"
             className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
           >
-            <span className="block truncate">My Properties</span>
+            <span className="block truncate">Listed Properties</span>
           </TabsTrigger>
           <TabsTrigger
             value="messages"

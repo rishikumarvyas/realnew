@@ -185,7 +185,7 @@ const Index = () => {
                 <Input
                   type="text"
                   className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                  placeholder="Search location, property..."
+                  placeholder="Search Society, Locality, City, State "
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
