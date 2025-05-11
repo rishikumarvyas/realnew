@@ -164,11 +164,11 @@ const Login = ({ onClose }) => {
               </Button>
             )}
             <CardTitle className="text-center text-2xl bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              Login to HomeYatra
+              Login
             </CardTitle>
             <CardDescription className="text-center">
               {step === "phone"
-                ? "Enter your phone number to continue"
+                ? "Enter your phone number"
                 : "Enter the verification code sent to your phone"}
             </CardDescription>
           </CardHeader>
@@ -180,7 +180,7 @@ const Login = ({ onClose }) => {
                 className="transition-all duration-300"
               >
                 <div className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Label htmlFor="phone" className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
