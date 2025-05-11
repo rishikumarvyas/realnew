@@ -14,6 +14,7 @@ import {
   Loader2, 
   Home, 
   DollarSign, 
+  IndianRupeeIcon,
   Calendar, 
   Users, 
   Bed, 
@@ -791,7 +792,7 @@ const PropertyListing = () => {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-blue-600" />
+                        <IndianRupeeIcon className="h-5 w-5 text-blue-600" />
                         <h3 className="font-medium">Price Range</h3>
                       </div>
                       <span className="text-xs font-medium text-blue-600">

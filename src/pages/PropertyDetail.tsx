@@ -634,12 +634,7 @@ const PropertyDetail = () => {
                   Schedule Visit
                 </Button>
               </div>
-            </div>
-            
-            {/* Similar Properties Teaser */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-md font-medium mb-3 text-blue-800">Similar Properties</h3>
-              <p className="text-sm text-gray-600 mb-4">Explore more properties like this one in {property.city || "this area"}.</p>
+              <div className="mt-6 pt-6 border-t border-gray-200">
               <Button
                 variant="default" 
                 className="w-full bg-blue-600 hover:bg-blue-700"
@@ -647,6 +642,7 @@ const PropertyDetail = () => {
               >
                 View Similar Properties
               </Button>
+              </div>
             </div>
           </div>
         </div>

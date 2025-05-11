@@ -221,11 +221,11 @@ const Signup = ({ onClose }: SignupProps) => {
               </Button>
             )}
             <CardTitle className="text-center text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              Sign up for HomeYatra
+              Sign up
             </CardTitle>
             <CardDescription className="text-center text-sm mt-1">
               {step === "form"
-                ? "Create an account to start your real estate journey"
+                ? "Create an account"
                 : `Enter the verification code sent to +91 ${phone}`}
             </CardDescription>
           </CardHeader>
