@@ -494,11 +494,11 @@ const PostProperty = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-gray-700 font-medium">
-                  Property Title <span className="text-red-500">*</span>
+                  Society Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="title"
-                  placeholder="E.g., Modern 3BHK Apartment with Garden View"
+                  placeholder="Society name"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
