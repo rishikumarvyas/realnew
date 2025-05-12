@@ -608,14 +608,14 @@ const PropertyDetail = () => {
                   WhatsApp Now
                 </Button>
                 
-                <Button
+                {/* <Button
                   onClick={() => handleContactModal("email")} 
                   variant="outline"
                   className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
                   Send Email
-                </Button>
+                </Button> */}
                 
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"

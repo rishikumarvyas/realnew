@@ -71,9 +71,9 @@ const PostProperty = () => {
 
   // Available cities
   const availableCities = [
-    { id: 1, name: "Indore" },
-    { id: 2, name: "Bhopal" },
-    { id: 3, name: "Pune" },
+    { id: 140, name: "Indore" },
+    { id: 135, name: "Bhopal" },
+    { id: 184, name: "Pune" },
   ];
 
   // Form validation states
