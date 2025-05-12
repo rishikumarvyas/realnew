@@ -90,6 +90,18 @@ export function Navbar() {
                 Rent
               </Link>
               <Link
+                to="/properties?type=plot"
+                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+              >
+                Plot
+              </Link>
+              <Link
+                to="/properties?type=commercial"
+                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+              >
+               Commercial
+              </Link>
+              <Link
                 to="/contactus"
                 className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
               >
@@ -139,12 +151,7 @@ export function Navbar() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    {/* <DropdownMenuItem asChild className="hover:bg-blue-50">
-                      <Link to="/my-properties" className="cursor-pointer flex items-center py-1">
-                        <Building className="mr-2 h-4 w-4 text-blue-500" />
-                        My Properties
-                      </Link>
-                    </DropdownMenuItem> */}
+                
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleLogout}
@@ -209,6 +216,20 @@ export function Navbar() {
             Rent
           </Link>
           <Link
+            to="/properties?type=plot"
+            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
+            onClick={() => setIsOpen(false)}
+          >
+           Plot
+          </Link>
+          <Link
+            to="/properties?type=commercial"
+            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
+            onClick={() => setIsOpen(false)}
+          >
+          Commercial
+          </Link>
+          <Link
             to="/contactus"
             className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
             onClick={() => setIsOpen(false)}
@@ -234,14 +255,7 @@ export function Navbar() {
                 <Home className="inline h-4 w-4 mr-2" />
                 Dashboard
               </Link>
-              <Link
-                to="/my-properties"
-                className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
-                onClick={() => setIsOpen(false)}
-              >
-                <Building className="inline h-4 w-4 mr-2" />
-                My Properties
-              </Link>
+          
               <div
                 className="block px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 cursor-pointer border-l-4 border-transparent hover:border-red-500"
                 onClick={() => {

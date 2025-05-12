@@ -13,19 +13,18 @@ import {
   MessageSquare,
   User,
   Shield,
-  ChevronLeft,
-  ChevronRight,
+  ArrowLeft,
   Wifi,
   Car,
   Wind,
   Lock,
   Droplets,
   ArrowUpDown,
-  ArrowLeft,
   Home,
   Heart,
   Share2,
-  Calendar
+  Calendar,
+  Image
 } from "lucide-react";
 import { 
   Carousel,
@@ -36,18 +35,28 @@ import {
 } from "@/components/ui/carousel";
 import { ContactForm } from "@/components/ContactForm";
 import { useAuth } from "@/contexts/AuthContext";
+import { ImageGalleryDialog } from "@/components/ImageGalleryDialog";
+import { useToast } from "@/hooks/use-toast";
+import PropertyMap from "@/components/PropertyMap";
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [property, setProperty] = useState(null);
+  const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [contactType, setContactType] = useState("whatsapp");
   const [isFavorite, setIsFavorite] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // New states for image gallery and likes
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [similarProperties, setSimilarProperties] = useState<any[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
@@ -71,7 +80,14 @@ const PropertyDetail = () => {
           // Set the favorite status based on API response
           setIsFavorite(propertyData.isLiked || false);
           setProperty(propertyData);
+          
+          // Set likes count from API or fallback to a default
+          setLikesCount(propertyData.likesCount || 0);
+          
           setError(null);
+          
+          // Fetch similar properties after getting property details
+          fetchSimilarProperties(propertyData.city, propertyData.propertyType);
         } else {
           throw new Error(data.message || 'Failed to retrieve property details');
         }
@@ -86,7 +102,11 @@ const PropertyDetail = () => {
             console.log("Using mock data in development");
             setProperty(mockPropertyDetail);
             setIsFavorite(mockPropertyDetail.isLiked || false);
+            setLikesCount(mockPropertyDetail.likesCount || 0);
             setError(null);
+            
+            // Fetch mock similar properties
+            getMockSimilarProperties(mockPropertyDetail.city, mockPropertyDetail.propertyType);
           }
         }
       } finally {
@@ -98,9 +118,52 @@ const PropertyDetail = () => {
       fetchPropertyDetails();
     }
   }, [id]);
+  
+  // Fetch similar properties based on location and property type
+  const fetchSimilarProperties = async (city: string, propertyType: string) => {
+    if (!city) return;
+    
+    setLoadingSimilar(true);
+    try {
+      // In a real implementation, you would call an API endpoint here
+      // to fetch properties from the same city and with the same property type
+      // This is a mock implementation
+      console.log(`Fetching similar properties for city: ${city}, type: ${propertyType}`);
+      
+      // For development/demo purposes, use mock data
+      getMockSimilarProperties(city, propertyType);
+    } catch (err) {
+      console.error('Error fetching similar properties:', err);
+    } finally {
+      setLoadingSimilar(false);
+    }
+  };
+  
+  // Mock similar properties (for development purposes)
+  const getMockSimilarProperties = (city: string, propertyType: string) => {
+    // Generate 3 mock similar properties
+    const mockProperties = Array(3).fill(0).map((_, index) => ({
+      propertyId: `mock_similar_${index}`,
+      title: `${propertyType} in ${city} - Property ${index + 1}`,
+      propertyType: propertyType,
+      price: Math.floor(Math.random() * 50000) + 10000,
+      superCategory: Math.random() > 0.5 ? "Rent" : "Buy",
+      bedroom: Math.floor(Math.random() * 4) + 1,
+      bathroom: Math.floor(Math.random() * 3) + 1,
+      area: Math.floor(Math.random() * 1000) + 500,
+      address: `${Math.floor(Math.random() * 100) + 1} ${city} Road`,
+      city: city,
+      imageDetails: [{
+        imageUrl: `https://source.unsplash.com/random/300x200?apartment,house,${index}`,
+        isMainImage: true
+      }]
+    }));
+    
+    setSimilarProperties(mockProperties);
+  };
 
   // Mock property data for development testing only
-  const getMockPropertyDetail = (propertyId) => {
+  const getMockPropertyDetail = (propertyId: string) => {
     console.log("Using mock data for propertyId:", propertyId);
     return {
       propertyId: propertyId,
@@ -116,6 +179,7 @@ const PropertyDetail = () => {
       bathroom: 2,
       balcony: 1,
       isLiked: true, // Added isLiked property
+      likesCount: 42, // Added likesCount property
       amenityDetails: [
         { amenityId: "1", amenity: "Wifi" },
         { amenityId: "2", amenity: "Parking" },
@@ -149,11 +213,18 @@ const PropertyDetail = () => {
           imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80",
           isMainImage: false 
         }
-      ]
+      ],
+      // New fields from PostProperty
+      ownerType: "Owner",
+      isReraApproved: true,
+      isOCApproved: false,
+      preferenceId: "2",
+      preference: "Family",
+      availableFrom: "2025-06-01"
     };
   };
 
-  const handleContactModal = (type) => {
+  const handleContactModal = (type: string) => {
     setContactType(type);
     setContactModalOpen(true);
   };
@@ -163,6 +234,9 @@ const PropertyDetail = () => {
       // Toggle the UI state immediately for better UX
       const newFavoriteState = !isFavorite;
       setIsFavorite(newFavoriteState);
+      
+      // Update likes count
+      setLikesCount(prevCount => newFavoriteState ? prevCount + 1 : Math.max(0, prevCount - 1));
       
       // Send update to the server
       const response = await fetch(`${BASE_URL}/api/Account/UpdateProperty`, {
@@ -179,22 +253,50 @@ const PropertyDetail = () => {
       if (!response.ok) {
         // If server request fails, revert the UI
         setIsFavorite(!newFavoriteState);
+        setLikesCount(prevCount => !newFavoriteState ? prevCount + 1 : Math.max(0, prevCount - 1));
         throw new Error('Failed to update favorite status');
       }
+      
+      toast({
+        title: newFavoriteState ? "Added to favorites" : "Removed from favorites",
+        description: newFavoriteState 
+          ? "This property has been added to your favorites." 
+          : "This property has been removed from your favorites.",
+      });
       
       console.log('Property favorite status updated successfully');
     } catch (error) {
       console.error('Error updating favorite status:', error);
-      // Could show a toast notification here
+      toast({
+        title: "Action failed",
+        description: "There was an error updating your favorites. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
+  const handleImageClick = (index: number) => {
+    setActiveImageIndex(index);
+  };
+  
   // Use posted by and phone information from the property details
   const ownerDetails = {
     name: property?.postedBy || user?.name || "Property Owner",
     phone: property?.phone || user?.phone || "+91 98765 43210",
     email: user?.email || "contact@homeyatra.com",
     verified: true
+  };
+
+  // Helper function to map preference ID to readable text
+  const getPreferenceText = (prefId: string) => {
+    const preferences: Record<string, string> = {
+      "1": "Bachelors",
+      "2": "Family",
+      "3": "Girls",
+      "4": "Anyone",
+      "0": "Any"
+    };
+    return preferences[prefId] || "Not specified";
   };
 
   if (loading) {
@@ -251,15 +353,18 @@ const PropertyDetail = () => {
           </Button>
           
           <div className="flex items-center gap-2">
-            {/* Like/Favorite Button - No Counter */}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className={`rounded-full transition-all duration-300 ${isFavorite ? 'bg-red-50 border-red-200' : ''}`}
-              onClick={toggleFavorite}
-            >
-              <Heart className={`h-4 w-4 transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-            </Button>
+            {/* Like/Favorite Button - WITH Counter */}
+            <div className="flex items-center">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className={`rounded-full transition-all duration-300 ${isFavorite ? 'bg-red-50 border-red-200' : ''}`}
+                onClick={toggleFavorite}
+              >
+                <Heart className={`h-4 w-4 transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+              </Button>
+              <span className="ml-1.5 text-sm font-medium">{likesCount}</span>
+            </div>
             
             <Button 
               variant="outline" 
@@ -306,22 +411,32 @@ const PropertyDetail = () => {
           </div>
         </div>
 
-        {/* Image Gallery with carousel component */}
+        {/* Image Gallery with carousel component - with click to open functionality */}
         <div className="mb-8 bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-scale-in">
           {images.length > 0 ? (
             <div className="relative">
-              <Carousel className="w-full" setActiveItem={setActiveImageIndex}>
+              <Carousel className="w-full" index={activeImageIndex} onSelect={(index) => setActiveImageIndex(index)}>
                 <CarouselContent>
-                  {images.map((image, index) => (
+                  {images.map((image: any, index: number) => (
                     <CarouselItem key={image.imageId || index}>
                       <div className="aspect-[16/10] overflow-hidden relative">
-                        <img 
-                          src={image.imageUrl} 
-                          alt={`Property view ${index + 1}`} 
-                          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                          loading={index === 0 ? "eager" : "lazy"}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
+                        <div 
+                          className="w-full h-full cursor-pointer group"
+                          onClick={() => setGalleryOpen(true)}
+                        >
+                          <img 
+                            src={image.imageUrl} 
+                            alt={`Property view ${index + 1}`} 
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading={index === 0 ? "eager" : "lazy"}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button variant="ghost" className="text-white bg-black/30 hover:bg-black/50">
+                              <Maximize2 className="h-5 w-5 mr-1" />
+                              View Image
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </CarouselItem>
                   ))}
@@ -338,13 +453,13 @@ const PropertyDetail = () => {
               {/* Thumbnails */}
               {images.length > 1 && (
                 <div className="flex p-4 gap-2 overflow-x-auto pb-2 bg-gray-50">
-                  {images.map((image, index) => (
+                  {images.map((image: any, index: number) => (
                     <div 
                       key={image.imageId || index}
                       className={`w-20 h-14 sm:w-24 sm:h-16 flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all ${
                         index === activeImageIndex ? 'ring-2 ring-blue-600 transform scale-105' : 'opacity-70 hover:opacity-100'
                       }`}
-                      onClick={() => setActiveImageIndex(index)}
+                      onClick={() => handleImageClick(index)}
                     >
                       <img src={image.imageUrl} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
                     </div>
@@ -438,6 +553,17 @@ const PropertyDetail = () => {
                     <span className="text-gray-500 text-sm">Listed By</span>
                   </div>
                 </div>
+                
+                {/* Likes Count Pill */}
+                <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                  <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                    <Heart className={`${isFavorite ? 'fill-red-500 text-red-500' : 'text-blue-600'}`} size={20} />
+                  </div>
+                  <div>
+                    <span className="block font-medium">{likesCount}</span>
+                    <span className="text-gray-500 text-sm">Likes</span>
+                  </div>
+                </div>
               </div>
               
               <div>
@@ -459,12 +585,15 @@ const PropertyDetail = () => {
                   <TabsTrigger value="details" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
                     Property Details
                   </TabsTrigger>
+                  <TabsTrigger value="moreInfo" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
+                    More Info
+                  </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="amenities" className="p-6">
                   {property.amenityDetails && property.amenityDetails.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {property.amenityDetails.map((amenity, index) => {
+                      {property.amenityDetails.map((amenity: any, index: number) => {
                         let icon = null;
                         
                         if (amenity.amenity.toLowerCase().includes("lift")) icon = <ArrowUpDown className="text-blue-600" size={18} />;
@@ -532,37 +661,90 @@ const PropertyDetail = () => {
                       </div>
                     )}
                     <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Listed Date</span>
-                      <span className="font-medium">April 20, 2025</span>
+                      <span className="text-gray-600">Listed By</span>
+                      <span className="font-medium">{property.userType || "Owner"}</span>
                     </div>
-                    {/* Favorite status in property details tab */}
+                    {/* Added from PostProperty fields */}
+                    {property.preference && (
+                      <div className="flex justify-between border-b pb-3">
+                        <span className="text-gray-600">Tenant Preference</span>
+                        <span className="font-medium">{property.preference || getPreferenceText(property.preferenceId)}</span>
+                      </div>
+                    )}
+                    {property.availableFrom && (
+                      <div className="flex justify-between border-b pb-3">
+                        <span className="text-gray-600">Available From</span>
+                        <span className="font-medium">{new Date(property.availableFrom).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="moreInfo" className="p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* New fields from PostProperty */}
                     <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Favorite Status</span>
+                      <span className="text-gray-600">RERA Approved</span>
                       <span className="font-medium flex items-center">
-                        {isFavorite ? (
-                          <>
-                            <Heart className="h-4 w-4 mr-1 fill-red-500 text-red-500" />
-                            Liked
-                          </>
+                        {property.isReraApproved ? (
+                          <Badge variant="default" className="bg-green-600">Yes</Badge>
                         ) : (
-                          "Not liked"
+                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
                         )}
                       </span>
                     </div>
+                    <div className="flex justify-between border-b pb-3">
+                      <span className="text-gray-600">OC Approved</span>
+                      <span className="font-medium flex items-center">
+                        {property.isOCApproved ? (
+                          <Badge variant="default" className="bg-green-600">Yes</Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-b pb-3">
+                      <span className="text-gray-600">Likes</span>
+                      <span className="font-medium flex items-center">
+                        <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                        {likesCount}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-b pb-3">
+                      <span className="text-gray-600">Listed Date</span>
+                      <span className="font-medium">April 20, 2025</span>
+                    </div>
+                  </div>
+                  
+                  {/* Property images button */}
+                  <div className="mt-6">
+                    <Button 
+                      variant="outline"
+                      className="w-full flex items-center justify-center hover:bg-blue-50"
+                      onClick={() => setGalleryOpen(true)}
+                    >
+                      <Image className="h-4 w-4 mr-2 text-blue-600" />
+                      View All Images ({images.length})
+                    </Button>
                   </div>
                 </TabsContent>
               </Tabs>
             </div>
             
-            {/* Location Map Placeholder */}
+            {/* Map Section - Updated with OpenStreetMap */}
             <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
               <h3 className="text-lg font-medium mb-3 inline-flex items-center">
                 <MapPin className="text-blue-600 mr-2" size={18} />
                 Location
               </h3>
-              <div className="bg-gray-100 rounded-lg h-[200px] flex items-center justify-center">
-                <p className="text-gray-500">Map view not available</p>
-              </div>
+              
+              <PropertyMap 
+                address={property.address || ''}
+                city={property.city || ''}
+                state={property.state || ''}
+                className="h-[300px]"
+              />
+              
               <p className="mt-3 text-sm text-gray-600">
                 {property.address}{property.city ? `, ${property.city}` : ''}{property.state ? `, ${property.state}` : ''}
               </p>
@@ -608,14 +790,14 @@ const PropertyDetail = () => {
                   WhatsApp Now
                 </Button>
                 
-                {/* <Button
+                <Button
                   onClick={() => handleContactModal("email")} 
                   variant="outline"
                   className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
                   Send Email
-                </Button> */}
+                </Button>
                 
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
@@ -634,26 +816,109 @@ const PropertyDetail = () => {
                   Schedule Visit
                 </Button>
               </div>
-              <div className="mt-6 pt-6 border-t border-gray-200">
-              <Button
-                variant="default" 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                onClick={() => navigate("/dashboard")}
-              >
-                View Similar Properties
-              </Button>
-              </div>
             </div>
           </div>
         </div>
+        
+        {/* Similar Properties Section - Moved to bottom and full width */}
+        <div className="mt-10 bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <h2 className="text-xl font-bold mb-6 flex items-center">
+            <Home className="text-blue-600 mr-2" size={20} />
+            Similar Properties in {property.city || "this area"}
+          </h2>
+          
+          {loadingSimilar ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : similarProperties.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {similarProperties.map((prop: any) => (
+                <div 
+                  key={prop.propertyId} 
+                  className="rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all hover:-translate-y-1"
+                  onClick={() => navigate(`/property/${prop.propertyId}`)}
+                >
+                  <div className="relative h-48">
+                    {prop.imageDetails && prop.imageDetails.length > 0 ? (
+                      <img 
+                        src={prop.imageDetails[0].imageUrl} 
+                        alt={prop.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <Home className="h-10 w-10 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2">
+                      <Badge className={`${prop.superCategory?.toLowerCase() === 'rent' ? 'bg-blue-600' : 'bg-teal-600'}`}>
+                        {prop.superCategory?.toLowerCase() === 'rent' ? 'Rent' : 'Sale'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-lg mb-1 line-clamp-1">{prop.title}</h3>
+                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                      <MapPin className="h-3 w-3 mr-1" /> 
+                      {prop.address} {prop.city ? `, ${prop.city}` : ''}
+                    </div>
+                    <div className="flex items-center justify-between text-sm mb-3">
+                      <div className="flex items-center">
+                        <div className="flex items-center mr-3">
+                          <Bed className="h-3 w-3 mr-1 text-gray-500" />
+                          <span>{prop.bedroom || 0}</span>
+                        </div>
+                        <div className="flex items-center mr-3">
+                          <Bath className="h-3 w-3 mr-1 text-gray-500" />
+                          <span>{prop.bathroom || 0}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Maximize2 className="h-3 w-3 mr-1 text-gray-500" />
+                          <span>{prop.area || 0} sq.ft</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold text-blue-600">₹{prop.price?.toLocaleString() || 0}</span>
+                      <Button size="sm" variant="outline" className="text-xs">
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <p className="text-gray-500">No similar properties found in this area.</p>
+              <Button 
+                className="mt-4" 
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+              >
+                Browse All Properties
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
       
+      {/* Contact Form Modal */}
       <ContactForm 
         open={contactModalOpen} 
         onOpenChange={setContactModalOpen} 
         propertyTitle={property.title}
         contactType={contactType}
         contactInfo={contactType === "whatsapp" ? (property.phone || ownerDetails.phone) : ownerDetails.email}
+      />
+      
+      {/* Image Gallery Dialog */}
+      <ImageGalleryDialog
+        images={images}
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        initialIndex={activeImageIndex}
       />
     </div>
   );

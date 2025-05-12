@@ -719,11 +719,24 @@ const PropertyListing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">Find Your Dream Property</h1>
-            <p className="text-xl opacity-90 mb-10">
+       <div className="relative">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+        }}
+      />
+      
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-black opacity-50"></div>
+      
+      {/* Content */}
+      <div className="relative py-20 px-4">
+        <div className="max-w-3xl mx-auto bg-gray-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
+            <p className="text-xl opacity-90 mb-10 text-white">
               Discover the perfect home that fits your lifestyle and budget from our extensive listings
             </p>
             
@@ -751,18 +764,29 @@ const PropertyListing = () => {
           </div>
         </div>
       </div>
-      
+      </div>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Tab filter */}
-        <div className="mb-6">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 h-14">
-              <TabsTrigger value="all" className="text-base">All Properties</TabsTrigger>
-              <TabsTrigger value="buy" className="text-base">Buy</TabsTrigger>
-              <TabsTrigger value="rent" className="text-base">Rent</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <div className="mb-8">
+              <div className="w-full max-w-2xl mx-auto bg-blue-700 bg-opacity-40 rounded-lg p-2">
+                <div className="grid grid-cols-5 gap-1 w-full">
+                  {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => handleTabChange(tab)}
+                      className={`py-3 px-1 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
+                        activeTab === tab 
+                          ? "bg-white text-blue-600 shadow-md" 
+                          : "text-white hover:bg-blue-500"
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      {tab === "all" ? " Properties" : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
         
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">

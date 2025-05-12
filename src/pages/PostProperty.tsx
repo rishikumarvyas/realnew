@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Upload,
   X,
@@ -30,9 +31,11 @@ import {
   Check,
   User,
   Camera,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import imageCompression from "browser-image-compression";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const PostProperty = () => {
   const navigate = useNavigate();
@@ -52,11 +55,23 @@ const PostProperty = () => {
   const [balcony, setBalcony] = useState("");
   const [area, setArea] = useState("");
   const [ownerType, setOwnerType] = useState("");
-  const [amenities, setAmenities] = useState([]);
-  const [images, setImages] = useState([]);
-  const [imageURLs, setImageURLs] = useState([]);
-  const [mainImageIndex, setMainImageIndex] = useState(null);
+  const [images, setImages] = useState<File[]>([]);
+  const [imageURLs, setImageURLs] = useState<string[]>([]);
+  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // New states for availability and approval
+  const [availableFrom, setAvailableFrom] = useState<Date | undefined>(undefined);
+  const [isReraApproved, setIsReraApproved] = useState<string>("false");
+  const [isOCApproved, setIsOCApproved] = useState<string>("false");
+
+  // Tenant preference options
+  const preferenceOptions = [
+    { id: "2", label: "Family" },
+    { id: "1", label: "Bachelors" },
+    { id: "3", label: "Girls" },
+    { id: "4", label: "Anyone" },
+  ];
 
   const availableAmenities = [
     "Swimming Pool",
@@ -67,76 +82,81 @@ const PostProperty = () => {
     "Garden",
     "Lift",
     "Club House",
+    "Furnished",
+    "Unfurnished",
+    "Semi Furnished",
   ];
 
-  // Available cities
+  // Individual checkbox states with proper initialization
+  const [amenityStates, setAmenityStates] = useState<Record<string, boolean>>(
+    availableAmenities.reduce((acc, amenity) => {
+      acc[amenity] = false;
+      return acc;
+    }, {} as Record<string, boolean>)
+  );
+
+  const [preferenceStates, setPreferenceStates] = useState<Record<string, boolean>>(
+    preferenceOptions.reduce((acc, option) => {
+      acc[option.id] = false;
+      return acc;
+    }, {} as Record<string, boolean>)
+  );
+
+  // Enhanced city-state mapping - properly mapped
   const availableCities = [
-    { id: 140, name: "Indore" },
-    { id: 135, name: "Bhopal" },
-    { id: 184, name: "Pune" },
+    { id: 140, name: "Indore", stateId: 20, stateName: "Madhya Pradesh" },
+    { id: 135, name: "Bhopal", stateId: 20, stateName: "Madhya Pradesh" },
+    { id: 184, name: "Pune", stateId: 21, stateName: "Maharashtra" },
   ];
 
   // Form validation states
   const [priceValidation, setPriceValidation] = useState(true);
   const [areaValidation, setAreaValidation] = useState(true);
 
-  const handleAmenityToggle = (amenity) => {
-    if (amenities.includes(amenity)) {
-      setAmenities(amenities.filter((item) => item !== amenity));
-    } else {
-      setAmenities([...amenities, amenity]);
-    }
+  // Fixed: Separate handler functions that don't cause infinite loops
+  const handleAmenityChange = (amenity: string) => {
+    setAmenityStates(prev => ({
+      ...prev,
+      [amenity]: !prev[amenity]
+    }));
   };
 
-  const handleImageUpload = async (e) => {
-    const imageFile = e.target.files[0];
-    const options = {
-      maxSizeMB: 0.1, // Max size in MB
-      maxWidthOrHeight: 1920,
-      useWebWorker: true,
-    };
+  // Fixed: Separate handler function for preferences
+  const handlePreferenceChange = (preferenceId: string) => {
+    setPreferenceStates(prev => ({
+      ...prev,
+      [preferenceId]: !prev[preferenceId]
+    }));
+  };
 
-    try {
-      const compressedFile = await imageCompression(imageFile, options);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
 
-      //converting compressedFile blob type to FileList type
-      const convertedfile = new File([compressedFile], "example.txt", {
-        type: compressedFile.type,
-      }); // Convert Blob to File
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(convertedfile); // Add the file to DataTransfer
-      const fileList = dataTransfer.files; // convert to FileList type
-
-      if (fileList && fileList.length > 0) {
-        const newFiles = Array.from(fileList);
-
-        if (images.length + newFiles.length > 6) {
-          toast({
-            title: "Maximum 6 images allowed",
-            description: "You can upload up to 6 images for a property.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const newImages = [...images, ...newFiles];
-        setImages(newImages);
-
-        // Generate preview URLs
-        const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-        setImageURLs([...imageURLs, ...newImageURLs]);
-
-        // If no main image is selected, select the first one by default
-        if (mainImageIndex === null && newImages.length > 0) {
-          setMainImageIndex(images.length); // Set to the first of the newly added images
-        }
+      if (images.length + newFiles.length > 6) {
+        toast({
+          title: "Maximum 6 images allowed",
+          description: "You can upload up to 6 images for a property.",
+          variant: "destructive",
+        });
+        return;
       }
-    } catch (error) {
-      console.error(error);
+
+      const newImages = [...images, ...newFiles];
+      setImages(newImages);
+
+      // Generate preview URLs
+      const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
+      setImageURLs([...imageURLs, ...newImageURLs]);
+
+      // If no main image is selected, select the first one by default
+      if (mainImageIndex === null && newImages.length > 0) {
+        setMainImageIndex(images.length); // Set to the first of the newly added images
+      }
     }
   };
 
-  const removeImage = (index) => {
+  const removeImage = (index: number) => {
     const newImages = [...images];
     const newImageURLs = [...imageURLs];
 
@@ -157,7 +177,7 @@ const PostProperty = () => {
   };
 
   // Validate price as a number with two decimal places
-  const validatePrice = (value) => {
+  const validatePrice = (value: string) => {
     // Allow empty value during typing
     if (!value) return true;
 
@@ -167,7 +187,7 @@ const PostProperty = () => {
   };
 
   // Handle price change with validation
-  const handlePriceChange = (e) => {
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const isValid = validatePrice(value);
     setPriceValidation(isValid);
@@ -175,7 +195,7 @@ const PostProperty = () => {
   };
 
   // Handle area change with validation
-  const handleAreaChange = (e) => {
+  const handleAreaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const isValid = !value || parseFloat(value) > 0;
     setAreaValidation(isValid);
@@ -183,16 +203,18 @@ const PostProperty = () => {
   };
 
   // Helper functions to map UI selections to API IDs
-  const mapCategoryToId = (type) => {
-    const categoryMap = {
+  const mapCategoryToId = (type: string) => {
+    const categoryMap: Record<string, number> = {
       buy: 1,
       rent: 2,
+      plot: 3,
+      commercial: 4,
     };
     return categoryMap[type] || 1;
   };
 
-  const mapPropertyTypeToId = (type) => {
-    const propertyTypeMap = {
+  const mapPropertyTypeToId = (type: string) => {
+    const propertyTypeMap: Record<string, number> = {
       "Row House": 3,
       shop: 2,
       Plot: 4,
@@ -202,17 +224,13 @@ const PostProperty = () => {
     return propertyTypeMap[type] || 1;
   };
 
-  const getCityStateId = (cityId) => {
-    const cityStateMap = {
-      1: 1, // Indore -> Madhya Pradesh
-      2: 1, // Bhopal -> Madhya Pradesh
-      3: 2, // Pune -> Maharashtra
-    };
-    return cityStateMap[cityId] || 1;
+  const getCityStateId = (cityId: number) => {
+    const selectedCity = availableCities.find(city => city.id === cityId);
+    return selectedCity?.stateId || 1;
   };
 
-  const mapOwnerTypeToId = (type) => {
-    const ownerTypeMap = {
+  const mapOwnerTypeToId = (type: string) => {
+    const ownerTypeMap: Record<string, number> = {
       owner: 1,
       broker: 2,
       builder: 3,
@@ -220,8 +238,8 @@ const PostProperty = () => {
     return ownerTypeMap[type] || 1;
   };
 
-  const mapAmenityToId = (amenity) => {
-    const amenityMap = {
+  const mapAmenityToId = (amenity: string) => {
+    const amenityMap: Record<string, number> = {
       "Lift": 1,
       "Swimming Pool": 2,
       "Club House": 3,
@@ -230,11 +248,14 @@ const PostProperty = () => {
       "Security": 6,
       "Parking": 8,
       "Power Backup": 7,
+      "Furnished": 9,
+      "Unfurnished": 10,
+      "Semi Furnished": 11,
     };
     return amenityMap[amenity] || 1;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     // Basic validation
@@ -290,36 +311,50 @@ const PostProperty = () => {
     setLoading(true);
 
     try {
+      // Get selected amenities
+      const selectedAmenities = Object.entries(amenityStates)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([amenity, _]) => amenity);
+      
+      // Get selected preferences
+      const selectedPreferences = Object.entries(preferenceStates)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([preferenceId, _]) => preferenceId);
+
       // Map your form selections to API IDs
       const categoryId = mapCategoryToId(propertyType);
       const propertyTypeId = mapPropertyTypeToId(category);
-      const cityId = parseInt(city); // Use the direct city ID from the dropdown
+      const cityId = parseInt(city); 
       const stateId = getCityStateId(cityId);
       const userTypeId = mapOwnerTypeToId(ownerType);
 
       // Map selected amenities to their IDs
-      const amenityIds = amenities.map((amenity) => mapAmenityToId(amenity));
+      const amenityIds = selectedAmenities.map((amenity) => mapAmenityToId(amenity));
 
       // Create FormData for file uploads
       const formData = new FormData();
 
-      // Add account ID
-      if (!user || !user.userId) {
+      // Add account ID - Check for both user.id and user.userId for backward compatibility
+      if (!user || (!user.userId && !user.id)) {
         toast({
-          title: "User Not Logged In",
-          description: "Please log in to post your property.",
+          title: "Authentication Required",
+          description: "Please log in to post a property.",
           variant: "destructive",
         });
+        navigate('/login');
         return;
       }
 
-      formData.append("AccountId", user.userId);
+      // Use either userId or id, whichever is available
+      const accountId = user.userId || user.id;
+      
+      formData.append("AccountId", accountId);
       formData.append("SuperCategoryId", categoryId.toString());
       formData.append("PropertyTypeId", propertyTypeId.toString());
       formData.append("Title", title);
       formData.append("Description", description);
 
-      // Price handling - same approach as area
+      // Price handling
       if (price) {
         // Ensure price is treated as a number with 2 decimal places
         const priceValue = parseFloat(price);
@@ -350,6 +385,24 @@ const PostProperty = () => {
       amenityIds.forEach((id) => {
         formData.append("AmenityIds", id.toString());
       });
+
+      // Add RERA and OC approval status
+      formData.append("IsReraApproved", (isReraApproved === "true").toString());
+      formData.append("IsOCApproved", (isOCApproved === "true").toString());
+
+      // Add preference and available from date for rental properties
+      if (propertyType === "rent") {
+        // Use the first preference or a default if none selected
+        if (selectedPreferences.length > 0) {
+          formData.append("PreferenceId", selectedPreferences[0]);
+        } else {
+          formData.append("PreferenceId", "4"); // Default to "Anyone"
+        }
+        
+        if (availableFrom) {
+          formData.append("AvailableFrom", availableFrom.toISOString());
+        }
+      }
 
       // Upload images with fixed format to match API expectations
       images.forEach((image, index) => {
@@ -415,6 +468,10 @@ const PostProperty = () => {
     }
   };
 
+  // Determine if we should show bedroom, bathroom, and balcony fields
+  // Don't show for Plot category or commercial properties
+  const showBedroomBathroomBalcony = !(category === "Plot" || category === "shop");
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       <div className="flex items-center mb-8">
@@ -463,6 +520,8 @@ const PostProperty = () => {
                     <SelectContent>
                       <SelectItem value="buy">Sell</SelectItem>
                       <SelectItem value="rent">Rent</SelectItem>
+                      <SelectItem value="plot">Plot</SelectItem>
+                      <SelectItem value="commercial">Commercial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -498,7 +557,7 @@ const PostProperty = () => {
                 </Label>
                 <Input
                   id="title"
-                  placeholder="Society name"
+                  placeholder="E.g., Modern 3BHK Apartment with Garden View"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
@@ -543,8 +602,8 @@ const PostProperty = () => {
                       className={`bg-white border-2 pl-8 focus:ring-2 focus:ring-blue-100 ${
                         !priceValidation ? "border-red-500" : ""
                       }`}
-                      type="text" // Changed to text to avoid browser-specific number input behavior
-                      inputMode="decimal" // Better for mobile decimal input
+                      type="text"
+                      inputMode="decimal"
                     />
                   </div>
                   {!priceValidation && (
@@ -567,8 +626,8 @@ const PostProperty = () => {
                       className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
                         !areaValidation ? "border-red-500" : ""
                       }`}
-                      type="text" // Changed to text
-                      inputMode="decimal" // Better for mobile decimal input
+                      type="text"
+                      inputMode="decimal"
                     />
                     <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
                       sq.ft
@@ -581,84 +640,172 @@ const PostProperty = () => {
                   )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bedrooms"
-                    className="text-gray-700 font-medium"
-                  >
-                    Bedrooms
+              
+              {/* RERA and OC Approval with Radio Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <Label className="text-gray-700 font-medium mb-2 block">
+                    RERA Approved
                   </Label>
-                  <Select value={bedrooms} onValueChange={setBedrooms}>
-                    <SelectTrigger
-                      id="bedrooms"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 1, 2, 3, 4, 5, 6].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 0 ? "Studio" : num === 6 ? "6+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <RadioGroup value={isReraApproved} onValueChange={setIsReraApproved} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="true" id="rera-yes" />
+                      <Label htmlFor="rera-yes">Yes</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="false" id="rera-no" />
+                      <Label htmlFor="rera-no">No</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bathrooms"
-                    className="text-gray-700 font-medium"
-                  >
-                    Bathrooms
+                <div>
+                  <Label className="text-gray-700 font-medium mb-2 block">
+                    OC Approved
                   </Label>
-                  <Select value={bathrooms} onValueChange={setBathrooms}>
-                    <SelectTrigger
-                      id="bathrooms"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 5 ? "5+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="balcony"
-                    className="text-gray-700 font-medium"
-                  >
-                    Balcony
-                  </Label>
-                  <Select value={balcony} onValueChange={setBalcony}>
-                    <SelectTrigger
-                      id="balcony"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 1, 2, 3, 4].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <RadioGroup value={isOCApproved} onValueChange={setIsOCApproved} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="true" id="oc-yes" />
+                      <Label htmlFor="oc-yes">Yes</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="false" id="oc-no" />
+                      <Label htmlFor="oc-no">No</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </div>
+
+              {/* Preferences with Checkboxes (Conditional Rendering) */}
+              {propertyType === "rent" && (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-gray-700 font-medium mb-2 block">
+                      Tenant Preference
+                    </Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {preferenceOptions.map((option) => (
+                        <div
+                          key={option.id}
+                          className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                            preferenceStates[option.id]
+                              ? "bg-blue-100 border-2 border-blue-300"
+                              : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                          }`}
+                        >
+                          <Checkbox
+                            id={`preference-${option.id}`}
+                            checked={preferenceStates[option.id]}
+                            onCheckedChange={() => handlePreferenceChange(option.id)}
+                            className="mr-2"
+                          />
+                          <Label 
+                            htmlFor={`preference-${option.id}`} 
+                            className="cursor-pointer text-sm"
+                          >
+                            {option.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Available From Date Picker */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="availableFrom"
+                      className="text-gray-700 font-medium flex items-center"
+                    >
+                      <Calendar className="h-4 w-4 mr-1 text-blue-600" />
+                      Available From
+                    </Label>
+                    <DatePicker
+                      date={availableFrom}
+                      setDate={setAvailableFrom}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Bedroom, Bathroom, Balcony (Conditional Rendering) */}
+              {showBedroomBathroomBalcony && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="bedrooms"
+                      className="text-gray-700 font-medium"
+                    >
+                      Bedrooms
+                    </Label>
+                    <Select value={bedrooms} onValueChange={setBedrooms}>
+                      <SelectTrigger
+                        id="bedrooms"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4, 5, 6].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 0 ? "Studio" : num === 6 ? "6+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="bathrooms"
+                      className="text-gray-700 font-medium"
+                    >
+                      Bathrooms
+                    </Label>
+                    <Select value={bathrooms} onValueChange={setBathrooms}>
+                      <SelectTrigger
+                        id="bathrooms"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 5 ? "5+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="balcony"
+                      className="text-gray-700 font-medium"
+                    >
+                      Balcony
+                    </Label>
+                    <Select value={balcony} onValueChange={setBalcony}>
+                      <SelectTrigger
+                        id="balcony"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Location Details */}
+          {/* Location Details with improved city-state mapping */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
               <div className="flex items-center">
@@ -701,12 +848,23 @@ const PostProperty = () => {
                           key={cityOption.id}
                           value={cityOption.id.toString()}
                         >
-                          {cityOption.name}
+                          {cityOption.name} ({cityOption.stateName})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {city && (
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 font-medium">
+                      State
+                    </Label>
+                    <div className="h-10 px-3 py-2 rounded-md border-2 border-input bg-background text-sm">
+                      {availableCities.find(c => c.id.toString() === city)?.stateName || "Not selected"}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -728,20 +886,21 @@ const PostProperty = () => {
                   <div
                     key={amenity}
                     className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                      amenities.includes(amenity)
+                      amenityStates[amenity]
                         ? "bg-blue-100 border-2 border-blue-300"
                         : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
                     }`}
-                    onClick={() => handleAmenityToggle(amenity)}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id={amenity}
-                      checked={amenities.includes(amenity)}
-                      onChange={() => {}}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                      checked={amenityStates[amenity]}
+                      onCheckedChange={() => handleAmenityChange(amenity)}
+                      className="mr-2"
                     />
-                    <Label htmlFor={amenity} className="cursor-pointer text-sm">
+                    <Label 
+                      htmlFor={amenity} 
+                      className="cursor-pointer text-sm"
+                    >
                       {amenity}
                     </Label>
                   </div>
@@ -884,7 +1043,7 @@ const PostProperty = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-real-blue hover:bg-blue-600"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               {loading ? "Posting Property..." : "Post Property"}
             </Button>

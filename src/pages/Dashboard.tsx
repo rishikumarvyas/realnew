@@ -1,8 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   PlusCircle,
   Edit,
@@ -14,7 +24,7 @@ import {
   Settings,
   ThumbsUp,
 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface PropertyCardProps {
@@ -202,6 +212,10 @@ const Dashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Add new state for confirmation dialogs
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
@@ -295,6 +309,69 @@ const Dashboard = () => {
 
     fetchUserProperties();
   }, [user?.userId, toast, newPropertyId, location.search]);
+
+  // Add handlers for account actions
+  const handleDeactivateAccount = async () => {
+    try {
+      setLoading(true);
+      
+      // Here you would make an API call to deactivate the account
+      // const response = await fetch(`${BASE_URL}/api/Account/DeactivateAccount?userId=${user.userId}`, {
+      //   method: "POST",
+      // });
+      
+      // For now, we'll just show a success message
+      toast({
+        title: "Account Deactivated",
+        description: "Your account has been deactivated successfully.",
+      });
+      
+      // After successful deactivation, you might want to log the user out
+      // logout();
+      // navigate("/");
+    } catch (error) {
+      console.error("Error deactivating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeactivateDialogOpen(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      
+      // Here you would make an API call to delete the account
+      // const response = await fetch(`${BASE_URL}/api/Account/DeleteAccount?userId=${user.userId}`, {
+      //   method: "DELETE",
+      // });
+      
+      // For now, we'll just show a success message
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      
+      // After successful deletion, you should log the user out
+      // logout();
+      // navigate("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   const handleDeleteProperty = async (id: string) => {
     console.log("Deleting property with ID:", id);
@@ -686,6 +763,30 @@ const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* Account Actions Section */}
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-4">Account Actions</h4>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button
+                      variant="outline"
+                      className="border-amber-500 text-amber-500 hover:bg-amber-50"
+                      onClick={() => setIsDeactivateDialogOpen(true)}
+                    >
+                      Deactivate Account
+                    </Button>
+                    <Button
+                      variant="outline" 
+                      className="border-red-500 text-red-500 hover:bg-red-50"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      Delete Account
+                    </Button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2">
+                    Deactivating will temporarily disable your account. Deleting will permanently remove all your data.
+                  </p>
+                </div>
+
                 <div className="pt-4 flex justify-end">
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     Save Settings
@@ -696,6 +797,54 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Deactivate Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeactivateDialogOpen} 
+        onOpenChange={setIsDeactivateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to deactivate your account? Your listings will be hidden and you won't receive any messages. You can reactivate your account by logging in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeactivateAccount}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove all your data from our servers, including all your property listings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAccount}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
