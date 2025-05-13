@@ -15,7 +15,6 @@ interface User {
   name?: string;
   token?: string;
   userTypeId?: string;
-  
 }
 
 interface UserProperty {
@@ -107,6 +106,23 @@ const storePersistentUserId = (phone: string, userId: string): void => {
   }
 };
 
+// Function to extract username from JWT token
+const extractUsernameFromToken = (token: string): string | null => {
+  try {
+    if (!token) return null;
+    
+    const decodedToken = parseJwt(token);
+    // Check for username claim in the token
+    if (decodedToken && decodedToken.UserName) {
+      return decodedToken.UserName;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error extracting username from token:", error);
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -146,6 +162,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           if (userData.token) {
             const tokenData = parseJwt(userData.token);
             if (tokenData && tokenData.exp * 1000 > Date.now()) {
+              // Check if token contains username and update it
+              const usernameFromToken = extractUsernameFromToken(userData.token);
+              if (usernameFromToken) {
+                userData.name = usernameFromToken;
+              }
               setUser(userData);
             }
           } else {
@@ -294,11 +315,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Store this as the persistent userId for this phone number
         storePersistentUserId(formattedPhone, userId);
   
+        // Extract username from token if available
+        let nameToUse = fullName;
+        if (token) {
+          const usernameFromToken = extractUsernameFromToken(token);
+          if (usernameFromToken) {
+            nameToUse = usernameFromToken;
+          }
+        }
+
         // Create user data object
         const userData = {
           userId,
           phone: formattedPhone,
-          name: fullName,
+          name: nameToUse,
           token,
           userTypeId
         };
@@ -363,12 +393,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token =
           typeof data.token === "string" ? data.token : data.token?.token;
 
-        // Get name from response - this is important to extract and use directly
-        const name = data.name || (data.user && data.user.name);
+        // Get name from response or extract from token
+        let nameToUse = data.name || (data.user && data.user.name);
         
-        // Get userTypeId and stateId from response if available
+        // Extract username from token if available
+        if (token) {
+          const usernameFromToken = extractUsernameFromToken(token);
+          if (usernameFromToken) {
+            nameToUse = usernameFromToken;
+            console.log("Extracted username from token:", usernameFromToken);
+          }
+        }
+        
+        // Get userTypeId from response if available
         const userTypeId = data.userTypeId || (data.user && data.user.userTypeId);
-        const stateId = data.stateId || (data.user && data.user.stateId);
 
         // Store the mapping
         storePersistentUserId(formattedPhone, userId);
@@ -378,9 +416,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           userId,
           phone: formattedPhone,
           token,
-          name, // Important: Including name from login response
+          name: nameToUse,
           userTypeId,
-       
         };
 
         console.log("Final user data for login:", userData);

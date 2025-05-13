@@ -24,7 +24,9 @@ import {
   Heart,
   Share2,
   Calendar,
-  Image
+  Image,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { 
   Carousel,
@@ -33,6 +35,7 @@ import {
   CarouselNext,
   CarouselPrevious 
 } from "@/components/ui/carousel";
+import { Switch } from "@/components/ui/switch";
 import { ContactForm } from "@/components/ContactForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { ImageGalleryDialog } from "@/components/ImageGalleryDialog";
@@ -57,6 +60,10 @@ const PropertyDetail = () => {
   const [likesCount, setLikesCount] = useState(0);
   const [similarProperties, setSimilarProperties] = useState<any[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
+  
+  // New states for contact toggle and contact count
+  const [showContactInfo, setShowContactInfo] = useState(false);
+  const [contactsViewed, setContactsViewed] = useState(0);
   
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
@@ -116,6 +123,12 @@ const PropertyDetail = () => {
 
     if (id) {
       fetchPropertyDetails();
+    }
+    
+    // Initialize contacts viewed count from localStorage
+    const viewedContacts = localStorage.getItem('contactsViewed');
+    if (viewedContacts) {
+      setContactsViewed(parseInt(viewedContacts));
     }
   }, [id]);
   
@@ -227,6 +240,26 @@ const PropertyDetail = () => {
   const handleContactModal = (type: string) => {
     setContactType(type);
     setContactModalOpen(true);
+  };
+
+  // New handler for toggle switch
+  const handleToggleContactInfo = (checked: boolean) => {
+    setShowContactInfo(checked);
+    
+    if (checked) {
+      // Increment the count when user toggles to view contact
+      const newCount = contactsViewed + 1;
+      setContactsViewed(newCount);
+      
+      // Store the updated count in localStorage
+      localStorage.setItem('contactsViewed', newCount.toString());
+      
+      // Notify user
+      toast({
+        title: "Contact information visible",
+        description: `You've viewed ${newCount} property contacts so far.`
+      });
+    }
   };
 
   const toggleFavorite = async () => {
@@ -411,11 +444,15 @@ const PropertyDetail = () => {
           </div>
         </div>
 
-        {/* Image Gallery with carousel component - with click to open functionality */}
+        {/* Image Gallery with carousel component - MODIFIED FOR THUMBNAIL CLICK FUNCTIONALITY */}
         <div className="mb-8 bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-scale-in">
           {images.length > 0 ? (
             <div className="relative">
-              <Carousel className="w-full" index={activeImageIndex} onSelect={(index) => setActiveImageIndex(index)}>
+              <Carousel 
+                className="w-full" 
+                selectedIndex={activeImageIndex}
+                onSlideChange={setActiveImageIndex}
+              >
                 <CarouselContent>
                   {images.map((image: any, index: number) => (
                     <CarouselItem key={image.imageId || index}>
@@ -754,10 +791,37 @@ const PropertyDetail = () => {
           {/* Sidebar - Contact Info */}
           <div>
             <div className="bg-white p-6 rounded-xl shadow-sm mb-6 sticky top-24 hover:shadow-lg transition-shadow">
-              <h3 className="text-lg font-medium mb-5 flex items-center border-b pb-3">
-                <User className="text-blue-600 mr-2" />
-                Contact {property.userType || "Owner"}
-              </h3>
+              <div className="border-b pb-4 space-y-4">
+      {/* First Row: Title with User Icon */}
+      <div className="flex items-center">
+        <User className="text-blue-600 mr-2" />
+        <h3 className="text-lg font-medium">
+          Contact {property.userType || "Owner"}
+        </h3>
+      </div>
+      
+      {/* Second Row: Toggle Switch with Label */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-500">Show Contact Info</span>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={showContactInfo}
+            onCheckedChange={handleToggleContactInfo}
+          />
+          {showContactInfo ? (
+            <Eye className="h-4 w-4 text-blue-600" />
+          ) : (
+            <EyeOff className="h-4 w-4 text-gray-400" />
+          )}
+        </div>
+      </div>
+    </div>
+              
+              {/* Contact info viewed counter */}
+              <div className="mb-4 flex items-center justify-center bg-blue-50 py-2 px-3 rounded-md text-sm text-blue-700">
+                <Eye className="h-3.5 w-3.5 mr-1.5" />
+                <span>You have viewed {contactsViewed} contacts</span>
+              </div>
               
               <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
                 <div className="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white shadow-inner">
@@ -780,42 +844,58 @@ const PropertyDetail = () => {
                 )}
               </div>
               
-              <div className="space-y-4">
-                <Button
-                  onClick={() => handleContactModal("whatsapp")}
-                  variant="outline"
-                  className="w-full justify-start hover:bg-green-50 hover:text-green-600 transition-colors"
-                >
-                  <MessageSquare className="mr-2 h-5 w-5 text-green-600" /> 
-                  WhatsApp Now
-                </Button>
-                
-                <Button
-                  onClick={() => handleContactModal("email")} 
-                  variant="outline"
-                  className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                >
-                  <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
-                  Send Email
-                </Button>
-                
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
-                >
-                  <Phone className="mr-2 h-5 w-5" /> 
-                  Call {property.phone || ownerDetails.phone}
-                </Button>
-              </div>
-              
-              {/* Schedule Visit Button */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <Button
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 transition-all shadow-md hover:shadow-lg"
-                >
-                  <Calendar className="mr-2 h-5 w-5" /> 
-                  Schedule Visit
-                </Button>
-              </div>
+              {/* Contact buttons - show based on toggle state */}
+              {showContactInfo ? (
+                <div className="space-y-4 animate-fade-in">
+                  <Button
+                    onClick={() => handleContactModal("whatsapp")}
+                    variant="outline"
+                    className="w-full justify-start hover:bg-green-50 hover:text-green-600 transition-colors"
+                  >
+                    <MessageSquare className="mr-2 h-5 w-5 text-green-600" /> 
+                    WhatsApp Now
+                  </Button>
+                  
+                  <Button
+                    onClick={() => handleContactModal("email")} 
+                    variant="outline"
+                    className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  >
+                    <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
+                    Send Email
+                  </Button>
+                  
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+                  >
+                    <Phone className="mr-2 h-5 w-5" /> 
+                    Call {property.phone || ownerDetails.phone}
+                  </Button>
+                  
+                  {/* Schedule Visit Button */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <Button
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 transition-all shadow-md hover:shadow-lg"
+                    >
+                      <Calendar className="mr-2 h-5 w-5" /> 
+                      Schedule Visit
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                  <EyeOff className="h-12 w-12 text-gray-400 mb-3" />
+                  <p className="text-gray-600 text-center mb-4">Toggle the switch above to view the property owner's contact information</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowContactInfo(true)}
+                    className="bg-white"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Show Contact Info
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

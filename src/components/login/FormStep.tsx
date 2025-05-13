@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Form,
   FormControl,
@@ -30,7 +30,9 @@ const formSchema = z.object({
   phone: z.string().refine((val) => phoneRegex.test(val), {
     message: "Please enter a valid 10-digit Indian phone number.",
   }),
-  userType: z.coerce.number(),
+  userType: z.coerce.number().refine((val) => val > 0, {
+    message: "Please select a user type.",
+  }),
 });
 
 interface FormStepProps {
@@ -48,9 +50,11 @@ export const FormStep = ({
   loading, 
   userTypes = [], 
   states = [],
-  initialUserType = 1,
+  initialUserType = undefined,
   phoneError = null
 }: FormStepProps) => {
+  const [isFormValid, setIsFormValid] = useState(false);
+  
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,7 +62,22 @@ export const FormStep = ({
       phone: "",
       userType: initialUserType,
     },
+    mode: "onChange" // Validate on field change
   });
+
+  // Watch all form fields to determine button status
+  const name = form.watch("name");
+  const phone = form.watch("phone");
+  const userType = form.watch("userType");
+
+  // Update button state based on form validation
+  useEffect(() => {
+    const nameValid = name && name.length >= 2;
+    const phoneValid = phone && phoneRegex.test(phone);
+    const userTypeValid = userType && userType > 0;
+    
+    setIsFormValid(nameValid && phoneValid && userTypeValid);
+  }, [name, phone, userType]);
 
   const handleSubmit = (data: any) => {
     if (onSubmit) {
@@ -126,7 +145,7 @@ export const FormStep = ({
                 <FormLabel className="text-xs font-medium">I am a</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
-                  defaultValue={field.value.toString()}
+                  value={field.value?.toString()}
                 >
                   <FormControl>
                     <SelectTrigger className="h-9">
@@ -148,8 +167,8 @@ export const FormStep = ({
 
           <Button 
             type="submit" 
-            className="w-full h-9 text-sm mt-2 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500" 
-            disabled={loading}
+            className="w-full h-9 text-sm mt-2 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
+            disabled={loading || !isFormValid}
           >
             {loading ? "Processing..." : "Continue with OTP"}
           </Button>

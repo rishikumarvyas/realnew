@@ -1,10 +1,7 @@
-
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -13,7 +10,6 @@ import {
   FilterX, 
   Loader2, 
   Home, 
-  DollarSign, 
   IndianRupeeIcon,
   Calendar, 
   Users, 
@@ -73,7 +69,6 @@ interface FilterOptions {
   maxArea: number;
   availableFrom?: string;
   preferenceId?: string;
-  superCategoryId?: number;
   furnished?: string;
   amenities?: string[];
 }
@@ -101,7 +96,7 @@ const amenityOptions = [
   "Security", "Garden", "Club House", "WiFi", "Gas Pipeline"
 ];
 
-const PropertyListing = () => {
+export const PropertyListing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
@@ -133,6 +128,16 @@ const PropertyListing = () => {
   // UI state for advanced filters visibility
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
+  // Check if advanced filters should be hidden based on property type
+  const shouldShowAdvancedFilters = () => {
+    return activeTab !== "plot" && activeTab !== "commercial";
+  };
+
+  // Toggle mobile filters
+  const toggleMobileFilters = () => {
+    setMobileFiltersVisible(!mobileFiltersVisible);
+  };
+
   // Initialize from URL params and fetch data
   useEffect(() => {
     // Get parameters from URL
@@ -245,7 +250,9 @@ const PropertyListing = () => {
         const categoryMap: Record<string, number> = {
           buy: 1,
           rent: 2,
-          sell: 3
+          sell: 3,
+          plot: 4,
+          commercial: 5
         };
         superCategoryId = categoryMap[typeParam as keyof typeof categoryMap] || 0;
       }
@@ -253,7 +260,7 @@ const PropertyListing = () => {
       const response = await axios.post<ApiResponse>(
         "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
         {
-          superCategoryId: superCategoryId, // 0 for all, 1 for buy, 2 for rent, 3 for sell
+          superCategoryId: superCategoryId, // 0 for all, 1 for buy, 2 for rent, 3 for sell, etc.
           accountId: "string", // Replace with actual accountId if available
           searchTerm: filterOptions.searchTerm,
           minPrice: filterOptions.minPrice,
@@ -283,7 +290,7 @@ const PropertyListing = () => {
         title: prop.title,
         price: prop.price,
         location: prop.city,
-        type: prop.superCategory.toLowerCase() as "buy" | "sell" | "rent",
+        type: prop.superCategory.toLowerCase() as "buy" | "sell" | "rent" | "plot" | "commercial",
         bedrooms: prop.bedroom,
         bathrooms: prop.bathroom,
         balcony: prop.balcony,
@@ -441,6 +448,33 @@ const PropertyListing = () => {
         preferenceId: 3, // Company
         amenities: ["WiFi", "Power Backup", "Security", "Parking"],
         furnished: "Fully"
+      },
+      {
+        id: "prop9",
+        title: "Residential Plot",
+        price: 3500000,
+        location: "Electronic City, Bangalore",
+        type: "plot",
+        bedrooms: 0,
+        bathrooms: 0,
+        balcony: 0,
+        area: 2400,
+        image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
+        amenities: ["Power Backup"]
+      },
+      {
+        id: "prop10",
+        title: "Office Space",
+        price: 85000,
+        location: "Connaught Place, Delhi",
+        type: "commercial",
+        bedrooms: 0,
+        bathrooms: 2,
+        balcony: 0,
+        area: 1800,
+        image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
+        amenities: ["WiFi", "Power Backup", "Security", "Parking"],
+        furnished: "Fully"
       }
     ];
     
@@ -545,6 +579,11 @@ const PropertyListing = () => {
   // Handle tab change and update URL
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    
+    // Hide advanced filters if plot or commercial is selected
+    if (value === "plot" || value === "commercial") {
+      setShowAdvancedFilters(false);
+    }
     
     if (value !== "all") {
       searchParams.set("type", value);
@@ -706,87 +745,78 @@ const PropertyListing = () => {
     return `₹${price.toLocaleString()}`;
   };
 
-  // Check if property type allows availability filter
-  const showAvailabilityFilter = () => {
-    return activeTab === "buy" || activeTab === "rent" || activeTab === "all";
-  };
-
-  // Toggle mobile filters
-  const toggleMobileFilters = () => {
-    setMobileFiltersVisible(!mobileFiltersVisible);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
-       <div className="relative">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
-        }}
-      />
-      
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black opacity-50"></div>
-      
-      {/* Content */}
-      <div className="relative py-20 px-4">
-        <div className="max-w-3xl mx-auto bg-gray-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
-            <p className="text-xl opacity-90 mb-10 text-white">
-              Discover the perfect home that fits your lifestyle and budget from our extensive listings
-            </p>
-            
-            <form onSubmit={handleSearch} className="relative mx-auto max-w-2xl">
-              <div className="relative flex shadow-xl rounded-full overflow-hidden">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-600" />
+      <div className="relative">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+          }}
+        />
+        
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black opacity-50"></div>
+        
+        {/* Content */}
+        <div className="relative py-20 px-4">
+          <div className="max-w-3xl mx-auto bg-gray-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
+              <p className="text-xl opacity-90 mb-10 text-white">
+                Discover the perfect home that fits your lifestyle and budget from our extensive listings
+              </p>
+              
+              <form onSubmit={handleSearch} className="relative mx-auto max-w-2xl">
+                <div className="relative flex shadow-xl rounded-full overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <Input
+                    type="text"
+                    className="block w-full rounded-l-full pl-12 py-6 bg-white text-gray-800 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search by location, property name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <Button 
+                    type="submit" 
+                    className="rounded-r-full bg-blue-500 hover:bg-blue-600 px-8 py-6 text-base font-medium"
+                    size="lg"
+                  >
+                    Search
+                  </Button>
                 </div>
-                <Input
-                  type="text"
-                  className="block w-full rounded-l-full pl-12 py-6 bg-white text-gray-800 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Search by location, property name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Button 
-                  type="submit" 
-                  className="rounded-r-full bg-blue-500 hover:bg-blue-600 px-8 py-6 text-base font-medium"
-                  size="lg"
-                >
-                  Search
-                </Button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       </div>
-      </div>
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Tab filter */}
         <div className="mb-8">
-              <div className="w-full max-w-2xl mx-auto bg-blue-700 bg-opacity-40 rounded-lg p-2">
-                <div className="grid grid-cols-5 gap-1 w-full">
-                  {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => handleTabChange(tab)}
-                      className={`py-3 px-1 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
-                        activeTab === tab 
-                          ? "bg-white text-blue-600 shadow-md" 
-                          : "text-white hover:bg-blue-500"
-                      }`}
-                    >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                      {tab === "all" ? " Properties" : ""}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="w-full max-w-2xl mx-auto bg-blue-700 bg-opacity-40 rounded-lg p-2">
+            <div className="grid grid-cols-5 gap-1 w-full">
+              {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`py-3 px-1 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
+                    activeTab === tab 
+                      ? "bg-white text-blue-600 shadow-md" 
+                      : "text-white hover:bg-blue-500"
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === "all" ? " Properties" : ""}
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
         
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">
@@ -922,19 +952,21 @@ const PropertyListing = () => {
                   </div>
                   
                   <div className="space-y-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
-                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    >
-                      {showAdvancedFilters ? (
-                        <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
-                      ) : (
-                        <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
-                      )}
-                    </Button>
+                    {shouldShowAdvancedFilters() && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      >
+                        {showAdvancedFilters ? (
+                          <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
+                        ) : (
+                          <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
+                        )}
+                      </Button>
+                    )}
                     
                     <Button 
                       variant="outline" 
@@ -950,13 +982,13 @@ const PropertyListing = () => {
             </Card>
 
             {/* Advanced filters */}
-            {showAdvancedFilters && (
+            {showAdvancedFilters && shouldShowAdvancedFilters() && (
               <Card className="shadow-md">
                 <CardContent className="p-6">
                   <h3 className="font-medium text-lg mb-4 text-blue-800">Advanced Filters</h3>
                   <Accordion type="single" collapsible className="w-full">
-                    {/* Only show availability filter for Buy and Rent property types */}
-                    {(activeTab === "buy" || activeTab === "rent" || activeTab === "all") && (
+                    {/* Only show availability filter for rent property type */}
+                    {(activeTab === "rent" || (activeTab === "all")) && (
                       <AccordionItem value="availability" className="border-b border-blue-100">
                         <AccordionTrigger className="py-3 hover:no-underline">
                           <div className="flex items-center gap-2">
@@ -977,36 +1009,38 @@ const PropertyListing = () => {
                       </AccordionItem>
                     )}
 
-                    {/* Show tenant preference for all property types */}
-                    <AccordionItem value="preference" className="border-b border-blue-100">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-blue-600" />
-                          <span>Tenant Preference</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-2 pb-4">
-                          <Select
-                            value={preferenceId}
-                            onValueChange={handlePreferenceChange}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select preference" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {preferenceOptions.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
+                    {/* Only show tenant preference for rent property type */}
+                    {(activeTab === "rent" || (activeTab === "all")) && (
+                      <AccordionItem value="preference" className="border-b border-blue-100">
+                        <AccordionTrigger className="py-3 hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-blue-600" />
+                            <span>Tenant Preference</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pt-2 pb-4">
+                            <Select
+                              value={preferenceId}
+                              onValueChange={handlePreferenceChange}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select preference" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {preferenceOptions.map((option) => (
+                                  <SelectItem key={option.id} value={option.id}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
 
-                    {/* Show furnished status for all property types */}
+                    {/* Show furnished status for all property types except plot and commercial */}
                     <AccordionItem value="furnished" className="border-b border-blue-100">
                       <AccordionTrigger className="py-3 hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -1035,7 +1069,7 @@ const PropertyListing = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Show amenities for all property types */}
+                    {/* Show amenities for all property types except plot and commercial */}
                     <AccordionItem value="amenities" className="border-b-0">
                       <AccordionTrigger className="py-3 hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -1301,8 +1335,8 @@ const PropertyListing = () => {
               ) : (
                 filteredProperties.map((property) => (
                   <PropertyCard
-                    key={property.id}
-                    {...property}
+                    key={property.id} 
+                    {...property} 
                     formattedPrice={formatPrice(property.price, property.type)}
                   />
                 ))
