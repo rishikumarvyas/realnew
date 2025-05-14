@@ -57,16 +57,19 @@ const PostProperty = () => {
   const [imageURLs, setImageURLs] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+
+  const furnishedOptions = ["Fully furnished", "Semi furnished", "Unfurnished"];
 
   const availableAmenities = [
+    "Lift",
     "Swimming Pool",
+    "Club House",
+    "Garden",
     "Gym",
     "Security",
     "Power Backup",
     "Parking",
-    "Garden",
-    "Lift",
-    "Club House",
   ];
 
   // Available cities
@@ -86,6 +89,10 @@ const PostProperty = () => {
     } else {
       setAmenities([...amenities, amenity]);
     }
+  };
+
+  const handleChange = (event) => {
+    setSelectedOption(event.target.value);
   };
 
   const handleImageUpload = async (e) => {
@@ -221,17 +228,21 @@ const PostProperty = () => {
   };
 
   const mapAmenityToId = (amenity) => {
-    const amenityMap = {
-      "Lift": 1,
+    const amenityMap: Record<string, number> = {
+      Lift: 1,
       "Swimming Pool": 2,
       "Club House": 3,
-      "Garden": 4,
-      "Gym": 5,
-      "Security": 6,
-      "Parking": 8,
+      Garden: 4,
+      Gym: 5,
+      Security: 6,
       "Power Backup": 7,
+      Parking: 8,
+      "Gas Pipeline": 9,
+      "Fully furnished": 10,
+      "Semi furnished": 11,
+      Unfurnished: 12,
     };
-    return amenityMap[amenity] || 1;
+    return amenityMap[amenity] || "";
   };
 
   const handleSubmit = async (e) => {
@@ -298,8 +309,9 @@ const PostProperty = () => {
       const userTypeId = mapOwnerTypeToId(ownerType);
 
       // Map selected amenities to their IDs
-      const amenityIds = amenities.map((amenity) => mapAmenityToId(amenity));
-
+      const amenityIds = [...amenities, selectedOption].map((amenity) =>
+        mapAmenityToId(amenity)
+      );
       // Create FormData for file uploads
       const formData = new FormData();
 
@@ -350,7 +362,6 @@ const PostProperty = () => {
       amenityIds.forEach((id) => {
         formData.append("AmenityIds", id.toString());
       });
-
       // Upload images with fixed format to match API expectations
       images.forEach((image, index) => {
         formData.append(`Images[${index}].File`, image);
@@ -744,6 +755,28 @@ const PostProperty = () => {
                     <Label htmlFor={amenity} className="cursor-pointer text-sm">
                       {amenity}
                     </Label>
+                  </div>
+                ))}
+                {furnishedOptions.map((option) => (
+                  <div
+                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                      selectedOption.includes(option)
+                        ? "bg-blue-100 border-2 border-blue-300"
+                        : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                    }`}
+                  >
+                    <label key={option}>
+                      <input
+                        type="radio"
+                        name="furnishing"
+                        value={option}
+                        checked={selectedOption === option}
+                        onChange={handleChange}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                      />
+                      {option}
+                      <br />
+                    </label>
                   </div>
                 ))}
               </div>
