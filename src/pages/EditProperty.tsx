@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -140,8 +139,12 @@ const EditProperty = () => {
           }
 
           // Find main image URL
-          const mainImage = property.imageDetails?.find((img: any) => img.isMainImage);
-          const mainImageUrl = mainImage ? mainImage.imageUrl : property.imageDetails?.[0]?.imageUrl || "";
+          const mainImage = property.imageDetails?.find(
+            (img: any) => img.isMainImage
+          );
+          const mainImageUrl = mainImage
+            ? mainImage.imageUrl
+            : property.imageDetails?.[0]?.imageUrl || "";
 
           // Map API response to form data
           setFormData({
@@ -216,7 +219,8 @@ const EditProperty = () => {
               isMainImage: true,
             },
           ],
-          mainImageUrl: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+          mainImageUrl:
+            "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
         });
       } finally {
         setLoading(false);
@@ -226,7 +230,9 @@ const EditProperty = () => {
     fetchPropertyDetails();
   }, [propertyId, toast, navigate]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -254,7 +260,7 @@ const EditProperty = () => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      setNewImages(prev => [...prev, ...selectedFiles]);
+      setNewImages((prev) => [...prev, ...selectedFiles]);
     }
   };
 
@@ -263,7 +269,7 @@ const EditProperty = () => {
   };
 
   const removeImage = (index: number) => {
-    setNewImages(prev => prev.filter((_, i) => i !== index));
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
     if (mainImageIndex === index) {
       setMainImageIndex(null);
     } else if (mainImageIndex !== null && mainImageIndex > index) {
@@ -286,7 +292,7 @@ const EditProperty = () => {
         security: "5",
         elevator: "6",
       };
-      
+
       const amenityIds = Object.entries(formData.amenities)
         .filter(([_, selected]) => selected)
         .map(([name, _]) => amenityMap[name] || name);
@@ -308,9 +314,9 @@ const EditProperty = () => {
       formDataObj.append("PropertyTypeId", formData.propertyTypeId);
       formDataObj.append("UserTypeId", formData.userTypeId);
       formDataObj.append("MainImageUrl", formData.mainImageUrl);
-      
+
       // Add amenity IDs
-      amenityIds.forEach(id => {
+      amenityIds.forEach((id) => {
         formDataObj.append("AmenityIds", id);
       });
 
@@ -318,7 +324,7 @@ const EditProperty = () => {
       newImages.forEach((file, index) => {
         formDataObj.append(`NewImages[${index}].File`, file);
         formDataObj.append(
-          `NewImages[${index}].IsMain`, 
+          `NewImages[${index}].IsMain`,
           mainImageIndex === index ? "true" : "false"
         );
       });
@@ -326,8 +332,8 @@ const EditProperty = () => {
       console.log("Sending update request...");
 
       const response = await axios.post(
-        `${BASE_URL}/api/Account/EditProperty`, 
-        formDataObj, 
+        `${BASE_URL}/api/Account/EditProperty`,
+        formDataObj,
         {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -398,18 +404,18 @@ const EditProperty = () => {
               Edit Property
             </h1>
           </div>
-          
+
           <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="bg-white/10 hover:bg-white/20 text-white border-white/30"
               onClick={() => navigate(`/property/${propertyId}`)}
             >
               View Property
             </Button>
-            <Button 
-              variant="default" 
-              onClick={handleSubmit} 
+            <Button
+              variant="default"
+              onClick={handleSubmit}
               disabled={saving}
               className="bg-white text-blue-700 hover:bg-white/90"
             >
@@ -461,7 +467,10 @@ const EditProperty = () => {
                   </div>
 
                   <div className="relative group">
-                    <Label htmlFor="description" className="text-sm font-medium">
+                    <Label
+                      htmlFor="description"
+                      className="text-sm font-medium"
+                    >
                       Description
                     </Label>
                     <div className="relative">
@@ -482,7 +491,10 @@ const EditProperty = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="relative group">
-                      <Label htmlFor="superCategory" className="text-sm font-medium">
+                      <Label
+                        htmlFor="superCategory"
+                        className="text-sm font-medium"
+                      >
                         Listing Type
                       </Label>
                       <Select
@@ -491,8 +503,8 @@ const EditProperty = () => {
                           handleSelectChange("superCategoryId", value)
                         }
                       >
-                        <SelectTrigger 
-                          id="superCategoryId" 
+                        <SelectTrigger
+                          id="superCategoryId"
                           className="border-blue-200 focus:border-blue-500"
                         >
                           <SelectValue placeholder="Select type" />
@@ -506,7 +518,10 @@ const EditProperty = () => {
                     </div>
 
                     <div className="relative group">
-                      <Label htmlFor="propertyType" className="text-sm font-medium">
+                      <Label
+                        htmlFor="propertyType"
+                        className="text-sm font-medium"
+                      >
                         Property Type
                       </Label>
                       <Select
@@ -515,8 +530,8 @@ const EditProperty = () => {
                           handleSelectChange("propertyTypeId", value)
                         }
                       >
-                        <SelectTrigger 
-                          id="propertyTypeId" 
+                        <SelectTrigger
+                          id="propertyTypeId"
                           className="border-blue-200 focus:border-blue-500"
                         >
                           <SelectValue placeholder="Select property type" />
@@ -613,7 +628,8 @@ const EditProperty = () => {
 
                     <div className="relative group">
                       <Label htmlFor="area" className="text-sm font-medium">
-                        <AreaChart className="h-4 w-4 inline mr-1" /> Area (sq.ft)
+                        <AreaChart className="h-4 w-4 inline mr-1" /> Area
+                        (sq.ft)
                       </Label>
                       <Input
                         id="area"
@@ -627,9 +643,9 @@ const EditProperty = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <Separator className="my-4" />
-                  
+
                   <h3 className="font-medium text-blue-800 flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" /> Amenities
                   </h3>
@@ -642,7 +658,10 @@ const EditProperty = () => {
                         checked={formData.amenities.parking}
                         onChange={() => handleAmenityToggle("parking")}
                       />
-                      <Label htmlFor="parking" className="text-sm cursor-pointer">
+                      <Label
+                        htmlFor="parking"
+                        className="text-sm cursor-pointer"
+                      >
                         Parking
                       </Label>
                     </div>
@@ -666,7 +685,10 @@ const EditProperty = () => {
                         checked={formData.amenities.garden}
                         onChange={() => handleAmenityToggle("garden")}
                       />
-                      <Label htmlFor="garden" className="text-sm cursor-pointer">
+                      <Label
+                        htmlFor="garden"
+                        className="text-sm cursor-pointer"
+                      >
                         Garden
                       </Label>
                     </div>
@@ -690,7 +712,10 @@ const EditProperty = () => {
                         checked={formData.amenities.security}
                         onChange={() => handleAmenityToggle("security")}
                       />
-                      <Label htmlFor="security" className="text-sm cursor-pointer">
+                      <Label
+                        htmlFor="security"
+                        className="text-sm cursor-pointer"
+                      >
                         Security
                       </Label>
                     </div>
@@ -702,7 +727,10 @@ const EditProperty = () => {
                         checked={formData.amenities.elevator}
                         onChange={() => handleAmenityToggle("elevator")}
                       />
-                      <Label htmlFor="elevator" className="text-sm cursor-pointer">
+                      <Label
+                        htmlFor="elevator"
+                        className="text-sm cursor-pointer"
+                      >
                         Elevator
                       </Label>
                     </div>
@@ -745,8 +773,8 @@ const EditProperty = () => {
                           handleSelectChange("cityId", value)
                         }
                       >
-                        <SelectTrigger 
-                          id="cityId" 
+                        <SelectTrigger
+                          id="cityId"
                           className="border-blue-200 focus:border-blue-500"
                         >
                           <SelectValue placeholder="Select city" />
@@ -755,7 +783,6 @@ const EditProperty = () => {
                           <SelectItem value="1">Indore</SelectItem>
                           <SelectItem value="2">Bhopal</SelectItem>
                           <SelectItem value="3">Pune</SelectItem>
-                        
                         </SelectContent>
                       </Select>
                     </div>
@@ -770,8 +797,8 @@ const EditProperty = () => {
                           handleSelectChange("stateId", value)
                         }
                       >
-                        <SelectTrigger 
-                          id="stateId" 
+                        <SelectTrigger
+                          id="stateId"
                           className="border-blue-200 focus:border-blue-500"
                         >
                           <SelectValue placeholder="Select state" />
@@ -779,7 +806,6 @@ const EditProperty = () => {
                         <SelectContent>
                           <SelectItem value="1">Madhya Pradesh</SelectItem>
                           <SelectItem value="2">Maharashtra</SelectItem>
-                         
                         </SelectContent>
                       </Select>
                     </div>
@@ -805,8 +831,8 @@ const EditProperty = () => {
                     multiple
                     className="hidden"
                   />
-                  
-                  <Button 
+
+                  <Button
                     type="button"
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
@@ -814,31 +840,38 @@ const EditProperty = () => {
                   >
                     Click to select images
                   </Button>
-                  
+
                   {newImages.length > 0 && (
                     <div className="mt-4">
                       <h4 className="font-medium mb-2">New Images:</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {newImages.map((file, index) => (
-                          <div key={index} className="relative group rounded overflow-hidden border">
-                            <img 
+                          <div
+                            key={index}
+                            className="relative group rounded overflow-hidden border"
+                          >
+                            <img
                               src={URL.createObjectURL(file)}
                               alt={`Upload Preview ${index}`}
                               className="w-full h-24 object-cover"
                             />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <Button 
-                                type="button" 
-                                variant="default" 
+                              <Button
+                                type="button"
+                                variant="default"
                                 onClick={() => handleSetMainImage(index)}
                                 size="sm"
-                                className={mainImageIndex === index ? "bg-green-600" : "bg-blue-600"}
+                                className={
+                                  mainImageIndex === index
+                                    ? "bg-green-600"
+                                    : "bg-blue-600"
+                                }
                               >
                                 {mainImageIndex === index ? "Main" : "Set Main"}
                               </Button>
-                              <Button 
-                                type="button" 
-                                variant="destructive" 
+                              <Button
+                                type="button"
+                                variant="destructive"
                                 onClick={() => removeImage(index)}
                                 size="sm"
                               >
@@ -867,8 +900,8 @@ const EditProperty = () => {
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saving}
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -890,14 +923,16 @@ const EditProperty = () => {
         <div className="space-y-6">
           <Card className="overflow-hidden border border-blue-100 shadow-md">
             <CardHeader className="bg-blue-50 p-4">
-              <CardTitle className="text-blue-800 text-base">Property Preview</CardTitle>
+              <CardTitle className="text-blue-800 text-base">
+                Property Preview
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="relative">
-                <img 
-                  src={mainImageUrl} 
-                  alt="Property Preview" 
-                  className="w-full h-48 object-cover" 
+                <img
+                  src={mainImageUrl}
+                  alt="Property Preview"
+                  className="w-full h-48 object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
                   <div className="text-white">
@@ -911,7 +946,7 @@ const EditProperty = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span className="flex items-center">
@@ -927,26 +962,29 @@ const EditProperty = () => {
                     {formData.area || 0} sqft
                   </span>
                 </div>
-                
+
                 <div className="font-bold text-blue-600 text-lg">
                   ₹ {Number(formData.price || 0).toLocaleString()}
                 </div>
-                
+
                 <Separator className="my-3" />
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">
                     ID: {formData.propertyId.substring(0, 8)}
                   </span>
                   <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full capitalize">
-                    {formData.superCategoryId === "1" ? "Buy" : 
-                     formData.superCategoryId === "2" ? "Sell" : "Rent"}
+                    {formData.superCategoryId === "1"
+                      ? "Buy"
+                      : formData.superCategoryId === "2"
+                      ? "Sell"
+                      : "Rent"}
                   </span>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="overflow-hidden border border-blue-100 shadow-md">
             <CardHeader className="bg-blue-50 p-4">
               <CardTitle className="text-blue-800 text-base">
@@ -956,23 +994,25 @@ const EditProperty = () => {
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-2">
                 {formData.images.length > 0 ? (
-                  formData.images.slice(0, 4).map((image: any, index: number) => (
-                    <div 
-                      key={image.imageId || index} 
-                      className="relative rounded overflow-hidden h-24"
-                    >
-                      <img 
-                        src={image.imageUrl} 
-                        alt={`Property Image ${index + 1}`} 
-                        className="h-full w-full object-cover"
-                      />
-                      {image.isMainImage && (
-                        <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded">
-                          Main
-                        </div>
-                      )}
-                    </div>
-                  ))
+                  formData.images
+                    .slice(0, 4)
+                    .map((image: any, index: number) => (
+                      <div
+                        key={image.imageId || index}
+                        className="relative rounded overflow-hidden h-24"
+                      >
+                        <img
+                          src={image.imageUrl}
+                          alt={`Property Image ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                        {image.isMainImage && (
+                          <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded">
+                            Main
+                          </div>
+                        )}
+                      </div>
+                    ))
                 ) : (
                   <div className="col-span-2 py-8 flex flex-col items-center justify-center bg-blue-50 rounded text-center">
                     <p className="text-blue-700">No images available</p>
