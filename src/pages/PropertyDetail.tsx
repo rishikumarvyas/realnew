@@ -65,6 +65,9 @@ const PropertyDetail = () => {
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [contactsViewed, setContactsViewed] = useState(0);
   
+  // Track whether the user has already liked this property
+  const [hasLiked, setHasLiked] = useState(false);
+  
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   useEffect(() => {
@@ -84,8 +87,13 @@ const PropertyDetail = () => {
         if (data.statusCode === 200 && data.propertyDetail) {
           const propertyData = data.propertyDetail;
           
-          // Set the favorite status based on API response
-          setIsFavorite(propertyData.isLiked || false);
+          // Check if property is already liked by current user
+          const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
+          const isLikedByUser = likedProperties[id || ''] || false;
+          setHasLiked(isLikedByUser);
+          
+          // Set the favorite status based on local storage
+          setIsFavorite(isLikedByUser);
           setProperty(propertyData);
           
           // Set likes count from API or fallback to a default
@@ -107,8 +115,14 @@ const PropertyDetail = () => {
           const mockPropertyDetail = getMockPropertyDetail(id || "");
           if (mockPropertyDetail) {
             console.log("Using mock data in development");
+            
+            // Check if property is already liked by current user
+            const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
+            const isLikedByUser = likedProperties[id || ''] || false;
+            setHasLiked(isLikedByUser);
+            
             setProperty(mockPropertyDetail);
-            setIsFavorite(mockPropertyDetail.isLiked || false);
+            setIsFavorite(isLikedByUser);
             setLikesCount(mockPropertyDetail.likesCount || 0);
             setError(null);
             
@@ -191,7 +205,6 @@ const PropertyDetail = () => {
       bedroom: 3,
       bathroom: 2,
       balcony: 1,
-      isLiked: true, // Added isLiked property
       likesCount: 42, // Added likesCount property
       amenityDetails: [
         { amenityId: "1", amenity: "Wifi" },
@@ -263,13 +276,38 @@ const PropertyDetail = () => {
   };
 
   const toggleFavorite = async () => {
+    // Check if the user is the property owner
+    if (property && user && property.postedBy === user.name) {
+      toast({
+        title: "Action not allowed",
+        description: "You cannot like your own property.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if the user has already liked this property
+    if (hasLiked) {
+      toast({
+        title: "Already liked",
+        description: "You have already liked this property.",
+      });
+      return;
+    }
+    
     try {
       // Toggle the UI state immediately for better UX
-      const newFavoriteState = !isFavorite;
+      const newFavoriteState = true; // Always set to true since we're only allowing to like, not unlike
       setIsFavorite(newFavoriteState);
+      setHasLiked(true);
       
-      // Update likes count
-      setLikesCount(prevCount => newFavoriteState ? prevCount + 1 : Math.max(0, prevCount - 1));
+      // Update likes count (increment by 1)
+      setLikesCount(prevCount => prevCount + 1);
+      
+      // Store the liked status in localStorage
+      const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
+      likedProperties[id || ''] = true;
+      localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
       
       // Send update to the server
       const response = await fetch(`${BASE_URL}/api/Account/UpdateProperty`, {
@@ -284,17 +322,12 @@ const PropertyDetail = () => {
       });
       
       if (!response.ok) {
-        // If server request fails, revert the UI
-        setIsFavorite(!newFavoriteState);
-        setLikesCount(prevCount => !newFavoriteState ? prevCount + 1 : Math.max(0, prevCount - 1));
         throw new Error('Failed to update favorite status');
       }
       
       toast({
-        title: newFavoriteState ? "Added to favorites" : "Removed from favorites",
-        description: newFavoriteState 
-          ? "This property has been added to your favorites." 
-          : "This property has been removed from your favorites.",
+        title: "Added to favorites",
+        description: "This property has been added to your favorites.",
       });
       
       console.log('Property favorite status updated successfully');
@@ -314,12 +347,25 @@ const PropertyDetail = () => {
   
   // Use posted by and phone information from the property details
   const ownerDetails = {
-    name: property?.postedBy || user?.name || "Property Owner",
-    phone: property?.phone || user?.phone || "+91 98765 43210",
-    email: user?.email || "contact@homeyatra.com",
+    name: property?.postedBy || "Property Owner",
+    phone: property?.phone || "+91 98765 43210",
+    email: "contact@homeyatra.com",
     verified: true
   };
-
+// Format date function for displaying the created date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Not specified";
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return "Invalid date";
+    }
+  };
   // Helper function to map preference ID to readable text
   const getPreferenceText = (prefId: string) => {
     const preferences: Record<string, string> = {
@@ -330,6 +376,11 @@ const PropertyDetail = () => {
       "0": "Any"
     };
     return preferences[prefId] || "Not specified";
+  };
+  
+  // Check if current user is the property owner
+  const isPropertyOwner = () => {
+    return property && user && property.postedBy === user.name;
   };
 
   if (loading) {
@@ -348,8 +399,8 @@ const PropertyDetail = () => {
       <div className="max-w-7xl mx-auto px-4 py-16 text-center bg-gray-50">
         <h1 className="text-3xl font-bold mb-4">Property Not Found</h1>
         <p className="mb-8 text-gray-600">{error || "The property you are looking for doesn't exist or has been removed."}</p>
-        <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg transition-all" onClick={() => navigate("/dashboard")}>
-          <Home className="mr-2 h-4 w-4" /> Back to Dashboard
+        <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg transition-all" onClick={() => navigate("/")}>
+          <Home className="mr-2 h-4 w-4" /> Back to Home
         </Button>
       </div>
     );
@@ -377,11 +428,11 @@ const PropertyDetail = () => {
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/")}
             className="flex items-center gap-2 hover:bg-gray-100 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" /> 
-            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="hidden sm:inline">Back to Home</span>
             <span className="sm:hidden">Back</span>
           </Button>
           
@@ -393,6 +444,8 @@ const PropertyDetail = () => {
                 size="icon" 
                 className={`rounded-full transition-all duration-300 ${isFavorite ? 'bg-red-50 border-red-200' : ''}`}
                 onClick={toggleFavorite}
+                disabled={isPropertyOwner()} // Disable if user is the owner
+                title={isPropertyOwner() ? "You cannot like your own property" : hasLiked ? "You already liked this property" : "Like this property"}
               >
                 <Heart className={`h-4 w-4 transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
               </Button>
@@ -747,9 +800,9 @@ const PropertyDetail = () => {
                         {likesCount}
                       </span>
                     </div>
-                    <div className="flex justify-between border-b pb-3">
+                   <div className="flex justify-between border-b pb-3">
                       <span className="text-gray-600">Listed Date</span>
-                      <span className="font-medium">April 20, 2025</span>
+                      <span className="font-medium">{formatDate(property.createdDt)}</span>
                     </div>
                   </div>
                   
@@ -792,30 +845,30 @@ const PropertyDetail = () => {
           <div>
             <div className="bg-white p-6 rounded-xl shadow-sm mb-6 sticky top-24 hover:shadow-lg transition-shadow">
               <div className="border-b pb-4 space-y-4">
-      {/* First Row: Title with User Icon */}
-      <div className="flex items-center">
-        <User className="text-blue-600 mr-2" />
-        <h3 className="text-lg font-medium">
-          Contact {property.userType || "Owner"}
-        </h3>
-      </div>
-      
-      {/* Second Row: Toggle Switch with Label */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-gray-500">Show Contact Info</span>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={showContactInfo}
-            onCheckedChange={handleToggleContactInfo}
-          />
-          {showContactInfo ? (
-            <Eye className="h-4 w-4 text-blue-600" />
-          ) : (
-            <EyeOff className="h-4 w-4 text-gray-400" />
-          )}
-        </div>
-      </div>
-    </div>
+                {/* First Row: Title with User Icon */}
+                <div className="flex items-center">
+                  <User className="text-blue-600 mr-2" />
+                  <h3 className="text-lg font-medium">
+                    Contact {property.userType || "Owner"}
+                  </h3>
+                </div>
+                
+                {/* Second Row: Toggle Switch with Label */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Show Contact Info</span>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={showContactInfo}
+                      onCheckedChange={handleToggleContactInfo}
+                    />
+                    {showContactInfo ? (
+                      <Eye className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
+                </div>
+              </div>
               
               {/* Contact info viewed counter */}
               <div className="mb-4 flex items-center justify-center bg-blue-50 py-2 px-3 rounded-md text-sm text-blue-700">
@@ -975,7 +1028,7 @@ const PropertyDetail = () => {
               <Button 
                 className="mt-4" 
                 variant="outline"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/")}
               >
                 Browse All Properties
               </Button>

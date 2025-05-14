@@ -21,7 +21,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ContactUs from "./pages/ContactUs"; 
 import ScrollToTop from "./components/ScrollToTop"; 
 import AuthModal from "./components/AuthModal"; // Import the AuthModal component  
-
+import Notifications from "./pages/Notifications";
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({   
   defaultOptions: {     
@@ -53,7 +53,7 @@ const App = () => (
               {/* Redirect login/signup routes to home with modal */}
               <Route path="login" element={<Navigate to="/" replace />} />
               <Route path="signup" element={<Navigate to="/" replace />} />
-              
+              <Route path="notifications" element={<Notifications />} />
               <Route path="properties" element={<PropertyListing />} />               
               <Route path="properties/:id" element={<PropertyDetail />} />                              
               

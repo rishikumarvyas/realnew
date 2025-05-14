@@ -207,8 +207,7 @@ const PostProperty = () => {
     const categoryMap: Record<string, number> = {
       buy: 1,
       rent: 2,
-      plot: 3,
-      commercial: 4,
+    
     };
     return categoryMap[type] || 1;
   };
@@ -508,20 +507,19 @@ const PostProperty = () => {
                     htmlFor="propertyType"
                     className="text-gray-700 font-medium"
                   >
-                    Property Type <span className="text-red-500">*</span>
+                    Property Category <span className="text-red-500">*</span>
                   </Label>
                   <Select value={propertyType} onValueChange={setPropertyType}>
                     <SelectTrigger
                       id="propertyType"
                       className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
                     >
-                      <SelectValue placeholder="Select Type" />
+                      <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="buy">Sell</SelectItem>
                       <SelectItem value="rent">Rent</SelectItem>
-                      <SelectItem value="plot">Plot</SelectItem>
-                      <SelectItem value="commercial">Commercial</SelectItem>
+             
                     </SelectContent>
                   </Select>
                 </div>
@@ -531,14 +529,14 @@ const PostProperty = () => {
                     htmlFor="category"
                     className="text-gray-700 font-medium"
                   >
-                    Category <span className="text-red-500">*</span>
+                  Property Type <span className="text-red-500">*</span>
                   </Label>
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger
                       id="category"
                       className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
                     >
-                      <SelectValue placeholder="Select Category" />
+                      <SelectValue placeholder="Select  Type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Flat">Flat</SelectItem>
@@ -557,7 +555,7 @@ const PostProperty = () => {
                 </Label>
                 <Input
                   id="title"
-                  placeholder="E.g., Modern 3BHK Apartment with Garden View"
+                  placeholder="Enter Society Name, House Name"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="bg-white border-2 focus:ring-2 focus:ring-blue-100"

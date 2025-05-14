@@ -23,6 +23,8 @@ import {
   MessageSquare,
   Settings,
   ThumbsUp,
+  PowerOff,
+  Check
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -208,7 +210,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
   const [likeCount, setLikeCount] = useState<number>(0); // New state for like count
-  const { user } = useAuth();
+  const { user, logout, updateUser } = useAuth(); // Make sure to destructure updateUser here
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -216,8 +218,11 @@ const Dashboard = () => {
   // Add new state for confirmation dialogs
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
+  const [accountIsActive, setAccountIsActive] = useState<boolean>(true);
 
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
+  const userId = user?.userId || "2d366c8f-08dd-4916-8033-b3c7454b5ba4"; // Use the provided userId as fallback
 
   const getNewPropertyIdFromQuery = () => {
     const params = new URLSearchParams(location.search);
@@ -232,11 +237,14 @@ const Dashboard = () => {
     if (user?.name) {
       setUserName(user.name);
     }
+    if (user?.isActive !== undefined) {
+      setAccountIsActive(user.isActive);
+    }
   }, [user]);
 
   useEffect(() => {
     const fetchUserProperties = async () => {
-      if (!user?.userId) {
+      if (!userId) {
         setLoading(false);
         return;
       }
@@ -247,7 +255,7 @@ const Dashboard = () => {
         // For development testing, use mock data if API fails
         try {
           const response = await fetch(
-            `${BASE_URL}/api/Account/GetUserDetails?userId=${user.userId}`
+            `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`
           );
           if (!response.ok) {
             throw new Error(`Failed to fetch user details: ${response.status}`);
@@ -263,6 +271,12 @@ const Dashboard = () => {
           // Set the like count from API response
           if (data.likedCount !== undefined) {
             setLikeCount(data.likedCount);
+          }
+
+          // Set account active status if available
+          if (data.isActive !== undefined) {
+            setAccountIsActive(data.isActive);
+            updateUser({ isActive: data.isActive });
           }
 
           if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
@@ -308,27 +322,73 @@ const Dashboard = () => {
     };
 
     fetchUserProperties();
-  }, [user?.userId, toast, newPropertyId, location.search]);
+  }, [userId, toast, newPropertyId, location.search, updateUser]);
 
-  // Add handlers for account actions
+  // Implement account activation functionality
+  const handleActivateAccount = async () => {
+    try {
+      setLoading(true);
+      
+      // Make API call to activate the account
+      const response = await fetch(`${BASE_URL}/api/Account/ActivateAccount`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userId),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to activate account: ${response.status}`);
+      }
+      
+      // Update local state
+      setAccountIsActive(true);
+      if (updateUser) {
+        updateUser({ isActive: true });
+      }
+      
+      toast({
+        title: "Account Activated",
+        description: "Your account has been successfully activated.",
+      });
+    } catch (error) {
+      console.error("Error activating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to activate account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsActivateDialogOpen(false);
+    }
+  };
+
+  // Implement account deactivation functionality
   const handleDeactivateAccount = async () => {
     try {
       setLoading(true);
       
-      // Here you would make an API call to deactivate the account
-      // const response = await fetch(`${BASE_URL}/api/Account/DeactivateAccount?userId=${user.userId}`, {
-      //   method: "POST",
-      // });
+      // Make API call to deactivate the account
+      const response = await fetch(`${BASE_URL}/api/Account/DeactivateAccount?userid=${userId}`, {
+        method: "DELETE",
+      });
       
-      // For now, we'll just show a success message
+      if (!response.ok) {
+        throw new Error(`Failed to deactivate account: ${response.status}`);
+      }
+      
+      // Update local state
+      setAccountIsActive(false);
+      if (updateUser) {
+        updateUser({ isActive: false });
+      }
+      
       toast({
         title: "Account Deactivated",
         description: "Your account has been deactivated successfully.",
       });
-      
-      // After successful deactivation, you might want to log the user out
-      // logout();
-      // navigate("/");
     } catch (error) {
       console.error("Error deactivating account:", error);
       toast({
@@ -342,24 +402,30 @@ const Dashboard = () => {
     }
   };
 
+  // Implement account deletion functionality
   const handleDeleteAccount = async () => {
     try {
       setLoading(true);
       
-      // Here you would make an API call to delete the account
-      // const response = await fetch(`${BASE_URL}/api/Account/DeleteAccount?userId=${user.userId}`, {
-      //   method: "DELETE",
-      // });
+      // Make API call to delete the account
+      const response = await fetch(`${BASE_URL}/api/Account/DeleteAccount?userid=${userId}`, {
+        method: "DELETE",
+      });
       
-      // For now, we'll just show a success message
+      if (!response.ok) {
+        throw new Error(`Failed to delete account: ${response.status}`);
+      }
+      
       toast({
         title: "Account Deleted",
         description: "Your account has been permanently deleted.",
       });
       
-      // After successful deletion, you should log the user out
-      // logout();
-      // navigate("/");
+      // After successful deletion, log the user out
+      if (logout) {
+        logout();
+      }
+      navigate("/");
     } catch (error) {
       console.error("Error deleting account:", error);
       toast({
@@ -454,6 +520,11 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-gray-500 mt-1">Welcome back, {userName}</p>
+          {!accountIsActive && (
+            <p className="text-amber-500 mt-1 font-medium">
+              Your account is currently deactivated
+            </p>
+          )}
         </div>
       </div>
 
@@ -767,23 +838,38 @@ const Dashboard = () => {
                 <div className="pt-4 border-t">
                   <h4 className="font-medium mb-4">Account Actions</h4>
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <Button
-                      variant="outline"
-                      className="border-amber-500 text-amber-500 hover:bg-amber-50"
-                      onClick={() => setIsDeactivateDialogOpen(true)}
-                    >
-                      Deactivate Account
-                    </Button>
+                    {accountIsActive ? (
+                      <Button
+                        variant="outline"
+                        className="border-amber-500 text-amber-500 hover:bg-amber-50"
+                        onClick={() => setIsDeactivateDialogOpen(true)}
+                      >
+                        <PowerOff className="h-4 w-4 mr-2" />
+                        Deactivate Account
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="border-green-500 text-green-500 hover:bg-green-50"
+                        onClick={() => setIsActivateDialogOpen(true)}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Activate Account
+                      </Button>
+                    )}
                     <Button
                       variant="outline" 
                       className="border-red-500 text-red-500 hover:bg-red-50"
                       onClick={() => setIsDeleteDialogOpen(true)}
                     >
+                      <Trash2 className="h-4 w-4 mr-2" />
                       Delete Account
                     </Button>
                   </div>
                   <p className="text-gray-500 text-xs mt-2">
-                    Deactivating will temporarily disable your account. Deleting will permanently remove all your data.
+                    {accountIsActive 
+                      ? "Deactivating will temporarily disable your account. Deleting will permanently remove all your data."
+                      : "Activate your account to make your listings visible again. Deleting will permanently remove all your data."}
                   </p>
                 </div>
 
@@ -797,6 +883,30 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Activate Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isActivateDialogOpen} 
+        onOpenChange={setIsActivateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Activate Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to activate your account? Your listings will be visible again and you'll receive messages from interested users.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleActivateAccount}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              Activate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Deactivate Account Confirmation Dialog */}
       <AlertDialog 

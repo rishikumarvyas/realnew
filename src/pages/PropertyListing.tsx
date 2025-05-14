@@ -753,7 +753,7 @@ export const PropertyListing = () => {
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+            backgroundImage: "url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
           }}
         />
         
@@ -762,12 +762,9 @@ export const PropertyListing = () => {
         
         {/* Content */}
         <div className="relative py-20 px-4">
-          <div className="max-w-3xl mx-auto bg-gray-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
+          <div className="max-w-3xl mx-auto bg-transparent-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
-              <p className="text-xl opacity-90 mb-10 text-white">
-                Discover the perfect home that fits your lifestyle and budget from our extensive listings
-              </p>
               
               <form onSubmit={handleSearch} className="relative mx-auto max-w-2xl">
                 <div className="relative flex shadow-xl rounded-full overflow-hidden">
