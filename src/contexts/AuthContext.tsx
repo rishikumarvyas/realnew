@@ -57,7 +57,7 @@ interface AuthContextType {
     fullName: string,
     otp: string,
     userTypeId: string,
-    stateId: string
+    stateId?: string
   ) => Promise<boolean>;
   logout: () => void;
   fetchUserDetails: (userId: string) => Promise<boolean>;
@@ -112,13 +112,30 @@ const extractUsernameFromToken = (token: string): string | null => {
     if (!token) return null;
     
     const decodedToken = parseJwt(token);
-    // Check for username claim in the token
+    // Check for UserName claim in the token (based on JWT screenshot)
     if (decodedToken && decodedToken.UserName) {
       return decodedToken.UserName;
     }
     return null;
   } catch (error) {
     console.error("Error extracting username from token:", error);
+    return null;
+  }
+};
+
+// Function to extract userId from JWT token
+const extractUserIdFromToken = (token: string): string | null => {
+  try {
+    if (!token) return null;
+    
+    const decodedToken = parseJwt(token);
+    // Check for UserId claim in the token (based on JWT screenshot)
+    if (decodedToken && decodedToken.UserId) {
+      return decodedToken.UserId;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error extracting userId from token:", error);
     return null;
   }
 };
@@ -168,6 +185,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
                 userData.name = usernameFromToken;
               }
               setUser(userData);
+              
+              // If we have a userId, try to fetch user details automatically
+              if (userData.userId) {
+                fetchUserDetails(userData.userId).catch(console.error);
+              }
+            } else {
+              // Token expired, clear auth
+              localStorage.removeItem("auth");
             }
           } else {
             setUser(userData);
@@ -186,8 +211,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchUserDetails = async (userId: string): Promise<boolean> => {
     try {
       console.log("Fetching user details for userId:", userId);
+      
+      // Get auth token
+      const authData = localStorage.getItem("auth");
+      if (!authData) {
+        console.error("No auth data found when trying to fetch user details");
+        return false;
+      }
+      
+      const { token } = JSON.parse(authData);
+      if (!token) {
+        console.error("No token available for API authorization");
+        return false;
+      }
+
       const response = await fetch(
-        `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`
+        `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
 
       if (!response.ok) {
@@ -237,17 +281,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       console.log("Requesting OTP for:", formattedPhone);
 
+      // Updated request body based on the WhatsApp message curl commands
+      const requestBody = modalType === 'signup' 
+        ? {
+            phone: formattedPhone,
+            templateId: 3,
+            action: "signup",
+            name: "username", // This will be replaced by actual name in signup process
+            userTypeId: "1"  // Default value, will be updated in signup
+          }
+        : {
+            phone: formattedPhone,
+            templateId: 3,
+            action: "login"
+          };
+
       const response = await fetch(`${BASE_URL}/api/Message/Send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          templateId: 3,
-          message: "Your OTP for Home Yatra login is: {{otp}}",
-          action: "HomeYatra",
-          name: "HomeYatra",
-          userTypeId: "0" // Use "0" string value as shown in your API screenshot
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -264,7 +316,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userTypeId: string
+    userTypeId: string,
+    stateId?: string
   ): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
@@ -277,7 +330,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         userTypeId
       });
   
-      // Match the API format exactly as shown in the screenshot
+      // Match the API format exactly as shown in the WhatsApp curl command
       const signupResponse = await fetch(`${BASE_URL}/api/Auth/SignUp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -300,16 +353,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const data = await signupResponse.json();
         console.log("Signup response data:", data);
   
-        // Extract userId and token from response
-        const userId =
-          data.userId || data.id || (data.user && data.user.userId);
-        const token =
-          typeof data.token === "string" ? data.token : data.token?.token;
-  
-        // If API didn't provide a userId, we can't proceed
-        if (!userId) {
-          console.error("API did not provide a userId during signup");
+        // Extract token from response
+        const token = typeof data.token === "string" ? data.token : data.token?.token;
+        
+        if (!token) {
+          console.error("API did not provide a token during signup");
           return false;
+        }
+        
+        // Extract userId from token
+        const userIdFromToken = extractUserIdFromToken(token);
+        
+        // If we couldn't extract userId from token, check other places
+        let userId = userIdFromToken;
+        if (!userId) {
+          userId = data.userId || data.id || (data.user && data.user.userId);
+          
+          if (!userId) {
+            console.error("Could not determine userId from response");
+            return false;
+          }
         }
   
         // Store this as the persistent userId for this phone number
@@ -317,11 +380,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   
         // Extract username from token if available
         let nameToUse = fullName;
-        if (token) {
-          const usernameFromToken = extractUsernameFromToken(token);
-          if (usernameFromToken) {
-            nameToUse = usernameFromToken;
-          }
+        const usernameFromToken = extractUsernameFromToken(token);
+        if (usernameFromToken) {
+          nameToUse = usernameFromToken;
         }
 
         // Create user data object
@@ -333,6 +394,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           userTypeId
         };
   
+        // Log the data for debugging
+        console.log("User data extracted from signup:", {
+          userId,
+          phoneNumber: formattedPhone,
+          name: nameToUse,
+          tokenAvailable: !!token,
+          userType: userTypeId
+        });
+        
         // Store user data for immediate use
         setUser(userData);
         localStorage.setItem("auth", JSON.stringify(userData));
@@ -375,34 +445,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const data = await loginResponse.json();
         console.log("Login response data:", data);
 
-        // Get userId directly from API response - don't fallback to generating one
-        const userId =
-          data.userId ||
-          data.id ||
-          (data.user && data.user.userId) ||
-          (data.token && data.token.userId);
-
-        if (!userId) {
-          console.error(
-            "API did not provide a userId. Cannot proceed with login."
-          );
+        // Get token from response
+        const token = typeof data.token === "string" ? data.token : data.token?.token;
+        
+        if (!token) {
+          console.error("API did not provide a token");
           return false;
         }
-
-        // Get token from response
-        const token =
-          typeof data.token === "string" ? data.token : data.token?.token;
+        
+        // Extract userId from token
+        const userIdFromToken = extractUserIdFromToken(token);
+        
+        // If we couldn't extract userId from token, check other places
+        let userId = userIdFromToken;
+        if (!userId) {
+          userId = data.userId || 
+                  data.id || 
+                  (data.user && data.user.userId) ||
+                  (data.token && data.token.userId);
+          
+          if (!userId) {
+            console.error("Could not determine userId from response");
+            return false;
+          }
+        }
 
         // Get name from response or extract from token
         let nameToUse = data.name || (data.user && data.user.name);
         
         // Extract username from token if available
-        if (token) {
-          const usernameFromToken = extractUsernameFromToken(token);
-          if (usernameFromToken) {
-            nameToUse = usernameFromToken;
-            console.log("Extracted username from token:", usernameFromToken);
-          }
+        const usernameFromToken = extractUsernameFromToken(token);
+        if (usernameFromToken) {
+          nameToUse = usernameFromToken;
+          console.log("Extracted username from token:", usernameFromToken);
         }
         
         // Get userTypeId from response if available
@@ -430,8 +505,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Close the auth modal after successful login
         closeAuthModal();
         
-        // Set empty user properties array (if needed, this can be fetched later on demand)
+        // Set empty user properties array (initial state)
         setUserProperties([]);
+        
+        // Attempt to fetch user details immediately after login if userId is available
+        if (userId) {
+          fetchUserDetails(userId).catch(console.error);
+        }
 
         return true;
       } catch (e) {

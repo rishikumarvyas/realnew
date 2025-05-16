@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -37,17 +36,17 @@ import {
   Security,
   Elevator,
 } from "@/components/icons/CustomIcons";
-
+  
 const EditProperty = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newImages, setNewImages] = useState<File[]>([]);
-  const [mainImageIndex, setMainImageIndex] = useState<number | null>(null);
+  const [newImages, setNewImages] = useState([]);
+  const [mainImageIndex, setMainImageIndex] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -73,6 +72,11 @@ const EditProperty = () => {
       pool: false,
       security: false,
       elevator: false,
+      clubHouse: false,
+      powerBackup: false,
+      furnished: false,
+      unfurnished: false,
+      semiFurnished: false,
     },
     propertyId: "",
     images: [],
@@ -82,7 +86,7 @@ const EditProperty = () => {
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   // Track which field is being edited
-  const [activeField, setActiveField] = useState<string | null>(null);
+  const [activeField, setActiveField] = useState(null);
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -114,6 +118,11 @@ const EditProperty = () => {
             pool: false,
             security: false,
             elevator: false,
+            clubHouse: false,
+            powerBackup: false,
+            furnished: false,
+            unfurnished: false,
+            semiFurnished: false,
           };
 
           try {
@@ -121,7 +130,7 @@ const EditProperty = () => {
               property.amenityDetails &&
               Array.isArray(property.amenityDetails)
             ) {
-              property.amenityDetails.forEach((amenity: any) => {
+              property.amenityDetails.forEach((amenity) => {
                 const amenityName = amenity.amenity.toLowerCase();
                 if (amenityName.includes("parking"))
                   parsedAmenities.parking = true;
@@ -131,8 +140,18 @@ const EditProperty = () => {
                 if (amenityName.includes("pool")) parsedAmenities.pool = true;
                 if (amenityName.includes("security"))
                   parsedAmenities.security = true;
-                if (amenityName.includes("elevator"))
+                if (amenityName.includes("elevator") || amenityName.includes("lift"))
                   parsedAmenities.elevator = true;
+                if (amenityName.includes("club"))
+                  parsedAmenities.clubHouse = true;
+                if (amenityName.includes("power") || amenityName.includes("backup"))
+                  parsedAmenities.powerBackup = true;
+                if (amenityName === "furnished")
+                  parsedAmenities.furnished = true;
+                if (amenityName === "unfurnished")
+                  parsedAmenities.unfurnished = true;
+                if (amenityName === "semi furnished" || amenityName.includes("semi"))
+                  parsedAmenities.semiFurnished = true;
               });
             }
           } catch (e) {
@@ -140,7 +159,7 @@ const EditProperty = () => {
           }
 
           // Find main image URL
-          const mainImage = property.imageDetails?.find((img: any) => img.isMainImage);
+          const mainImage = property.imageDetails?.find((img) => img.isMainImage);
           const mainImageUrl = mainImage ? mainImage.imageUrl : property.imageDetails?.[0]?.imageUrl || "";
 
           // Map API response to form data
@@ -206,6 +225,11 @@ const EditProperty = () => {
             pool: false,
             security: true,
             elevator: false,
+            clubHouse: false,
+            powerBackup: true,
+            furnished: false,
+            unfurnished: true,
+            semiFurnished: false,
           },
           propertyId: propertyId || "",
           images: [
@@ -226,7 +250,7 @@ const EditProperty = () => {
     fetchPropertyDetails();
   }, [propertyId, toast, navigate]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -234,14 +258,14 @@ const EditProperty = () => {
     }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name, value) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleAmenityToggle = (amenity: keyof typeof formData.amenities) => {
+  const handleAmenityToggle = (amenity) => {
     setFormData((prev) => ({
       ...prev,
       amenities: {
@@ -251,18 +275,18 @@ const EditProperty = () => {
     }));
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
       setNewImages(prev => [...prev, ...selectedFiles]);
     }
   };
 
-  const handleSetMainImage = (index: number) => {
+  const handleSetMainImage = (index) => {
     setMainImageIndex(index);
   };
 
-  const removeImage = (index: number) => {
+  const removeImage = (index) => {
     setNewImages(prev => prev.filter((_, i) => i !== index));
     if (mainImageIndex === index) {
       setMainImageIndex(null);
@@ -271,20 +295,25 @@ const EditProperty = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       setSaving(true);
 
       // Format amenities for API as array of IDs
-      const amenityMap: Record<string, string> = {
-        parking: "1",
-        gym: "2",
-        garden: "3",
-        pool: "4",
-        security: "5",
-        elevator: "6",
+      const amenityMap = {
+        "elevator": "1", // Changed from "Lift" to match our object property
+        "pool": "2", // Changed from "Swimming Pool"
+        "clubHouse": "3", // Changed to camelCase
+        "garden": "4",
+        "gym": "5",
+        "security": "6",
+        "powerBackup": "7", // Changed to camelCase
+        "parking": "8",
+        "furnished": "9",
+        "unfurnished": "10",
+        "semiFurnished": "11", // Changed to camelCase
       };
       
       const amenityIds = Object.entries(formData.amenities)
@@ -371,13 +400,13 @@ const EditProperty = () => {
 
   // Find main image URL
   const mainImageUrl =
-    formData.images.find((img: any) => img.isMainImage)?.imageUrl ||
+    formData.images.find((img) => img.isMainImage)?.imageUrl ||
     formData.images[0]?.imageUrl ||
     "https://via.placeholder.com/800x500?text=No+Image";
 
   // Get additional images (excluding main)
   const additionalImages = formData.images
-    .filter((img: any) => !img.isMainImage)
+    .filter((img) => !img.isMainImage)
     .slice(0, 3); // Show up to 3 additional images
 
   return (
@@ -704,6 +733,66 @@ const EditProperty = () => {
                       />
                       <Label htmlFor="elevator" className="text-sm cursor-pointer">
                         Elevator
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="clubHouse"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.clubHouse}
+                        onChange={() => handleAmenityToggle("clubHouse")}
+                      />
+                      <Label htmlFor="clubHouse" className="text-sm cursor-pointer">
+                        Club House
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="powerBackup"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.powerBackup}
+                        onChange={() => handleAmenityToggle("powerBackup")}
+                      />
+                      <Label htmlFor="powerBackup" className="text-sm cursor-pointer">
+                        Power Backup
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="furnished"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.furnished}
+                        onChange={() => handleAmenityToggle("furnished")}
+                      />
+                      <Label htmlFor="furnished" className="text-sm cursor-pointer">
+                        Furnished
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="unfurnished"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.unfurnished}
+                        onChange={() => handleAmenityToggle("unfurnished")}
+                      />
+                      <Label htmlFor="unfurnished" className="text-sm cursor-pointer">
+                        Unfurnished
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="semiFurnished"
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                        checked={formData.amenities.semiFurnished}
+                        onChange={() => handleAmenityToggle("semiFurnished")}
+                      />
+                      <Label htmlFor="semiFurnished" className="text-sm cursor-pointer">
+                        Semi-Furnished
                       </Label>
                     </div>
                   </div>

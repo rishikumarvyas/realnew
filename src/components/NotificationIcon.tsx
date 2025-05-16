@@ -28,30 +28,50 @@ const NotificationIcon: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
+  useEffect(() => {
+    if (user) {
+      console.log('User object available:', user);
+    }
+  }, [user]);
+
   const fetchNotifications = async () => {
-    if (!user?.id) {
-      // Use mock data if user is not logged in
+    if (!user) {
+      useMockData();
+      return;
+    }
+
+    const userId = user.userId;
+    if (!userId) {
+      console.warn('No user ID found in user object:', user);
       useMockData();
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/Notification/GetUserNotifications?userId=${user.id}`);
+      const response = await fetch(`${BASE_URL}/api/Notification/GetUserNotifications?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-      
+
       const data: NotificationResponse = await response.json();
-      
+
       if (data.statusCode === 200 && data.notifications) {
         setNotifications(data.notifications);
         setUnreadCount(data.notifications.filter(n => !n.isRead).length);
       } else {
-        // Fallback to mock data in case of error
         useMockData();
       }
     } catch (error) {
@@ -61,18 +81,13 @@ const NotificationIcon: React.FC = () => {
         description: "Please try again later",
         variant: "destructive",
       });
-      
-      // Fallback to mock data in development
-      if (process.env.NODE_ENV === 'development') {
-        useMockData();
-      }
+      useMockData();
     } finally {
       setIsLoading(false);
     }
   };
 
   const useMockData = () => {
-    // Simulated response for development/testing
     const testData: Notification[] = [
       {
         notificationId: '1',
@@ -83,13 +98,13 @@ const NotificationIcon: React.FC = () => {
       {
         notificationId: '2',
         message: 'New message received from a potential buyer.',
-        createdDt: new Date(Date.now() - 3600 * 1000).toISOString(), // 1 hour ago
+        createdDt: new Date(Date.now() - 3600 * 1000).toISOString(),
         isRead: false,
       },
       {
         notificationId: '3',
         message: 'Your property has received 5 new views.',
-        createdDt: new Date(Date.now() - 86400 * 1000).toISOString(), // 1 day ago
+        createdDt: new Date(Date.now() - 86400 * 1000).toISOString(),
         isRead: true,
       },
     ];
@@ -102,55 +117,52 @@ const NotificationIcon: React.FC = () => {
     if (!showDropdown) {
       await fetchNotifications();
     }
-    setShowDropdown((prev) => !prev);
+    setShowDropdown(prev => !prev);
+  };
+
+  const updateNotificationState = (notificationId: string) => {
+    setNotifications(prev =>
+      prev.map(n =>
+        n.notificationId === notificationId
+          ? { ...n, isRead: true }
+          : n
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
   const markAsRead = async (notificationId: string) => {
-    if (!user?.id) return;
-    
+    if (!user || !user.userId || !user.token) {
+      updateNotificationState(notificationId);
+      return;
+    }
+
     try {
       const response = await fetch(`${BASE_URL}/api/Notification/MarkAsRead`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({
-          userId: user.id,
+          userId: user.userId,
           notificationId: notificationId,
         }),
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Mark as read error response:', errorText);
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      // Update the local state to reflect the change
-      setNotifications(prev => 
-        prev.map(n => 
-          n.notificationId === notificationId 
-            ? { ...n, isRead: true } 
-            : n
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      
+      updateNotificationState(notificationId);
     } catch (error) {
       console.error("Error marking notification as read", error);
-      // In development, just update the UI anyway
-      if (process.env.NODE_ENV === 'development') {
-        setNotifications(prev => 
-          prev.map(n => 
-            n.notificationId === notificationId 
-              ? { ...n, isRead: true } 
-              : n
-          )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
+      updateNotificationState(notificationId);
     }
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -162,26 +174,51 @@ const NotificationIcon: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const tryAlternateEndpoint = async (userId: string, token: string) => {
+    try {
+      const alternateResponse = await fetch(`${BASE_URL}/api/Notification/GetNotifications?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (alternateResponse.ok) {
+        const data = await alternateResponse.json();
+        if (data.notifications) {
+          setNotifications(data.notifications);
+          setUnreadCount(data.notifications.filter((n: Notification) => !n.isRead).length);
+          return true;
+        }
+      }
+    } catch (error) {
+      console.log('Alternate endpoint also failed');
+    }
+    return false;
+  };
+
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleString();
-    } catch (error) {
+      const date = new Date(dateString);
+      return !isNaN(date.getTime())
+        ? date.toLocaleString()
+        : "Unknown date";
+    } catch {
       return "Unknown date";
     }
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    // Mark as read when clicked
     if (!notification.isRead) {
       markAsRead(notification.notificationId);
     }
-    
-    // Here you would navigate to relevant pages based on notification content
+
     toast({
       title: "Notification",
       description: notification.message,
     });
-    
+
     setShowDropdown(false);
   };
 
@@ -207,7 +244,7 @@ const NotificationIcon: React.FC = () => {
           <div className="p-2 border-b bg-gradient-to-r from-blue-50 to-blue-100">
             <h3 className="font-medium text-blue-800">Notifications</h3>
           </div>
-          
+
           {isLoading ? (
             <div className="p-4 text-center">
               <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mb-2"></div>
@@ -219,18 +256,14 @@ const NotificationIcon: React.FC = () => {
                 notifications.map((notification) => (
                   <div
                     key={notification.notificationId}
-                    className={`p-3 border-b text-sm cursor-pointer transition-colors ${
-                      notification.isRead ? 'bg-white hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'
-                    }`}
+                    className={`p-3 border-b text-sm cursor-pointer transition-colors ${notification.isRead ? 'bg-white hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'}`}
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <p className={notification.isRead ? 'text-gray-700' : 'font-medium text-gray-900'}>
                       {notification.message}
                     </p>
                     <div className="flex justify-between items-center mt-1">
-                      <p className="text-xs text-gray-500">
-                        {formatDate(notification.createdDt)}
-                      </p>
+                      <p className="text-xs text-gray-500">{formatDate(notification.createdDt)}</p>
                       {!notification.isRead && (
                         <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded-full">
                           New
@@ -246,12 +279,12 @@ const NotificationIcon: React.FC = () => {
               )}
             </div>
           )}
-          
+
           {notifications.length > 0 && (
             <div className="p-2 border-t text-center">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-xs text-blue-600 hover:text-blue-800"
                 onClick={() => setShowDropdown(false)}
               >

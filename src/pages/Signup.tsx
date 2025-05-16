@@ -1,5 +1,3 @@
-// Modified Signup.tsx to fix the signup call and remove stateId parameter
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -61,23 +59,13 @@ const Signup = ({ onClose }: SignupProps) => {
     setPhoneError(null);
 
     try {
-      // Check if the user already exists (we'll manually check here since we don't have checkPhoneExists)
-      const users = localStorage.getItem("homeYatra_users");
-      const existingUsers = users ? JSON.parse(users) : {};
-      const fullPhoneNumber = "+91" + phoneNumber;
-      
-      if (existingUsers[fullPhoneNumber]) {
-        setPhoneError("This number is already registered. Please login or use another number.");
-        setLoading(false);
-        return;
-      }
-      
+      // Save the data for the signup flow
       setName(fullName);
       setPhone(phoneNumber);
       setUserType(selectedUserType);
 
       // Request OTP for validation
-      const success = await requestOtp(fullPhoneNumber);
+      const success = await requestOtp(phoneNumber);
 
       if (success) {
         toast({
@@ -111,7 +99,7 @@ const Signup = ({ onClose }: SignupProps) => {
     try {
       // Pass only the required parameters according to the API spec
       const success = await signup(
-        "+91" + phone, 
+        phone, 
         name, 
         otp, 
         userType.toString() // Convert to string as API expects string
@@ -128,7 +116,7 @@ const Signup = ({ onClose }: SignupProps) => {
         toast({
           title: "Registration Failed",
           description:
-            "Your number is already registered. Please sign in or use another number.",
+            "Your registration could not be completed. Please try again.",
           variant: "destructive",
         });
       }
@@ -146,8 +134,8 @@ const Signup = ({ onClose }: SignupProps) => {
 
   const handleResendOtp = async () => {
     try {
-      // Skip formatPhoneNumber and directly pass the correctly formatted number
-      const success = await requestOtp("+91" + phone);
+      // Request new OTP
+      const success = await requestOtp(phone);
 
       if (success) {
         toast({
