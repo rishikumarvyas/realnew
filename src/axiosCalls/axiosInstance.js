@@ -3,7 +3,6 @@ import axios from "axios";
 const axiosInstance = axios.create({
   baseURL: "https://homeyatraapi.azurewebsites.net", // Update this to your API base URL
 });
-console.log("axiosInstance>>>", axiosInstance);
 // Add a request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
