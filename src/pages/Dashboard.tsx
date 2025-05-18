@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
 interface PropertyCardProps {
   id: string;
   title: string;
@@ -232,20 +232,25 @@ const Dashboard = () => {
 
         // For development testing, use mock data if API fails
         try {
-          const response = await fetch(
-            `${BASE_URL}/api/Account/GetUserDetails?userId=${user.userId}`
+          const response = await axiosInstance.get(
+            `/api/Account/GetUserDetails`,
+            {
+              params: { userId: user.userId }, // Pass query parameters correctly
+            }
           );
-          if (!response.ok) {
-            throw new Error(`Failed to fetch user details: ${response.status}`);
+
+          if (!(response?.data?.statusCode === 200)) {
+            throw new Error(
+              `Failed to fetch user details: ${response?.data?.statusCode}`
+            );
           }
 
-          const data = await response.json();
-          console.log("Raw API response for user properties:", data);
+          const data = response?.data;
 
           if (data.name) {
             setUserName(data.name);
           }
-          
+
           // Set the like count from API response
           if (data.likedCount !== undefined) {
             setLikeCount(data.likedCount);
