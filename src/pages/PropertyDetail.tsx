@@ -41,6 +41,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ImageGalleryDialog } from "@/components/ImageGalleryDialog";
 import { useToast } from "@/hooks/use-toast";
 import PropertyMap from "@/components/PropertyMap";
+import axiosInstance from "../axiosCalls/axiosInstance";
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -67,21 +68,17 @@ const PropertyDetail = () => {
   
   // Track whether the user has already liked this property
   const [hasLiked, setHasLiked] = useState(false);
-  
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       setLoading(true);
       try {
         console.log("Fetching property with ID:", id);
-        const response = await fetch(`${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${id}`);
+        // Using axiosInstance instead of fetch
+        const response = await axiosInstance.get(`/api/Account/GetPropertyDetails?propertyId=${id}`);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch property details: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        // Axios automatically parses JSON and puts data in response.data
+        const data = response.data;
         console.log("Raw property data:", data);
         
         if (data.statusCode === 200 && data.propertyDetail) {
@@ -106,9 +103,11 @@ const PropertyDetail = () => {
         } else {
           throw new Error(data.message || 'Failed to retrieve property details');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching property details:', err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        // With axios, the error message is in err.response.data or err.message
+        const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
+        setError(errorMessage);
         
         // Only use mock data in development
         if (process.env.NODE_ENV === 'development') {
@@ -152,10 +151,13 @@ const PropertyDetail = () => {
     
     setLoadingSimilar(true);
     try {
-      // In a real implementation, you would call an API endpoint here
-      // to fetch properties from the same city and with the same property type
-      // This is a mock implementation
+      // In a real implementation, you would call an API endpoint here using axiosInstance
+      // For now, using the mock implementation
       console.log(`Fetching similar properties for city: ${city}, type: ${propertyType}`);
+      
+      // In a production app, you would do:
+      // const response = await axiosInstance.get(`/api/Properties/Similar?city=${city}&propertyType=${propertyType}`);
+      // setSimilarProperties(response.data.properties);
       
       // For development/demo purposes, use mock data
       getMockSimilarProperties(city, propertyType);
@@ -309,19 +311,13 @@ const PropertyDetail = () => {
       likedProperties[id || ''] = true;
       localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
       
-      // Send update to the server
-      const response = await fetch(`${BASE_URL}/api/Account/UpdateProperty`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          propertyId: id,
-          isLiked: newFavoriteState
-        })
+      // Send update to the server using axiosInstance
+      const response = await axiosInstance.post('/api/Account/UpdateProperty', {
+        propertyId: id,
+        isLiked: newFavoriteState
       });
       
-      if (!response.ok) {
+      if (response.data.statusCode !== 200) {
         throw new Error('Failed to update favorite status');
       }
       
@@ -352,7 +348,8 @@ const PropertyDetail = () => {
     email: "contact@homeyatra.com",
     verified: true
   };
-// Format date function for displaying the created date
+  
+  // Format date function for displaying the created date
   const formatDate = (dateString: string) => {
     if (!dateString) return "Not specified";
     try {
@@ -366,6 +363,7 @@ const PropertyDetail = () => {
       return "Invalid date";
     }
   };
+
   // Helper function to map preference ID to readable text
   const getPreferenceText = (prefId: string) => {
     const preferences: Record<string, string> = {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "../axiosCalls/axiosInstance";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,14 +53,14 @@ const EditProperty = () => {
     price: "",
     address: "",
     city: "",
-    cityId: "", // Default value based on the curl example
+    cityId: "1", // Default value based on the curl example
     state: "",
-    stateId: "", // Default value based on the curl example
+    stateId: "1", // Default value based on the curl example
     superCategory: "",
-    superCategoryId: "", // Default value based on the curl example
+    superCategoryId: "1", // Default value based on the curl example
     propertyType: "",
-    propertyTypeId: "", // Default value based on the curl example
-    userTypeId: "", // Default value based on the curl example
+    propertyTypeId: "1", // Default value based on the curl example
+    userTypeId: "1", // Default value based on the curl example
     bedroom: "",
     bathroom: "",
     balcony: "",
@@ -83,8 +83,6 @@ const EditProperty = () => {
     mainImageUrl: "",
   });
 
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
-
   // Track which field is being edited
   const [activeField, setActiveField] = useState(null);
 
@@ -103,8 +101,9 @@ const EditProperty = () => {
       try {
         setLoading(true);
 
-        const response = await axios.get(
-          `${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${propertyId}`
+        // Use axiosInstance instead of direct axios call
+        const response = await axiosInstance.get(
+          `/api/Account/GetPropertyDetails?propertyId=${propertyId}`
         );
 
         if (response.status === 200 && response.data.propertyDetail) {
@@ -354,8 +353,9 @@ const EditProperty = () => {
 
       console.log("Sending update request...");
 
-      const response = await axios.post(
-        `${BASE_URL}/api/Account/EditProperty`, 
+      // Use axiosInstance instead of direct axios call
+      const response = await axiosInstance.post(
+        `/api/Account/EditProperty`, 
         formDataObj, 
         {
           headers: {

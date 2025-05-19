@@ -6,7 +6,18 @@ import React, {
   ReactNode,
 } from "react";
 import { BASE_URL } from "@/constants/api";
-import { formatPhoneNumber, parseJwt } from "@/utils/auth";
+import { formatPhoneNumber } from "@/utils/auth";
+import { jwtDecode } from "jwt-decode";
+import axios from "axios";
+
+// Type for decoded JWT token
+interface DecodedToken {
+  UserId: string;
+  Phone: string;
+  UserName: string;
+  exp: number;
+  // Add other token fields as needed
+}
 
 // Define types
 interface User {
@@ -45,7 +56,7 @@ interface AuthContextType {
   loading: boolean;
   // Auth modal state
   showAuthModal: boolean;
-  modalType: 'login' | 'signup' | null;
+  modalType: "login" | "signup" | null;
   openLoginModal: () => void;
   openSignupModal: () => void;
   closeAuthModal: () => void;
@@ -57,7 +68,7 @@ interface AuthContextType {
     fullName: string,
     otp: string,
     userTypeId: string,
-    stateId?: string
+    stateId: string
   ) => Promise<boolean>;
   logout: () => void;
   fetchUserDetails: (userId: string) => Promise<boolean>;
@@ -65,26 +76,6 @@ interface AuthContextType {
 
 // Create context with default values
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Function to get a persistent user ID based on phone number
-const getPersistentUserId = (phone: string): string | null => {
-  try {
-    // Try to get the stored phone-to-userId mapping
-    const userMappingStr = localStorage.getItem("userIdMapping");
-    if (userMappingStr) {
-      const userMapping = JSON.parse(userMappingStr);
-
-      // If we have a mapping for this phone, return it
-      if (userMapping[phone]) {
-        return userMapping[phone];
-      }
-    }
-    return null;
-  } catch (e) {
-    console.error("Error getting persistent user ID:", e);
-    return null;
-  }
-};
 
 // Function to store a persistent user ID for a phone number
 const storePersistentUserId = (phone: string, userId: string): void => {
@@ -106,37 +97,15 @@ const storePersistentUserId = (phone: string, userId: string): void => {
   }
 };
 
-// Function to extract username from JWT token
-const extractUsernameFromToken = (token: string): string | null => {
+// Helper function to validate JWT token
+const isTokenValid = (token: string): boolean => {
   try {
-    if (!token) return null;
-    
-    const decodedToken = parseJwt(token);
-    // Check for UserName claim in the token (based on JWT screenshot)
-    if (decodedToken && decodedToken.UserName) {
-      return decodedToken.UserName;
-    }
-    return null;
+    const decoded: DecodedToken = jwtDecode(token);
+    // Check if token is expired
+    return decoded.exp * 1000 > Date.now();
   } catch (error) {
-    console.error("Error extracting username from token:", error);
-    return null;
-  }
-};
-
-// Function to extract userId from JWT token
-const extractUserIdFromToken = (token: string): string | null => {
-  try {
-    if (!token) return null;
-    
-    const decodedToken = parseJwt(token);
-    // Check for UserId claim in the token (based on JWT screenshot)
-    if (decodedToken && decodedToken.UserId) {
-      return decodedToken.UserId;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error extracting userId from token:", error);
-    return null;
+    console.error("Error validating token:", error);
+    return false;
   }
 };
 
@@ -146,19 +115,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [userProperties, setUserProperties] = useState<UserProperty[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  
+
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
-  const [modalType, setModalType] = useState<'login' | 'signup' | null>(null);
+  const [modalType, setModalType] = useState<"login" | "signup" | null>(null);
 
   // Auth modal actions
   const openLoginModal = () => {
-    setModalType('login');
+    setModalType("login");
     setShowAuthModal(true);
   };
 
   const openSignupModal = () => {
-    setModalType('signup');
+    setModalType("signup");
     setShowAuthModal(true);
   };
 
@@ -170,38 +139,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Check for existing auth on mount
   useEffect(() => {
     const loadAuth = async () => {
-      const storedAuth = localStorage.getItem("auth");
-      if (storedAuth) {
+      // First check for token in localStorage
+      const token = localStorage.getItem("token");
+      
+      if (token && isTokenValid(token)) {
         try {
-          const userData = JSON.parse(storedAuth);
-
-          // Verify the token is still valid if it exists
-          if (userData.token) {
-            const tokenData = parseJwt(userData.token);
-            if (tokenData && tokenData.exp * 1000 > Date.now()) {
-              // Check if token contains username and update it
-              const usernameFromToken = extractUsernameFromToken(userData.token);
-              if (usernameFromToken) {
-                userData.name = usernameFromToken;
-              }
-              setUser(userData);
-              
-              // If we have a userId, try to fetch user details automatically
-              if (userData.userId) {
-                fetchUserDetails(userData.userId).catch(console.error);
-              }
-            } else {
-              // Token expired, clear auth
-              localStorage.removeItem("auth");
-            }
-          } else {
-            setUser(userData);
+          // Decode the token to get user information
+          const decodedToken: DecodedToken = jwtDecode(token);
+          
+          // Create user object from token data
+          const userData: User = {
+            userId: decodedToken.UserId,
+            phone: decodedToken.Phone,
+            name: decodedToken.UserName,
+            token: token
+          };
+          
+          setUser(userData);
+          console.log("User authenticated from token:", userData);
+          
+          // Optionally fetch additional user details if needed
+          if (userData.userId) {
+            fetchUserDetails(userData.userId);
           }
         } catch (error) {
-          console.error("Error parsing stored auth data:", error);
-          localStorage.removeItem("auth");
+          console.error("Error decoding token:", error);
+          localStorage.removeItem("token");
         }
       }
+      
       setLoading(false);
     };
 
@@ -211,27 +177,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchUserDetails = async (userId: string): Promise<boolean> => {
     try {
       console.log("Fetching user details for userId:", userId);
-      
-      // Get auth token
-      const authData = localStorage.getItem("auth");
-      if (!authData) {
-        console.error("No auth data found when trying to fetch user details");
-        return false;
-      }
-      
-      const { token } = JSON.parse(authData);
-      if (!token) {
-        console.error("No token available for API authorization");
-        return false;
-      }
-
       const response = await fetch(
-        `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
+        `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`
       );
 
       if (!response.ok) {
@@ -255,7 +202,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             name: data.name || user.name, // Keep the name if it exists
           };
           setUser(updatedUser);
-          localStorage.setItem("auth", JSON.stringify(updatedUser));
           console.log(
             `Updated user with API data: userId=${data.userId}, name=${
               data.name || user.name
@@ -281,25 +227,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       console.log("Requesting OTP for:", formattedPhone);
 
-      // Updated request body based on the WhatsApp message curl commands
-      const requestBody = modalType === 'signup' 
-        ? {
-            phone: formattedPhone,
-            templateId: 3,
-            action: "signup",
-            name: "username", // This will be replaced by actual name in signup process
-            userTypeId: "1"  // Default value, will be updated in signup
-          }
-        : {
-            phone: formattedPhone,
-            templateId: 3,
-            action: "login"
-          };
-
       const response = await fetch(`${BASE_URL}/api/Message/Send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          phone: formattedPhone,
+          templateId: 3,
+          message: "Your OTP for Home Yatra login is: {{otp}}",
+          action: "HomeYatra",
+          name: "HomeYatra",
+          userTypeId: "0", // Use "0" string value as shown in your API screenshot
+        }),
       });
 
       const data = await response.json();
@@ -317,19 +255,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     fullName: string,
     otp: string,
     userTypeId: string,
-    stateId?: string
+    stateId: string = "" // Added default empty string for stateId parameter
   ): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
-  
+
       console.log("Attempting signup with:", {
         phone: formattedPhone,
         name: fullName,
         otp,
-        userTypeId
+        userTypeId,
       });
-  
+
       // Match the API format exactly as shown in the WhatsApp curl command
       const signupResponse = await fetch(`${BASE_URL}/api/Auth/SignUp`, {
         method: "POST",
@@ -338,78 +276,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           name: fullName,
           phone: formattedPhone,
           otp: otp,
-          userTypeId: userTypeId
+          userTypeId: userTypeId,
+          stateId: stateId, // Include stateId if needed by API
         }),
       });
-  
+
       console.log("Signup response status:", signupResponse.status);
-  
+
       if (!signupResponse.ok) {
         console.error("Signup failed with status:", signupResponse.status);
         return false;
       }
-  
+
       try {
         const data = await signupResponse.json();
         console.log("Signup response data:", data);
-  
-        // Extract token from response
-        const token = typeof data.token === "string" ? data.token : data.token?.token;
-        
-        if (!token) {
-          console.error("API did not provide a token during signup");
+
+        // Extract userId and token from response
+        const userId =
+          data.userId || data.id || (data.user && data.user.userId);
+        const token =
+          typeof data.token === "string" ? data.token : data.token?.token;
+
+        // If API didn't provide a userId, we can't proceed
+        if (!userId) {
+          console.error("API did not provide a userId during signup");
           return false;
         }
-        
-        // Extract userId from token
-        const userIdFromToken = extractUserIdFromToken(token);
-        
-        // If we couldn't extract userId from token, check other places
-        let userId = userIdFromToken;
-        if (!userId) {
-          userId = data.userId || data.id || (data.user && data.user.userId);
-          
-          if (!userId) {
-            console.error("Could not determine userId from response");
-            return false;
-          }
-        }
-  
+
         // Store this as the persistent userId for this phone number
         storePersistentUserId(formattedPhone, userId);
-  
-        // Extract username from token if available
-        let nameToUse = fullName;
-        const usernameFromToken = extractUsernameFromToken(token);
-        if (usernameFromToken) {
-          nameToUse = usernameFromToken;
-        }
 
         // Create user data object
         const userData = {
           userId,
           phone: formattedPhone,
-          name: nameToUse,
+          name: fullName,
           token,
-          userTypeId
+          userTypeId,
         };
-  
-        // Log the data for debugging
-        console.log("User data extracted from signup:", {
-          userId,
-          phoneNumber: formattedPhone,
-          name: nameToUse,
-          tokenAvailable: !!token,
-          userType: userTypeId
-        });
-        
+
+        // Store token separately for interceptors to use
+        if (token) {
+          localStorage.setItem("token", token);
+        }
+
         // Store user data for immediate use
         setUser(userData);
-        localStorage.setItem("auth", JSON.stringify(userData));
-        
+
         // Close the auth modal after successful signup
         closeAuthModal();
-  
+
         return true;
       } catch (e) {
         console.error("Error parsing signup response:", e);
@@ -426,92 +343,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      console.log("Starting login process for phone:", formattedPhone);
-
-      const loginResponse = await fetch(`${BASE_URL}/api/Auth/Login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const loginResponse = await axios.post(
+        `${BASE_URL}/api/Auth/Login`,
+        {
           phone: formattedPhone,
           otp,
-        }),
-      });
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
-      console.log("Login response status:", loginResponse.status);
-
-      if (!loginResponse.ok) return false;
+      if (!(loginResponse?.data?.statusCode === 200)) {
+        console.error(
+          "Login failed with status:",
+          loginResponse.data.statusCode
+        );
+        return false;
+      }
 
       try {
-        const data = await loginResponse.json();
-        console.log("Login response data:", data);
+        const data = loginResponse?.data;
 
         // Get token from response
-        const token = typeof data.token === "string" ? data.token : data.token?.token;
-        
+        const token = data?.token;
+
         if (!token) {
-          console.error("API did not provide a token");
           return false;
         }
         
-        // Extract userId from token
-        const userIdFromToken = extractUserIdFromToken(token);
-        
-        // If we couldn't extract userId from token, check other places
-        let userId = userIdFromToken;
-        if (!userId) {
-          userId = data.userId || 
-                  data.id || 
-                  (data.user && data.user.userId) ||
-                  (data.token && data.token.userId);
-          
-          if (!userId) {
-            console.error("Could not determine userId from response");
-            return false;
-          }
-        }
+        const decodedToken: DecodedToken = jwtDecode(token);
 
-        // Get name from response or extract from token
-        let nameToUse = data.name || (data.user && data.user.name);
-        
-        // Extract username from token if available
-        const usernameFromToken = extractUsernameFromToken(token);
-        if (usernameFromToken) {
-          nameToUse = usernameFromToken;
-          console.log("Extracted username from token:", usernameFromToken);
-        }
-        
-        // Get userTypeId from response if available
-        const userTypeId = data.userTypeId || (data.user && data.user.userTypeId);
-
-        // Store the mapping
-        storePersistentUserId(formattedPhone, userId);
+        // Store token in localStorage for axios interceptors to use
+        localStorage.setItem("token", token);
 
         // Create user data with API values
         const userData = {
-          userId,
-          phone: formattedPhone,
+          userId: decodedToken?.UserId,
+          phone: decodedToken?.Phone,
           token,
-          name: nameToUse,
-          userTypeId,
+          name: decodedToken?.UserName,
         };
 
-        console.log("Final user data for login:", userData);
         setUser(userData);
-        localStorage.setItem("auth", JSON.stringify(userData));
 
         // Clear signup data after successful login
         localStorage.removeItem("signupData");
-        
+
         // Close the auth modal after successful login
         closeAuthModal();
-        
+
         // Set empty user properties array (initial state)
         setUserProperties([]);
-        
-        // Attempt to fetch user details immediately after login if userId is available
-        if (userId) {
-          fetchUserDetails(userId).catch(console.error);
-        }
 
         return true;
       } catch (e) {
@@ -527,7 +410,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const logout = () => {
     setUser(null);
     setUserProperties([]);
-    localStorage.removeItem("auth");
+    localStorage.removeItem("token");
     localStorage.removeItem("signupData"); // Also clear any signup data
     // IMPORTANT: We do NOT remove userIdMapping to maintain persistent phone -> userId mapping
     console.log(

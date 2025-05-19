@@ -36,6 +36,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Checkbox } from "@/components/ui/checkbox";
+import axiosInstance from "../axiosCalls/axiosInstance";
 
 const PostProperty = () => {
   const navigate = useNavigate();
@@ -417,20 +418,18 @@ const PostProperty = () => {
         console.log(pair[0] + ": " + pair[1]);
       }
 
-      // API call
-      const response = await fetch(
-        "https://homeyatraapi.azurewebsites.net/api/Account/AddProperty",
+      // API call using axios instance with automatic token handling
+      const response = await axiosInstance.post(
+        "/api/Account/AddProperty",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
 
       // Extract the propertyId from the response, checking both possible field names
       // This handles the API inconsistency where sometimes it returns 'propetyId' (with typo)
@@ -454,12 +453,30 @@ const PostProperty = () => {
 
       // Navigate to the Dashboard page with the PropertyId
       navigate(`/dashboard?newPropertyId=${newPropertyId}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error posting property:", error);
+      
+      // Handle different types of errors
+      let errorMessage = "There was an error posting your property. Please try again.";
+      
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.status === 401) {
+          errorMessage = "Authentication failed. Please login again.";
+          navigate('/login');
+        } else if (error.response.status === 403) {
+          errorMessage = "You don't have permission to post properties.";
+        } else if (error.response.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        // Network error
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+
       toast({
         title: "Failed to Post Property",
-        description:
-          "There was an error posting your property. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

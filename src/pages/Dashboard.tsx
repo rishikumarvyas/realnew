@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import axiosInstance from "../axiosCalls/axiosInstance";
 
 interface PropertyCardProps {
   id: string;
@@ -148,6 +149,7 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
     status: property.status || "active",
   };
 };
+
 const mockMessages = [
   {
     id: "msg1",
@@ -221,7 +223,6 @@ const Dashboard = () => {
   const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
   const [accountIsActive, setAccountIsActive] = useState<boolean>(true);
 
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
   const userId = user?.userId || "2d366c8f-08dd-4916-8033-b3c7454b5ba4"; // Use the provided userId as fallback
 
   const getNewPropertyIdFromQuery = () => {
@@ -254,29 +255,35 @@ const Dashboard = () => {
 
         // For development testing, use mock data if API fails
         try {
-          const response = await fetch(
-            `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`
+          const response = await axiosInstance.get(
+            `/api/Account/GetUserDetails`,
+            {
+              params: { userId: user?.userId }, // Pass query parameters correctly
+            }
           );
-          if (!response.ok) {
-            throw new Error(`Failed to fetch user details: ${response.status}`);
+
+          if (!(response?.data?.statusCode === 200)) {
+            throw new Error(
+              `Failed to fetch user details: ${response?.data?.statusCode}`
+            );
           }
 
-          const data = await response.json();
-          console.log("Raw API response for user properties:", data);
+          const data = response?.data;
 
           if (data.name) {
             setUserName(data.name);
           }
-          
+
           // Set the like count from API response
           if (data.likedCount !== undefined) {
             setLikeCount(data.likedCount);
           }
-
           // Set account active status if available
           if (data.isActive !== undefined) {
             setAccountIsActive(data.isActive);
-            updateUser({ isActive: data.isActive });
+            if (updateUser) {
+              updateUser({ isActive: data.isActive });
+            }
           }
 
           if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
@@ -322,25 +329,23 @@ const Dashboard = () => {
     };
 
     fetchUserProperties();
-  }, [userId, toast, newPropertyId, location.search, updateUser]);
+  }, [userId, toast, newPropertyId, location.search, updateUser, user?.userId]);
 
-  // Implement account activation functionality
+  // Updated to use axiosInstance for account activation
   const handleActivateAccount = async () => {
     try {
       setLoading(true);
       
-      // Make API call to activate the account
-      const response = await fetch(`${BASE_URL}/api/Account/ActivateAccount`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userId),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to activate account: ${response.status}`);
-      }
+      // Make API call to activate the account using axiosInstance
+      const response = await axiosInstance.post(
+        `/api/Account/ActivateAccount`,
+        JSON.stringify(userId),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       
       // Update local state
       setAccountIsActive(true);
@@ -365,19 +370,15 @@ const Dashboard = () => {
     }
   };
 
-  // Implement account deactivation functionality
+  // Updated to use axiosInstance for account deactivation
   const handleDeactivateAccount = async () => {
     try {
       setLoading(true);
       
-      // Make API call to deactivate the account
-      const response = await fetch(`${BASE_URL}/api/Account/DeactivateAccount?userid=${userId}`, {
-        method: "DELETE",
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to deactivate account: ${response.status}`);
-      }
+      // Make API call to deactivate the account using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeactivateAccount?userid=${userId}`
+      );
       
       // Update local state
       setAccountIsActive(false);
@@ -402,19 +403,15 @@ const Dashboard = () => {
     }
   };
 
-  // Implement account deletion functionality
+  // Updated to use axiosInstance for account deletion
   const handleDeleteAccount = async () => {
     try {
       setLoading(true);
       
-      // Make API call to delete the account
-      const response = await fetch(`${BASE_URL}/api/Account/DeleteAccount?userid=${userId}`, {
-        method: "DELETE",
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete account: ${response.status}`);
-      }
+      // Make API call to delete the account using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeleteAccount?userid=${userId}`
+      );
       
       toast({
         title: "Account Deleted",
@@ -439,6 +436,7 @@ const Dashboard = () => {
     }
   };
 
+  // Updated to use axiosInstance for property deletion
   const handleDeleteProperty = async (id: string) => {
     console.log("Deleting property with ID:", id);
 
@@ -457,24 +455,14 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Send the ID to the API
-      const response = await fetch(
-        `${BASE_URL}/api/Account/DeleteProperty?propertyId=${id}`,
-        {
-          method: "DELETE",
-        }
+      // Send the ID to the API using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeleteProperty?propertyId=${id}`
       );
 
-      console.log("Delete response status:", response.status);
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete property with ID: ${id}`);
-      }
-
-      const result = await response.json();
-      console.log("Delete API response:", result);
-
-      if (result.statusCode === 200) {
+      console.log("Delete response:", response.data);
+      
+      if (response.data.statusCode === 200) {
         // Update the UI by removing the deleted property
         setProperties((prev) => prev.filter((prop) => prop.propertyId !== id));
         toast({
@@ -482,7 +470,7 @@ const Dashboard = () => {
           description: "The property has been removed successfully.",
         });
       } else {
-        throw new Error(result.message || "Failed to delete property");
+        throw new Error(response.data.message || "Failed to delete property");
       }
     } catch (error) {
       console.error("Error deleting property:", error);

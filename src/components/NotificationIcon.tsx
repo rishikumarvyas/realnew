@@ -3,12 +3,15 @@ import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import axiosInstance from "../axiosCalls/axiosInstance";
 
 interface Notification {
   notificationId: string;
   message: string;
   isRead: boolean;
   createdDt: string;
+  propertyId?: string;
+  notificationType?: 'user' | 'property';
 }
 
 interface NotificationResponse {
@@ -25,11 +28,12 @@ const NotificationIcon: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [notificationType, setNotificationType] = useState<'user' | 'property'>('user');
+  // Add propertyId state if you need to support property notifications
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   useEffect(() => {
     if (user) {
@@ -52,33 +56,53 @@ const NotificationIcon: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/Notification/GetUserNotifications?userId=${userId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error response:', errorText);
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data: NotificationResponse = await response.json();
-
-      if (data.statusCode === 200 && data.notifications) {
-        setNotifications(data.notifications);
-        setUnreadCount(data.notifications.filter(n => !n.isRead).length);
+      let endpoint: string;
+      
+      if (notificationType === 'user') {
+        // For user notifications, only userId is needed
+        endpoint = `/api/Notification/GetUserNotifications?userId=${userId}`;
       } else {
+        // For property notifications, both userId and propertyId are required
+        if (!selectedPropertyId) {
+          // If no property is selected, show error or fetch all user's properties
+          toast({
+            title: "Property Required",
+            description: "Please select a property to view property notifications",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        endpoint = `/api/Notification/GetPropertyNotifications?userId=${userId}&propertyId=${selectedPropertyId}`;
+      }
+      
+      console.log('Fetching from endpoint:', endpoint);
+      const response = await axiosInstance.get(endpoint);
+
+      if (response.status === 200 && response.data.notifications) {
+        const notificationsWithType = response.data.notifications.map((n: Notification) => ({
+          ...n,
+          notificationType
+        }));
+        
+        setNotifications(notificationsWithType);
+        setUnreadCount(notificationsWithType.filter(n => !n.isRead).length);
+      } else {
+        console.warn('Unexpected response structure:', response.data);
         useMockData();
       }
-    } catch (error) {
-      console.error("Error fetching notifications", error);
+    } catch (error: any) {
+      console.error(`Error fetching ${notificationType} notifications:`, error);
+      
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error status:', error.response.status);
+        console.error('Error data:', error.response.data);
+      }
+      
       toast({
         title: "Failed to load notifications",
-        description: "Please try again later",
+        description: `Unable to fetch ${notificationType} notifications. Please try again later.`,
         variant: "destructive",
       });
       useMockData();
@@ -94,23 +118,29 @@ const NotificationIcon: React.FC = () => {
         message: 'Your property listing has been approved.',
         createdDt: new Date().toISOString(),
         isRead: false,
+        notificationType: 'property',
+        propertyId: 'property1'
       },
       {
         notificationId: '2',
         message: 'New message received from a potential buyer.',
         createdDt: new Date(Date.now() - 3600 * 1000).toISOString(),
         isRead: false,
+        notificationType: 'user'
       },
       {
         notificationId: '3',
         message: 'Your property has received 5 new views.',
         createdDt: new Date(Date.now() - 86400 * 1000).toISOString(),
         isRead: true,
+        notificationType: 'property',
+        propertyId: 'property1'
       },
     ];
 
-    setNotifications(testData);
-    setUnreadCount(testData.filter(n => !n.isRead).length);
+    const filteredData = testData.filter(n => n.notificationType === notificationType);
+    setNotifications(filteredData);
+    setUnreadCount(filteredData.filter(n => !n.isRead).length);
   };
 
   const toggleDropdown = async () => {
@@ -131,35 +161,39 @@ const NotificationIcon: React.FC = () => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const markAsRead = async (notificationId: string) => {
-    if (!user || !user.userId || !user.token) {
+  const markAsRead = async (notificationId: string, propertyId?: string) => {
+    if (!user || !user.userId) {
       updateNotificationState(notificationId);
       return;
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/api/Notification/MarkAsRead`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
-        body: JSON.stringify({
-          userId: user.userId,
-          notificationId: notificationId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Mark as read error response:', errorText);
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      const payload: any = {
+        userId: user.userId,
+        notificationId: notificationId,
+      };
+      
+      // Add propertyId to payload if it exists
+      if (propertyId) {
+        payload.propertyId = propertyId;
       }
 
+      const response = await axiosInstance.put('/api/Notification/MarkAsRead', payload);
+
+      if (response.status === 200) {
+        updateNotificationState(notificationId);
+      }
+    } catch (error: any) {
+      console.error("Error marking notification as read:", error);
+      // Still update UI even if API call fails
       updateNotificationState(notificationId);
-    } catch (error) {
-      console.error("Error marking notification as read", error);
-      updateNotificationState(notificationId);
+      
+      // Show error toast for API failures
+      toast({
+        title: "Warning",
+        description: "Notification marked as read locally, but failed to sync with server",
+        variant: "destructive",
+      });
     }
   };
 
@@ -174,30 +208,6 @@ const NotificationIcon: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const tryAlternateEndpoint = async (userId: string, token: string) => {
-    try {
-      const alternateResponse = await fetch(`${BASE_URL}/api/Notification/GetNotifications?userId=${userId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (alternateResponse.ok) {
-        const data = await alternateResponse.json();
-        if (data.notifications) {
-          setNotifications(data.notifications);
-          setUnreadCount(data.notifications.filter((n: Notification) => !n.isRead).length);
-          return true;
-        }
-      }
-    } catch (error) {
-      console.log('Alternate endpoint also failed');
-    }
-    return false;
-  };
-
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -211,7 +221,7 @@ const NotificationIcon: React.FC = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
-      markAsRead(notification.notificationId);
+      markAsRead(notification.notificationId, notification.propertyId);
     }
 
     toast({
@@ -220,6 +230,15 @@ const NotificationIcon: React.FC = () => {
     });
 
     setShowDropdown(false);
+  };
+
+  const handleNotificationTypeChange = async (type: 'user' | 'property') => {
+    setNotificationType(type);
+    // Reset notifications when changing type
+    setNotifications([]);
+    setUnreadCount(0);
+    // Fetch new notifications for the selected type
+    await fetchNotifications();
   };
 
   return (
@@ -242,7 +261,42 @@ const NotificationIcon: React.FC = () => {
       {showDropdown && (
         <div className="absolute right-0 mt-2 w-80 bg-white border rounded-md shadow-xl z-50">
           <div className="p-2 border-b bg-gradient-to-r from-blue-50 to-blue-100">
-            <h3 className="font-medium text-blue-800">Notifications</h3>
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-blue-800">Notifications</h3>
+              <div className="flex space-x-1">
+                <Button
+                  variant={notificationType === 'user' ? 'default' : 'outline'}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => handleNotificationTypeChange('user')}
+                >
+                  User
+                </Button>
+                <Button
+                  variant={notificationType === 'property' ? 'default' : 'outline'}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => handleNotificationTypeChange('property')}
+                >
+                  Property
+                </Button>
+              </div>
+            </div>
+            
+            {notificationType === 'property' && (
+              <div className="mt-2">
+                <select
+                  value={selectedPropertyId}
+                  onChange={(e) => setSelectedPropertyId(e.target.value)}
+                  className="w-full text-xs border rounded px-2 py-1"
+                >
+                  <option value="">Select a property...</option>
+                  {/* You'll need to populate this with actual property options */}
+                  <option value="property1">Property 1</option>
+                  <option value="property2">Property 2</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {isLoading ? (
@@ -264,17 +318,29 @@ const NotificationIcon: React.FC = () => {
                     </p>
                     <div className="flex justify-between items-center mt-1">
                       <p className="text-xs text-gray-500">{formatDate(notification.createdDt)}</p>
-                      {!notification.isRead && (
-                        <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded-full">
-                          New
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-1">
+                        {notification.notificationType === 'property' && (
+                          <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full">
+                            Property
+                          </span>
+                        )}
+                        {!notification.isRead && (
+                          <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded-full">
+                            New
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="p-4 text-center">
-                  <p className="text-sm text-gray-500">No notifications</p>
+                  <p className="text-sm text-gray-500">
+                    {notificationType === 'property' && !selectedPropertyId 
+                      ? 'Select a property to view notifications'
+                      : 'No notifications'
+                    }
+                  </p>
                 </div>
               )}
             </div>

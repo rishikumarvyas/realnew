@@ -1,3 +1,4 @@
+import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -7,8 +8,9 @@ const ProtectedRoute = () => {
   // Show a full-page loader while auth state is initializing
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen text-xl font-medium">
-        Loading...
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+        <p className="ml-3">Loading...</p>
       </div>
     );
   }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Button } from "@/components/ui/button";
 import NotificationIcon from "@/components/NotificationIcon";
 import {
@@ -16,7 +16,6 @@ import {
   LogOut,
   PlusCircle,
   Home,
-  Building,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -33,6 +32,7 @@ export function Navbar() {
   } = useAuth();
   
   const location = useLocation();
+  const navigate = useNavigate(); // Use navigate instead of window.location
 
   const handleLogout = () => {
     logout();
@@ -47,6 +47,14 @@ export function Navbar() {
 
   const handleSignupClick = () => {
     openSignupModal();
+    setIsOpen(false); // Close mobile menu if open
+  };
+
+  // New function to handle proper navigation to post-property
+  const handlePostPropertyClick = () => {
+    if (location.pathname !== "/post-property") {
+      navigate("/post-property"); // Use React Router's navigate
+    }
     setIsOpen(false); // Close mobile menu if open
   };
 
@@ -115,7 +123,7 @@ export function Navbar() {
               <div className="flex items-center space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => location.pathname !== "/post-property" && window.location.assign("/post-property")}
+                  onClick={handlePostPropertyClick} // Use the new handler
                   className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full"
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
@@ -239,14 +247,14 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <div className="border-t border-gray-200"></div>
-              <Link
-                to="/post-property"
-                className="block px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
-                onClick={() => setIsOpen(false)}
+              {/* Use button with navigate for Post Property mobile view */}
+              <button
+                className="block w-full text-left px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
+                onClick={handlePostPropertyClick}
               >
                 <PlusCircle className="inline h-4 w-4 mr-2" />
                 Post Property
-              </Link>
+              </button>
               <Link
                 to="/dashboard"
                 className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
