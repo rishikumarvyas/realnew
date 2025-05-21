@@ -39,9 +39,11 @@ const NotificationIcon: React.FC = () => {
 
   const fetchNotifications = async () => {
     if (!user) {
-      useMockData();
-      return;
-    }
+      console.warn('User object or credentials missing:', user);
+    setNotifications([]);
+    setUnreadCount(0);
+    return;
+  }
 
     const userId = user.userId;
     if (!userId) {
@@ -55,8 +57,7 @@ const NotificationIcon: React.FC = () => {
       const response = await fetch(`${BASE_URL}/api/Notification/GetUserNotifications?userId=${userId}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
+          'Content-Type': 'application/json'
         }
       });
 
@@ -141,10 +142,10 @@ const NotificationIcon: React.FC = () => {
       const response = await fetch(`${BASE_URL}/api/Notification/MarkAsRead`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          type:'user',
           userId: user.userId,
           notificationId: notificationId,
         }),

@@ -250,9 +250,8 @@ export const PropertyListing = () => {
         const categoryMap: Record<string, number> = {
           buy: 1,
           rent: 2,
-          sell: 3,
-          plot: 4,
-          commercial: 5
+          plot: 0,
+          commercial: 0
         };
         superCategoryId = categoryMap[typeParam as keyof typeof categoryMap] || 0;
       }
