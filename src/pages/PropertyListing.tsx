@@ -55,6 +55,9 @@ interface ApiProperty {
   preferenceId?: number; // Tenant preference ID
   amenities?: string[]; // Array of amenity strings
   furnished?: string; // "Fully", "Semi", "Not" furnished status
+  likes?: number; 
+  isLike?: boolean; 
+  propertyType?: string;
 }
 
 // Filter options interface
@@ -96,6 +99,16 @@ const amenityOptions = [
   "Security", "Garden", "Club House", "WiFi", "Gas Pipeline"
 ];
 
+// Property type mapping - Added to help debugging
+const propertyTypeMapping = {
+  "plot": { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
+  "commercial": { superCategoryId: 1, propertyTypeIds: [2, 7], label: "Commercial" },
+  "shop": { superCategoryId: 1, propertyTypeIds: [2], label: "Shop" },
+  "buy": { superCategoryId: 1, propertyFor: 1, label: "Buy" },
+  "rent": { superCategoryId: 2, propertyFor: 2, label: "Rent" },
+  "all": { superCategoryId: 0, label: "All Properties" }
+};
+
 export const PropertyListing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -127,6 +140,13 @@ export const PropertyListing = () => {
   
   // UI state for advanced filters visibility
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Debug state to show API request/response
+  const [apiDebug, setApiDebug] = useState({
+    request: null,
+    response: null,
+    error: null
+  });
   
   // Check if advanced filters should be hidden based on property type
   const shouldShowAdvancedFilters = () => {
@@ -243,75 +263,173 @@ export const PropertyListing = () => {
         filterOptions.amenities = amenitiesParam.split(',');
       }
       
-      // Map type param to superCategoryId: 0 for all, 1 for buy, 2 for rent, 3 for sell
-      let superCategoryId = 0; // Default to all (0)
-      const typeParam = searchParams.get("type");
-      if (typeParam && typeParam !== "all") {
-        const categoryMap: Record<string, number> = {
-          buy: 1,
-          rent: 2,
-          sell: 3,
-          plot: 4,
-          commercial: 5
-        };
-        superCategoryId = categoryMap[typeParam as keyof typeof categoryMap] || 0;
+      // --- FIXED: Tab logic ---
+      const typeParam = activeTab;
+      const typeConfig = propertyTypeMapping[typeParam] || propertyTypeMapping.all;
+      
+      let superCategoryId = typeConfig.superCategoryId;
+      let propertyTypeIds = typeConfig.propertyTypeIds || [];
+      let propertyFor = typeConfig.propertyFor;
+      
+      // For commercial/shop tab, handle both possibilities
+      if (typeParam === "shop") {
+        superCategoryId = 1; // always buy for shops
+        propertyTypeIds = [2]; // shop property type
+      } else if (typeParam === "commercial") {
+        // Include both commercial property types (buy and rent)
+        superCategoryId = 0; // don't filter by superCategory
+        propertyTypeIds = [2, 7]; // both commercial property types
       }
+      
+      // Pagination params
+      let pageSize = -1;
+      let pageNumber = 0;
+      
+      if (typeParam !== "all") {
+        pageSize = 10;
+        pageNumber = parseInt(searchParams.get("page") || "1") - 1; // 0-indexed
+      }
+      // --- END FIXED Tab logic ---
+
+      // Prepare request payload
+      const requestPayload = {
+        superCategoryId,
+        propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
+        propertyFor,
+        accountId: "string", // Replace with actual accountId if available
+        searchTerm: filterOptions.searchTerm,
+        minPrice: filterOptions.minPrice,
+        maxPrice: filterOptions.maxPrice,
+        bedroom: filterOptions.minBedrooms,
+        bathroom: filterOptions.minBathrooms,
+        balcony: filterOptions.minBalcony,
+        minArea: filterOptions.minArea,
+        maxArea: filterOptions.maxArea,
+        availableFrom: filterOptions.availableFrom,
+        preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
+        furnished: filterOptions.furnished,
+        amenities: filterOptions.amenities,
+        pageNumber,
+        pageSize,
+      };
+      
+      // For debugging
+      setApiDebug(prev => ({ ...prev, request: requestPayload }));
 
       const response = await axios.post<ApiResponse>(
         "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
-        {
-          superCategoryId: superCategoryId, // 0 for all, 1 for buy, 2 for rent, 3 for sell, etc.
-          accountId: "string", // Replace with actual accountId if available
-          searchTerm: filterOptions.searchTerm,
-          minPrice: filterOptions.minPrice,
-          maxPrice: filterOptions.maxPrice,
-          bedroom: filterOptions.minBedrooms,
-          bathroom: filterOptions.minBathrooms,
-          balcony: filterOptions.minBalcony,
-          minArea: filterOptions.minArea,
-          maxArea: filterOptions.maxArea,
-          availableFrom: filterOptions.availableFrom,
-          preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
-          furnished: filterOptions.furnished,
-          amenities: filterOptions.amenities,
-          pageNumber: 0, // No pagination
-          pageSize: -1, // Get all properties
-        },
+        requestPayload,
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
+      
+      // For debugging
+      setApiDebug(prev => ({ ...prev, response: response.data }));
 
-      // Transform API data to our property format
-      const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => ({
-        id: prop.propertyId,
-        title: prop.title,
-        price: prop.price,
-        location: prop.city,
-        type: prop.superCategory.toLowerCase() as "buy" | "sell" | "rent" | "plot" | "commercial",
-        bedrooms: prop.bedroom,
-        bathrooms: prop.bathroom,
-        balcony: prop.balcony,
-        area: prop.area,
-        image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
-        availableFrom: prop.availableFrom,
-        preferenceId: prop.preferenceId,
-        amenities: prop.amenities,
-        furnished: prop.furnished
-      }));
+      // FIXED: Transform API data to our property format with correct mapping
+      const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => {
+        // Determine the correct type based on superCategory and propertyType
+        let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
+        
+        // Convert superCategory to lowercase for comparison
+        const superCategoryLower = prop.superCategory?.toLowerCase() || "";
+        const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
+        
+        // Properly map the API response to our property types
+        if (propertyTypeLower.includes("plot") || propertyTypeLower.includes("land")) {
+          type = "plot";
+        } else if (propertyTypeLower.includes("commercial") || propertyTypeLower.includes("shop") || 
+                   propertyTypeLower.includes("office")) {
+          type = "commercial";
+        } else if (superCategoryLower.includes("rent")) {
+          type = "rent";
+        } else if (superCategoryLower.includes("sell") || superCategoryLower.includes("buy")) {
+          type = "buy";
+        }
+        
+        return {
+          id: prop.propertyId,
+          title: prop.title,
+          price: prop.price,
+          location: prop.city,
+          type: type, // Using our revised type determination
+          bedrooms: prop.bedroom,
+          bathrooms: prop.bathroom,
+          balcony: prop.balcony,
+          area: prop.area,
+          image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
+          availableFrom: prop.availableFrom,
+          preferenceId: prop.preferenceId,
+          amenities: prop.amenities,
+          furnished: prop.furnished,
+          likes: prop.likes ?? 0,
+          isLike: prop.isLike ?? false,
+          propertyType: prop.propertyType,
+          status: prop.superCategory,
+        };
+      });
 
       setProperties(transformedData);
-      applyFilters(transformedData);
+      
+      // FIXED: Client-side filtering logic
+      let filtered = transformedData;
+      
+      // If activeTab is 'plot' or 'commercial', make sure we show all related properties
+      if (activeTab === "plot") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "plot" || 
+          (prop.propertyType?.toLowerCase() || "").includes("plot") ||
+          (prop.propertyType?.toLowerCase() || "").includes("land")
+        );
+      } else if (activeTab === "commercial" || activeTab === "shop") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "commercial" || 
+          (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
+          (prop.propertyType?.toLowerCase() || "").includes("shop") ||
+          (prop.propertyType?.toLowerCase() || "").includes("office")
+        );
+      } else {
+        applyFilters(transformedData);
+        return; // No need to continue, regular applyFilters will handle it
+      }
+      
+      // Apply remaining filters to our specialized property types
+      filtered = filtered.filter(property => {
+        // Filter by search query
+        if (
+          searchQuery &&
+          !property.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !property.location.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+        
+        // Filter by price range
+        if (property.price < priceRange[0] || property.price > priceRange[1]) {
+          return false;
+        }
+        
+        // Filter by area
+        if (property.area < minArea) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      setFilteredProperties(filtered);
       
       toast({
         title: "Properties Loaded",
-        description: `Found ${transformedData.length} properties matching your criteria.`,
+        description: `Found ${filtered.length} properties matching your criteria.`,
       });
     } catch (err) {
       console.error("Failed to fetch properties:", err);
       setError("Unable to load properties. Please try again later.");
+      setApiDebug(prev => ({ ...prev, error: err }));
       
       toast({
         variant: "destructive",
@@ -325,6 +443,29 @@ export const PropertyListing = () => {
       setLoading(false);
     }
   };
+
+  // Property card interface
+  interface PropertyCardProps {
+    id: string;
+    title: string;
+    price: number;
+    location: string;
+    type: "buy" | "sell" | "rent" | "plot" | "commercial";
+    bedrooms: number;
+    bathrooms: number;
+    balcony?: number;
+    area: number;
+    image: string;
+    availableFrom?: string;
+    preferenceId?: number;
+    amenities?: string[];
+    furnished?: string;
+    likes?: number;
+    isLike?: boolean;
+    propertyType?: string;
+    status?: string;
+    formattedPrice?: string;
+  }
 
   // Enhanced mock data for fallback or development
   const useMockData = () => {
@@ -373,85 +514,10 @@ export const PropertyListing = () => {
         amenities: ["WiFi", "Power Backup"],
         furnished: "Semi"
       },
-      {
-        id: "prop4",
-        title: "Spacious 2BHK Apartment",
-        price: 5600000,
-        location: "Powai, Mumbai",
-        type: "buy",
-        bedrooms: 2,
-        bathrooms: 2,
-        balcony: 1,
-        area: 1050,
-        image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80",
-        amenities: ["Parking", "Security"],
-        furnished: "Semi"
-      },
-      {
-        id: "prop5",
-        title: "Elegant 3BHK Villa",
-        price: 48000,
-        location: "Whitefield, Bangalore",
-        type: "rent",
-        bedrooms: 3,
-        bathrooms: 3,
-        balcony: 2,
-        area: 1800,
-        image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80",
-        availableFrom: "2025-06-01T00:00:00",
-        preferenceId: 1, // Family
-        amenities: ["Garden", "Parking", "Security"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop6",
-        title: "Commercial Space",
-        price: 9500000,
-        location: "Andheri, Mumbai",
-        type: "sell",
-        bedrooms: 0,
-        bathrooms: 2,
-        balcony: 0,
-        area: 2500,
-        image: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup", "Parking"],
-        furnished: "Not"
-      },
-      {
-        id: "prop7",
-        title: "Cozy 1BHK for Rent",
-        price: 22000,
-        location: "HSR Layout, Bangalore",
-        type: "rent",
-        bedrooms: 1,
-        bathrooms: 1,
-        balcony: 1,
-        area: 750,
-        image: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&q=80",
-        availableFrom: "2025-05-10T00:00:00",
-        preferenceId: 2, // Bachelor
-        amenities: ["WiFi", "Power Backup", "Parking"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop8",
-        title: "Corporate Office Space",
-        price: 65000,
-        location: "Cyber City, Gurgaon",
-        type: "rent",
-        bedrooms: 0,
-        bathrooms: 3,
-        balcony: 0,
-        area: 3200,
-        image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80",
-        availableFrom: "2025-07-01T00:00:00",
-        preferenceId: 3, // Company
-        amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully"
-      },
+      // Added mock plot and commercial properties
       {
         id: "prop9",
-        title: "Residential Plot",
+        title: "Residential Plot in Prime Location",
         price: 3500000,
         location: "Electronic City, Bangalore",
         type: "plot",
@@ -460,11 +526,12 @@ export const PropertyListing = () => {
         balcony: 0,
         area: 2400,
         image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup"]
+        amenities: ["Power Backup"],
+        propertyType: "Plot/Land"
       },
       {
         id: "prop10",
-        title: "Office Space",
+        title: "Commercial Office Space",
         price: 85000,
         location: "Connaught Place, Delhi",
         type: "commercial",
@@ -474,7 +541,23 @@ export const PropertyListing = () => {
         area: 1800,
         image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
         amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully"
+        furnished: "Fully",
+        propertyType: "Commercial Office"
+      },
+      {
+        id: "prop11",
+        title: "Retail Shop in Mall",
+        price: 120000,
+        location: "Saket, Delhi",
+        type: "commercial",
+        bedrooms: 0,
+        bathrooms: 1,
+        balcony: 0,
+        area: 850,
+        image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
+        amenities: ["Security", "Power Backup"],
+        furnished: "Not",
+        propertyType: "Shop"
       }
     ];
     
@@ -484,12 +567,29 @@ export const PropertyListing = () => {
 
   // Apply client-side filters
   const applyFilters = (data: PropertyCardProps[]) => {
-    const filtered = data.filter((property) => {
-      // Filter by tab/type
-      if (activeTab !== "all" && property.type !== activeTab) {
-        return false;
+    // FIXED: Filter by tab/type (special handling for plot and commercial)
+    let filtered = data;
+    if (activeTab !== "all") {
+      if (activeTab === "plot") {
+        filtered = data.filter(property => 
+          property.type === "plot" || 
+          (property.propertyType?.toLowerCase() || "").includes("plot") ||
+          (property.propertyType?.toLowerCase() || "").includes("land")
+        );
+      } else if (activeTab === "commercial" || activeTab === "shop") {
+        filtered = data.filter(property => 
+          property.type === "commercial" || 
+          (property.propertyType?.toLowerCase() || "").includes("commercial") ||
+          (property.propertyType?.toLowerCase() || "").includes("shop") ||
+          (property.propertyType?.toLowerCase() || "").includes("office")
+        );
+      } else {
+        filtered = data.filter(property => property.type === activeTab);
       }
-      
+    }
+    
+    // Apply remaining filters
+    filtered = filtered.filter((property) => {
       // Filter by search query
       if (
         searchQuery &&
@@ -504,49 +604,55 @@ export const PropertyListing = () => {
         return false;
       }
       
-      // Filter by bedrooms
-      if (property.bedrooms < minBedrooms) {
-        return false;
-      }
-      
-      // Filter by bathrooms
-      if (property.bathrooms < minBathrooms) {
-        return false;
-      }
+      // Only apply bedroom/bathroom filters for residential properties
+      if (property.type !== "plot" && property.type !== "commercial") {
+        // Filter by bedrooms
+        if (property.bedrooms < minBedrooms) {
+          return false;
+        }
+        
+        // Filter by bathrooms
+        if (property.bathrooms < minBathrooms) {
+          return false;
+        }
 
-      // Filter by balcony
-      if (property.balcony < minBalcony) {
-        return false;
-      }
-      
-      // Filter by area
-      if (property.area < minArea) {
-        return false;
-      }
-      
-      // Filter by availability date
-      if (availableFrom && property.availableFrom) {
-        const propertyDate = new Date(property.availableFrom);
-        if (propertyDate > availableFrom) {
+        // Filter by balcony
+        if (property.balcony < minBalcony) {
           return false;
         }
       }
       
-      // Filter by preference
-      if (preferenceId !== "0" && property.preferenceId !== parseInt(preferenceId)) {
+      // Filter by area (applicable to all property types)
+      if (property.area < minArea) {
         return false;
       }
-
-      // Filter by furnished status
-      if (furnished !== "any" && property.furnished?.toLowerCase() !== furnished) {
-        return false;
-      }
-
-      // Filter by amenities
-      if (selectedAmenities.length > 0 && property.amenities) {
-        for (const amenity of selectedAmenities) {
-          if (!property.amenities.includes(amenity)) {
+      
+      // Only apply these filters for residential properties
+      if (property.type !== "plot" && property.type !== "commercial") {
+        // Filter by availability date
+        if (availableFrom && property.availableFrom) {
+          const propertyDate = new Date(property.availableFrom);
+          if (propertyDate > availableFrom) {
             return false;
+          }
+        }
+        
+        // Filter by preference
+        if (preferenceId !== "0" && property.preferenceId !== parseInt(preferenceId)) {
+          return false;
+        }
+
+        // Filter by furnished status
+        if (furnished !== "any" && property.furnished?.toLowerCase() !== furnished) {
+          return false;
+        }
+
+        // Filter by amenities
+        if (selectedAmenities.length > 0 && property.amenities) {
+          for (const amenity of selectedAmenities) {
+            if (!property.amenities.includes(amenity)) {
+              return false;
+            }
           }
         }
       }
