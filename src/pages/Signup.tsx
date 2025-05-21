@@ -22,18 +22,14 @@ const USER_TYPES = [
   { id: 3, name: "Builder" },
 ];
 
-interface SignupProps {
-  onClose?: () => void;
-}
-
-const Signup = ({ onClose }: SignupProps) => {
+const Signup = ({ onClose, onSwitchToLogin }) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [userType, setUserType] = useState(1); // Default to Owner (id: 1)
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, signup } = useAuth();
@@ -52,7 +48,7 @@ const Signup = ({ onClose }: SignupProps) => {
     }, 300);
   };
 
-  const handleFormSubmit = async (formData: any) => {
+  const handleFormSubmit = async (formData) => {
     const { name: fullName, phone: phoneNumber, userType: selectedUserType } = formData;
 
     setLoading(true);
@@ -93,7 +89,7 @@ const Signup = ({ onClose }: SignupProps) => {
     }
   };
 
-  const handleOtpSubmit = async (otp: string) => {
+  const handleOtpSubmit = async (otp) => {
     setLoading(true);
 
     try {
@@ -102,7 +98,8 @@ const Signup = ({ onClose }: SignupProps) => {
         phone, 
         name, 
         otp, 
-        userType.toString() // Convert to string as API expects string
+        userType.toString(), // Convert to string as API expects string
+        "" // Empty string for stateId
       );
 
       if (success) {
@@ -241,12 +238,13 @@ const Signup = ({ onClose }: SignupProps) => {
           <CardFooter className="flex justify-center border-t p-3">
             <div className="text-sm text-gray-500">
               Already have an account?{" "}
-              <Link
-                to="/login"
+              <a
+                href="#"
+                onClick={onSwitchToLogin}
                 className="text-blue-600 hover:underline font-medium"
               >
                 Log in
-              </Link>
+              </a>
             </div>
           </CardFooter>
         </Card>

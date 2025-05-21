@@ -11,12 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, X, Phone, Key, Home } from "lucide-react";
+import { ArrowLeft, X, Phone, Home } from "lucide-react";
 import { OtpStep } from "@/components/login/OtpStep";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const Login = ({ onClose }) => {
+const Login = ({ onClose, onSwitchToSignup }) => {
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState("phone");
   const [loading, setLoading] = useState(false);
@@ -227,12 +227,13 @@ const Login = ({ onClose }) => {
           <CardFooter className="flex justify-center border-t p-6">
             <div className="text-sm text-gray-500">
               Don't have an account?{" "}
-              <Link
-                to="/signup"
+              <a
+                href="#"
+                onClick={onSwitchToSignup}
                 className="text-blue-600 hover:underline font-medium"
               >
                 Sign up
-              </Link>
+              </a>
             </div>
           </CardFooter>
         </Card>

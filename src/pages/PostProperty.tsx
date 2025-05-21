@@ -335,7 +335,7 @@ const PostProperty = () => {
       const formData = new FormData();
 
       // Add account ID - Check for both user.id and user.userId for backward compatibility
-      if (!user || (!user.userId && !user.id)) {
+      if (!user || (!user.userId && !user.userId )) {
         toast({
           title: "Authentication Required",
           description: "Please log in to post a property.",
@@ -346,7 +346,7 @@ const PostProperty = () => {
       }
 
       // Use either userId or id, whichever is available
-      const accountId = user.userId || user.id;
+      const accountId = user.userId || user.userId;
       
       formData.append("AccountId", accountId);
       formData.append("SuperCategoryId", categoryId.toString());

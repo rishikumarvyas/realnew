@@ -17,21 +17,21 @@ export const apiRequest = async (
 ): Promise<any> => {
   try {
     const { authorized = true, ...restOptions } = options;
-    
+
     // Create headers starting with content-type
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...restOptions.headers,
     };
-    
+
     // Add authorization token if required and available
     if (authorized) {
       const authData = sessionStorage.getItem("auth");
-      
+
       if (authData) {
         const { token } = JSON.parse(authData);
         if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+          headers["Authorization"] = `Bearer ${token}`;
         } else {
           console.warn("No token available for authorized request");
         }
@@ -39,16 +39,16 @@ export const apiRequest = async (
         console.warn("No auth data found for authorized request");
       }
     }
-    
+
     // Prepare final request options
     const requestOptions = {
       ...restOptions,
       headers,
     };
-    
+
     // Make the API call
     const response = await fetch(url, requestOptions);
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       throw new Error(
@@ -57,7 +57,7 @@ export const apiRequest = async (
         }`
       );
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error("API request error:", error);
@@ -68,46 +68,60 @@ export const apiRequest = async (
 /**
  * Shorthand for making authorized GET requests
  */
-export const apiGet = async (endpoint: string, options: ApiRequestOptions = {}): Promise<any> => {
+export const apiGet = async (
+  endpoint: string,
+  options: ApiRequestOptions = {}
+): Promise<any> => {
   return apiRequest(`${BASE_URL}${endpoint}`, {
-    method: 'GET',
+    method: "GET",
     authorized: true,
-    ...options
+    ...options,
   });
 };
 
 /**
  * Shorthand for making authorized POST requests
  */
-export const apiPost = async (endpoint: string, data: any, options: ApiRequestOptions = {}): Promise<any> => {
+export const apiPost = async (
+  endpoint: string,
+  data: any,
+  options: ApiRequestOptions = {}
+): Promise<any> => {
   return apiRequest(`${BASE_URL}${endpoint}`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify(data),
     authorized: true,
-    ...options
+    ...options,
   });
 };
 
 /**
  * Shorthand for making authorized PUT requests
  */
-export const apiPut = async (endpoint: string, data: any, options: ApiRequestOptions = {}): Promise<any> => {
+export const apiPut = async (
+  endpoint: string,
+  data: any,
+  options: ApiRequestOptions = {}
+): Promise<any> => {
   return apiRequest(`${BASE_URL}${endpoint}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify(data),
     authorized: true,
-    ...options
+    ...options,
   });
 };
 
 /**
  * Shorthand for making authorized DELETE requests
  */
-export const apiDelete = async (endpoint: string, options: ApiRequestOptions = {}): Promise<any> => {
+export const apiDelete = async (
+  endpoint: string,
+  options: ApiRequestOptions = {}
+): Promise<any> => {
   return apiRequest(`${BASE_URL}${endpoint}`, {
-    method: 'DELETE',
+    method: "DELETE",
     authorized: true,
-    ...options
+    ...options,
   });
 };
 
@@ -115,22 +129,29 @@ export const apiDelete = async (endpoint: string, options: ApiRequestOptions = {
  * Make unauthorized requests when authentication is not required
  */
 export const apiPublic = {
-  get: async (endpoint: string, options: ApiRequestOptions = {}): Promise<any> => {
+  get: async (
+    endpoint: string,
+    options: ApiRequestOptions = {}
+  ): Promise<any> => {
     return apiRequest(`${BASE_URL}${endpoint}`, {
-      method: 'GET',
+      method: "GET",
       authorized: false,
-      ...options
+      ...options,
     });
   },
-  
-  post: async (endpoint: string, data: any, options: ApiRequestOptions = {}): Promise<any> => {
+
+  post: async (
+    endpoint: string,
+    data: any,
+    options: ApiRequestOptions = {}
+  ): Promise<any> => {
     return apiRequest(`${BASE_URL}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(data),
       authorized: false,
-      ...options
+      ...options,
     });
-  }
+  },
 };
 
 /**
