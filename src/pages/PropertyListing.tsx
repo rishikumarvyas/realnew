@@ -125,18 +125,22 @@ export const PropertyListing = () => {
   
   // Basic search and filter states
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState([0, 20000000]);
   const [minBedrooms, setMinBedrooms] = useState(0);
   const [minBathrooms, setMinBathrooms] = useState(0);
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
   
+  // Search suggestions state
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
   // Advanced filter states
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(undefined);
   const [preferenceId, setPreferenceId] = useState<string>("0"); // Default to "Any"
   const [furnished, setFurnished] = useState<string>("any");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   
   // UI state for advanced filters visibility
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -147,6 +151,45 @@ export const PropertyListing = () => {
     response: null,
     error: null
   });
+  
+  // Fetch suggestions from API with debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.trim().length > 1) {
+        axios
+          .get(`https://homeyatraapi.azurewebsites.net/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`)
+          .then((res) => {
+            setSuggestions(res.data);
+            setShowSuggestions(true);
+          })
+          .catch((err) => {
+            console.error("Suggestion error:", err);
+            setSuggestions([]);
+          });
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300); // debounce 300ms
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+  
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchTerm(suggestion);
+    setShowSuggestions(false);
+    
+    // Update search params and trigger search
+    searchParams.set("search", suggestion);
+    setSearchParams(searchParams);
+    setSearchQuery(suggestion);
+    
+    toast({
+      title: "Search Applied",
+      description: `Showing results for "${suggestion}"`,
+    });
+  };
   
   // Check if advanced filters should be hidden based on property type
   const shouldShowAdvancedFilters = () => {
@@ -878,20 +921,35 @@ export const PropertyListing = () => {
                     <Search className="h-5 w-5 text-gray-600" />
                   </div>
                   <Input
-                    type="text"
-                    className="block w-full rounded-l-full pl-12 py-6 bg-white text-gray-800 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search by location, property name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <Button 
-                    type="submit" 
-                    className="rounded-r-full bg-blue-500 hover:bg-blue-600 px-8 py-6 text-base font-medium"
-                    size="lg"
-                  >
-                    Search
-                  </Button>
-                </div>
+                                  type="text"
+                                  className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                                  placeholder="Search Society, Locality, City, State"
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  onFocus={() => setShowSuggestions(true)}
+                                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} // delay to allow click
+                                />
+                                <Button
+                                  type="submit"
+                                  className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-r-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+                                >
+                                  Search
+                                </Button>
+                              </div>
+                  
+                              {showSuggestions && suggestions.length > 0 && (
+                                <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
+                                  {suggestions.map((suggestion, index) => (
+                                    <li
+                                      key={index}
+                                      onMouseDown={() => handleSuggestionClick(suggestion)}
+                                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                                    >
+                                      {suggestion}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
               </form>
             </div>
           </div>
