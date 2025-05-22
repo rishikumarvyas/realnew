@@ -4,7 +4,7 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Loader2, Home } from "lucide-react";
 import { Card } from "@/components/ui/card";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
 // API interfaces
 interface ApiResponse {
   statusCode: number;
@@ -89,8 +89,8 @@ const AllProperty = () => {
       // 0 for all, 1 for buy, 2 for rent, 3 for sell
       const superCategoryId = 0;
 
-      const response = await axios.post<ApiResponse>(
-        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+     const response = await axiosInstance.post<ApiResponse>(
+    "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
         {
           superCategoryId: superCategoryId,
           accountId: "string", // Replace with actual accountId if available
