@@ -77,12 +77,12 @@ const AllProperty = () => {
       const filterOptions: FilterOptions = {
         searchTerm: "",
         minPrice: 0,
-        maxPrice: 20000000,
+        maxPrice: 0,
         minBedrooms: 0,
         minBathrooms: 0,
         minBalcony: 0,
         minArea: 0,
-        maxArea: 50000,
+        maxArea: 0,
       };
       
       // You can set superCategoryId here to filter by property type

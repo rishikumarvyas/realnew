@@ -206,12 +206,12 @@ const PropertyListing = () => {
       const filterOptions: FilterOptions = {
         searchTerm: searchParams.get("search") || "",
         minPrice: parseInt(searchParams.get("minPrice") || "0"),
-        maxPrice: parseInt(searchParams.get("maxPrice") || "20000000"),
+        maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
         minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
         minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
         minBalcony: parseInt(searchParams.get("balcony") || "0"),
         minArea: parseInt(searchParams.get("minArea") || "0"),
-        maxArea: 50000,
+        maxArea: 0,
       };
       
       // Add availability date if present
