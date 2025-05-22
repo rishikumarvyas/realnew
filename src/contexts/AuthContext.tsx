@@ -8,7 +8,8 @@ import React, {
 import { BASE_URL } from "@/constants/api";
 import { formatPhoneNumber, parseJwt } from "@/utils/auth";
 import { jwtDecode } from "jwt-decode";
-import axios from "axios";
+import axiosInstance from "../axiosCalls/axiosInstance";
+
 // Define types
 interface User {
   userId?: string;
@@ -16,6 +17,7 @@ interface User {
   name?: string;
   token?: string;
   userTypeId?: string;
+  isActive?: boolean;
 }
 
 interface UserProperty {
@@ -29,14 +31,6 @@ interface UserProperty {
   area: number;
   bedroom: number;
   bathroom: number;
-}
-
-interface UserDetailsResponse {
-  statusCode: number;
-  message: string;
-  userId: string;
-  name: string;
-  userDetails: UserProperty[];
 }
 
 interface AuthContextType {
@@ -61,31 +55,11 @@ interface AuthContextType {
     stateId: string
   ) => Promise<boolean>;
   logout: () => void;
-  fetchUserDetails: (userId: string) => Promise<boolean>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 // Create context with default values
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Function to store a persistent user ID for a phone number
-const storePersistentUserId = (phone: string, userId: string): void => {
-  try {
-    // Get existing mapping or create new one
-    const userMappingStr = localStorage.getItem("userIdMapping");
-    const userMapping = userMappingStr ? JSON.parse(userMappingStr) : {};
-
-    // Add/update the mapping
-    userMapping[phone] = userId;
-
-    // Store back to localStorage
-    localStorage.setItem("userIdMapping", JSON.stringify(userMapping));
-    console.log(
-      `Stored userId '${userId}' for phone '${phone}' in persistent storage`
-    );
-  } catch (e) {
-    console.error("Error storing persistent user ID:", e);
-  }
-};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -114,80 +88,110 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setModalType(null);
   };
 
+  // Add updateUser function
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prevUser => {
+      if (prevUser) {
+        const updatedUser = { ...prevUser, ...updates };
+        // Update localStorage as well
+        localStorage.setItem("homeYatraUser", JSON.stringify(updatedUser));
+        return updatedUser;
+      }
+      return null;
+    });
+  };
+
+  // Save user to localStorage
+  const saveUserToStorage = (userData: User) => {
+    localStorage.setItem("homeYatraUser", JSON.stringify(userData));
+    localStorage.setItem("homeYatraToken", userData.token || "");
+    setUser(userData);
+  };
+
+  // Load user from localStorage
+  const loadUserFromStorage = () => {
+    try {
+      const savedUser = localStorage.getItem("homeYatraUser");
+      const savedToken = localStorage.getItem("homeYatraToken");
+      
+      if (savedUser && savedToken) {
+        const userData = JSON.parse(savedUser);
+        
+        // Check if token is expired
+        if (userData.token) {
+          try {
+            const decodedToken = jwtDecode(userData.token);
+            const currentTime = Date.now() / 1000;
+            
+            if (decodedToken.exp && decodedToken.exp > currentTime) {
+              // Token is valid
+              console.log("Loading user from localStorage:", userData.name);
+              setUser(userData);
+              return userData;
+            } else {
+              // Token expired
+              console.log("Token expired, clearing storage");
+              clearUserStorage();
+            }
+          } catch (error) {
+            console.error("Error decoding token:", error);
+            clearUserStorage();
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading user from storage:", error);
+      clearUserStorage();
+    }
+    return null;
+  };
+
+  // Clear user from localStorage
+  const clearUserStorage = () => {
+    localStorage.removeItem("homeYatraUser");
+    localStorage.removeItem("homeYatraToken");
+    setUser(null);
+  };
+
   // Check for existing auth on mount
   useEffect(() => {
-    const loadAuth = async () => {
-      const storedAuth = localStorage.getItem("auth");
-      if (storedAuth) {
-        try {
-          const userData = JSON.parse(storedAuth);
-
-          // Verify the token is still valid if it exists
-          if (userData.token) {
-            const tokenData = parseJwt(userData.token);
-            if (tokenData && tokenData.exp * 1000 > Date.now()) {
-              setUser(userData);
-            }
-          } else {
-            setUser(userData);
-          }
-        } catch (error) {
-          console.error("Error parsing stored auth data:", error);
-          localStorage.removeItem("auth");
-        }
-      }
-      setLoading(false);
-    };
-
-    loadAuth();
+    console.log("AuthProvider mounting, checking for saved user...");
+    const savedUser = loadUserFromStorage();
+    setLoading(false);
   }, []);
 
-  const fetchUserDetails = async (userId: string): Promise<boolean> => {
-    try {
-      console.log("Fetching user details for userId:", userId);
-      const response = await fetch(
-        `${BASE_URL}/api/Account/GetUserDetails?userId=${userId}`
-      );
-
-      if (!response.ok) {
-        console.error("Failed to fetch user details", response.status);
-        return false;
-      }
-
-      const data: UserDetailsResponse = await response.json();
-      console.log("User details:", data);
-
-      if (data.statusCode === 200) {
-        // If the API returns a userId and user exists with a phone
-        if (data.userId && user && user.phone) {
-          // Always store the API-provided userId for this phone number
-          storePersistentUserId(user.phone, data.userId);
-
-          // Update user state with userId, name, and any other fields from API
-          const updatedUser = {
-            ...user,
-            userId: data.userId,
-            name: data.name || user.name, // Keep the name if it exists
-          };
-          setUser(updatedUser);
-          localStorage.setItem("auth", JSON.stringify(updatedUser));
-          console.log(
-            `Updated user with API data: userId=${data.userId}, name=${
-              data.name || user.name
-            }`
-          );
+  // Set up axios interceptor when user changes
+  useEffect(() => {
+    const requestInterceptor = axiosInstance.interceptors.request.use(
+      (config) => {
+        const token = user?.token || localStorage.getItem("homeYatraToken");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log("Adding token to request");
         }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
 
-        setUserProperties(data.userDetails || []);
-        return true;
+    // Handle token expiry in response interceptor
+    const responseInterceptor = axiosInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log("Authentication failed - logging out user");
+          clearUserStorage();
+        }
+        return Promise.reject(error);
       }
+    );
 
-      return false;
-    } catch (error) {
-      console.error("Error fetching user details:", error);
-      return false;
-    }
-  };
+    // Cleanup interceptors
+    return () => {
+      axiosInstance.interceptors.request.eject(requestInterceptor);
+      axiosInstance.interceptors.response.eject(responseInterceptor);
+    };
+  }, [user?.token]);
 
   const requestOtp = async (phoneNumber: string): Promise<boolean> => {
     try {
@@ -196,23 +200,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       console.log("Requesting OTP for:", formattedPhone);
 
-      const response = await fetch(`${BASE_URL}/api/Message/Send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          templateId: 3,
-          message: "Your OTP for Home Yatra login is: {{otp}}",
-          action: "HomeYatra",
-          name: "HomeYatra",
-          userTypeId: "0", // Use "0" string value as shown in your API screenshot
-        }),
+      const response = await axiosInstance.post('/api/Message/Send', {
+        phone: formattedPhone,
+        templateId: 3,
+        message: "Your OTP for Home Yatra login is: {{otp}}",
+        action: "HomeYatra",
+        name: "HomeYatra",
+        userTypeId: "0",
       });
 
-      const data = await response.json();
-      console.log("OTP request response:", data);
+      console.log("OTP request response:", response.data);
 
-      return response.ok && data?.statusCode === 200;
+      return response.status === 200 && response.data?.statusCode === 200;
     } catch (error) {
       console.error("Error requesting OTP:", error);
       return false;
@@ -236,43 +235,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         userTypeId,
       });
 
-      // Match the API format exactly as shown in the WhatsApp curl command
-      const signupResponse = await fetch(`${BASE_URL}/api/Auth/SignUp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: fullName,
-          phone: formattedPhone,
-          otp: otp,
-          userTypeId: userTypeId,
-        }),
+      const signupResponse = await axiosInstance.post('/api/Auth/SignUp', {
+        name: fullName,
+        phone: formattedPhone,
+        otp: otp,
+        userTypeId: userTypeId,
       });
 
-      console.log("Signup response status:", signupResponse.status);
+      console.log("Signup response:", signupResponse.data);
 
-      if (!signupResponse.ok) {
-        console.error("Signup failed with status:", signupResponse.status);
-        return false;
-      }
-
-      try {
-        const data = await signupResponse.json();
-        console.log("Signup response data:", data);
+      if (signupResponse.status === 200 && signupResponse.data?.statusCode === 200) {
+        const data = signupResponse.data;
 
         // Extract userId and token from response
-        const userId =
-          data.userId || data.id || (data.user && data.user.userId);
-        const token =
-          typeof data.token === "string" ? data.token : data.token?.token;
+        const userId = data.userId || data.id || (data.user && data.user.userId);
+        const token = typeof data.token === "string" ? data.token : data.token?.token;
 
-        // If API didn't provide a userId, we can't proceed
-        if (!userId) {
-          console.error("API did not provide a userId during signup");
+        if (!userId || !token) {
+          console.error("API did not provide userId or token during signup");
           return false;
         }
-
-        // Store this as the persistent userId for this phone number
-        storePersistentUserId(formattedPhone, userId);
 
         // Create user data object
         const userData = {
@@ -281,18 +263,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           name: fullName,
           token,
           userTypeId,
+          isActive: true,
         };
 
-        // Store user data for immediate use
-        setUser(userData);
-        localStorage.setItem("auth", JSON.stringify(userData));
-
-        // Close the auth modal after successful signup
+        // Save to localStorage and state
+        saveUserToStorage(userData);
         closeAuthModal();
 
+        console.log("User signed up and saved:", userData.name);
         return true;
-      } catch (e) {
-        console.error("Error parsing signup response:", e);
+      } else {
+        console.error("Signup failed with status:", signupResponse.data?.statusCode);
         return false;
       }
     } catch (error) {
@@ -306,60 +287,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const loginResponse = await axios.post(
-        `${BASE_URL}/api/Auth/Login`,
-        {
-          phone: formattedPhone,
-          otp,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      console.log("Attempting login with:", { phone: formattedPhone, otp });
 
-      if (!(loginResponse?.data?.statusCode === 200)) {
-        console.error(
-          "Login failed with status:",
-          loginResponse.data.statusCode
-        );
-        return false;
-      }
+      const loginResponse = await axiosInstance.post('/api/Auth/Login', {
+        phone: formattedPhone,
+        otp,
+      });
 
-      try {
-        const data = loginResponse?.data;
+      console.log("Login response:", loginResponse.data);
 
-        // Get token from response
+      if (loginResponse.status === 200 && loginResponse.data?.statusCode === 200) {
+        const data = loginResponse.data;
         const token = data?.token;
 
         if (!token) {
+          console.error("No token received from login response");
           return false;
         }
-        const decodedToken: decodedToken = jwtDecode(token);
 
-        localStorage.setItem("token", token);
+        // Decode token to get user info
+        const decodedToken = jwtDecode(token);
+        console.log("Decoded token:", decodedToken);
 
-        // Create user data with API values
+        // Create user data with token values
         const userData = {
           userId: decodedToken?.UserId,
-          phone: decodedToken?.Phone,
+          phone: decodedToken?.Phone || formattedPhone,
           token,
           name: decodedToken?.UserName,
+          userTypeId: decodedToken?.UserTypeId,
+          isActive: true,
         };
 
-        setUser(userData);
-
-        // Clear signup data after successful login
-        localStorage.removeItem("signupData");
-
-        // Close the auth modal after successful login
+        // Save to localStorage and state
+        saveUserToStorage(userData);
         closeAuthModal();
-
-        // Set empty user properties array (initial state)
         setUserProperties([]);
 
+        console.log("User logged in and saved:", userData.name);
         return true;
-      } catch (e) {
-        console.error("Error parsing login response:", e);
+      } else {
+        console.error("Login failed with status:", loginResponse.data?.statusCode);
         return false;
       }
     } catch (error) {
@@ -369,14 +337,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const logout = () => {
-    setUser(null);
+    console.log("Logging out user...");
+    clearUserStorage();
     setUserProperties([]);
-    localStorage.removeItem("auth");
-    localStorage.removeItem("signupData"); // Also clear any signup data
-    // IMPORTANT: We do NOT remove userIdMapping to maintain persistent phone -> userId mapping
-    console.log(
-      "User logged out but userIdMapping is preserved in localStorage"
-    );
   };
 
   const value = {
@@ -395,7 +358,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     login,
     signup,
     logout,
-    fetchUserDetails,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

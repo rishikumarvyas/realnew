@@ -1,8 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   PlusCircle,
   Edit,
@@ -13,10 +23,13 @@ import {
   MessageSquare,
   Settings,
   ThumbsUp,
+  PowerOff,
+  Check
 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import axiosInstance from "../axiosCalls/axiosInstance";
+
 interface PropertyCardProps {
   id: string;
   title: string;
@@ -34,70 +47,43 @@ interface DashboardProperty extends PropertyCardProps {
   propertyId: string;
 }
 
-// 1. Updated convertToPropertyCard function with better image handling
+// Updated convertToPropertyCard function with better image handling
 const convertToPropertyCard = (property: any): DashboardProperty => {
-  // Get the property ID correctly
   const propertyId = property.propertyId || property.id || "";
-
-  // Initialize with a reliable fallback image
+  
   let mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
 
   try {
-    // Log the property for debugging
     console.log(`Processing property ${propertyId}:`, property);
 
-    // Check if the property has imageDetails array
     if (
       property.imageDetails &&
       Array.isArray(property.imageDetails) &&
       property.imageDetails.length > 0
     ) {
-      console.log(
-        `Property ${propertyId} has ${property.imageDetails.length} images`
-      );
+      console.log(`Property ${propertyId} has ${property.imageDetails.length} images`);
 
-      // Try to find main image first
       const mainImageObj = property.imageDetails.find(
         (img: any) => img.isMainImage === true
       );
 
       if (mainImageObj) {
-        // Make sure we're using the correct property for the URL
-        mainImage =
-          mainImageObj.imageUrl ||
-          mainImageObj.url ||
-          mainImageObj.path ||
-          mainImage;
+        mainImage = mainImageObj.imageUrl || mainImageObj.url || mainImageObj.path || mainImage;
         console.log(`Using main image for property ${propertyId}:`, mainImage);
       } else {
-        // Use first image as fallback
         const firstImg = property.imageDetails[0];
-        mainImage =
-          firstImg.imageUrl || firstImg.url || firstImg.path || mainImage;
+        mainImage = firstImg.imageUrl || firstImg.url || firstImg.path || mainImage;
         console.log(`Using first image for property ${propertyId}:`, mainImage);
       }
-    }
-    // Check if there's a mainImageDetail object
-    else if (property.mainImageDetail) {
-      mainImage =
-        property.mainImageDetail.url ||
-        property.mainImageDetail.imageUrl ||
-        property.mainImageDetail.path ||
-        mainImage;
-      console.log(
-        `Using mainImageDetail for property ${propertyId}:`,
-        mainImage
-      );
-    }
-    // Check if there's a simple image property
-    else if (property.image) {
+    } else if (property.mainImageDetail) {
+      mainImage = property.mainImageDetail.url || property.mainImageDetail.imageUrl || property.mainImageDetail.path || mainImage;
+      console.log(`Using mainImageDetail for property ${propertyId}:`, mainImage);
+    } else if (property.image) {
       mainImage = property.image;
       console.log(`Using direct image property for ${propertyId}:`, mainImage);
     }
 
-    // If the image URL doesn't start with http or https, it might be a relative path
     if (mainImage && !mainImage.startsWith("http")) {
-      // Add base URL for relative paths
       if (!mainImage.startsWith("/")) {
         mainImage = "/" + mainImage;
       }
@@ -105,7 +91,6 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
       console.log(`Converted relative path to absolute URL: ${mainImage}`);
     }
 
-    // Extra check to ensure image URL is valid
     if (mainImage && !mainImage.match(/^(https?:\/\/)/)) {
       console.warn(`Invalid image URL format: ${mainImage}, using fallback`);
       mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
@@ -136,6 +121,7 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
     status: property.status || "active",
   };
 };
+
 const mockMessages = [
   {
     id: "msg1",
@@ -159,51 +145,22 @@ const mockMessages = [
   },
 ];
 
-// Mock properties for fallback when API fails
-const mockProperties = [
-  {
-    propertyId: "prop1",
-    title: "Modern 3BHK with Sea View",
-    price: 25000,
-    address: "Marine Drive",
-    city: "Mumbai",
-    superCategory: "Rent",
-    bedroom: 3,
-    bathroom: 2,
-    area: 1500,
-    mainImageDetail: {
-      url: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-    },
-  },
-  {
-    propertyId: "prop2",
-    title: "Spacious Bungalow",
-    price: 9500000,
-    address: "Koregaon Park",
-    city: "Pune",
-    superCategory: "Buy",
-    bedroom: 4,
-    bathroom: 3,
-    area: 2800,
-    mainImageDetail: {
-      url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80",
-    },
-  },
-];
-
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("properties");
   const [properties, setProperties] = useState<DashboardProperty[]>([]);
   const [messages, setMessages] = useState<typeof mockMessages>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
-  const [likeCount, setLikeCount] = useState<number>(0); // New state for like count
-  const { user } = useAuth();
+  const [likeCount, setLikeCount] = useState<number>(0);
+  const { user, logout, updateUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
+  
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
+  const [accountIsActive, setAccountIsActive] = useState<boolean>(true);
 
   const getNewPropertyIdFromQuery = () => {
     const params = new URLSearchParams(location.search);
@@ -218,35 +175,41 @@ const Dashboard = () => {
     if (user?.name) {
       setUserName(user.name);
     }
+    if (user?.isActive !== undefined) {
+      setAccountIsActive(user.isActive);
+    }
   }, [user]);
 
   useEffect(() => {
     const fetchUserProperties = async () => {
+      // Check if user is authenticated
       if (!user?.userId) {
+        console.log("No user found, redirecting to login");
         setLoading(false);
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to view your dashboard.",
+          variant: "destructive",
+        });
+        navigate("/login");
         return;
       }
 
       try {
         setLoading(true);
+        console.log("Fetching properties for user:", user.userId);
 
-        // For development testing, use mock data if API fails
-        try {
-          const response = await axiosInstance.get(
-            `/api/Account/GetUserDetails`,
-            {
-              params: { userId: user.userId }, // Pass query parameters correctly
-            }
-          );
+        // Try to get user details and properties
+        const response = await axiosInstance.get(
+          `/api/Account/GetUserDetails?userId=${user.userId}`
+        );
 
-          if (!(response?.data?.statusCode === 200)) {
-            throw new Error(
-              `Failed to fetch user details: ${response?.data?.statusCode}`
-            );
-          }
+        console.log("API Response:", response.data);
 
-          const data = response?.data;
+        if (response.data?.statusCode === 200) {
+          const data = response.data;
 
+          // Update user name if available
           if (data.name) {
             setUserName(data.name);
           }
@@ -256,42 +219,64 @@ const Dashboard = () => {
             setLikeCount(data.likedCount);
           }
 
-          if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
-            console.log("First property from API:", data.userDetails[0]);
-            const formattedProperties = data.userDetails.map(
-              convertToPropertyCard
-            );
+          // Set account active status if available
+          if (data.isActive !== undefined) {
+            setAccountIsActive(data.isActive);
+            if (updateUser) {
+              updateUser({ isActive: data.isActive });
+            }
+          }
+
+          // Process properties data
+          if (Array.isArray(data.userDetails) && data.userDetails.length > 0) {
+            console.log("Found properties:", data.userDetails.length);
+            const formattedProperties = data.userDetails.map(convertToPropertyCard);
             console.log("Formatted properties:", formattedProperties);
             setProperties(formattedProperties);
           } else {
-            throw new Error("No property data received from API");
+            console.log("No properties found in response");
+            setProperties([]);
           }
-        } catch (apiError) {
-          console.error("API error, using mock data:", apiError);
-          // Mock data for testing when API is unavailable
-          const formattedProperties = mockProperties.map(convertToPropertyCard);
-          setProperties(formattedProperties);
-          setLikeCount(1); // Default like count for mock data
+        } else {
+          throw new Error(`API returned status: ${response.data?.statusCode}`);
         }
 
+        // Show success message for new property
         if (newPropertyId) {
           toast({
             title: "New Property Added!",
             description: `Your property with ID ${newPropertyId} has been successfully added.`,
           });
         }
+
       } catch (error) {
         console.error("Error fetching user properties:", error);
-        toast({
-          title: "Error",
-          description:
-            "Failed to load your properties. Please try again later.",
-          variant: "destructive",
-        });
-        // Ensure we have at least some properties to display
-        const formattedProperties = mockProperties.map(convertToPropertyCard);
-        setProperties(formattedProperties);
-        setLikeCount(0); // Reset like count on error
+        
+        // Show specific error message
+        if (error.response?.status === 401) {
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to access your dashboard.",
+            variant: "destructive",
+          });
+          logout();
+          navigate("/login");
+        } else if (error.response?.status === 404) {
+          toast({
+            title: "User Not Found",
+            description: "Your user account could not be found.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error Loading Properties",
+            description: "Failed to load your properties. Please try refreshing the page.",
+            variant: "destructive",
+          });
+        }
+        
+        setProperties([]);
+        setLikeCount(0);
       } finally {
         setLoading(false);
         setMessages(mockMessages);
@@ -299,7 +284,103 @@ const Dashboard = () => {
     };
 
     fetchUserProperties();
-  }, [user?.userId, toast, newPropertyId, location.search]);
+  }, [user?.userId, toast, newPropertyId, location.search, updateUser, navigate, logout]);
+
+  const handleActivateAccount = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await axiosInstance.post(
+        `/api/Account/ActivateAccount`,
+        JSON.stringify(user?.userId),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      setAccountIsActive(true);
+      if (updateUser) {
+        updateUser({ isActive: true });
+      }
+      
+      toast({
+        title: "Account Activated",
+        description: "Your account has been successfully activated.",
+      });
+    } catch (error) {
+      console.error("Error activating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to activate account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsActivateDialogOpen(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await axiosInstance.delete(
+        `/api/Account/DeactivateAccount?userid=${user?.userId}`
+      );
+      
+      setAccountIsActive(false);
+      if (updateUser) {
+        updateUser({ isActive: false });
+      }
+      
+      toast({
+        title: "Account Deactivated",
+        description: "Your account has been deactivated successfully.",
+      });
+    } catch (error) {
+      console.error("Error deactivating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeactivateDialogOpen(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await axiosInstance.delete(
+        `/api/Account/DeleteAccount?userid=${user?.userId}`
+      );
+      
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      
+      if (logout) {
+        logout();
+      }
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   const handleDeleteProperty = async (id: string) => {
     console.log("Deleting property with ID:", id);
@@ -319,7 +400,6 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-     // Send the ID to the API using axiosInstance
       const response = await axiosInstance.delete(
         `/api/Account/DeleteProperty?propertyId=${id}`
       );
@@ -327,7 +407,6 @@ const Dashboard = () => {
       console.log("Delete response:", response.data);
       
       if (response.data.statusCode === 200) {
-        // Update the UI by removing the deleted property
         setProperties((prev) => prev.filter((prop) => prop.propertyId !== id));
         toast({
           title: "Property Deleted",
@@ -348,14 +427,12 @@ const Dashboard = () => {
     }
   };
 
-  // Function to mark a message as read
   const markMessageAsRead = (id: string) => {
     setMessages(
       messages.map((msg) => (msg.id === id ? { ...msg, read: true } : msg))
     );
   };
 
-  // Count unread messages
   const unreadCount = messages.filter((msg) => !msg.read).length;
 
   if (loading) {
@@ -366,12 +443,36 @@ const Dashboard = () => {
     );
   }
 
+  // Redirect if not authenticated
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+              <p className="text-gray-600 mb-4">Please log in to access your dashboard.</p>
+              <Button onClick={() => navigate("/login")} className="w-full">
+                Go to Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-gray-500 mt-1">Welcome back, {userName}</p>
+          {!accountIsActive && (
+            <p className="text-amber-500 mt-1 font-medium">
+              Your account is currently deactivated
+            </p>
+          )}
         </div>
       </div>
 
@@ -390,7 +491,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* New Like Count Card */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -681,6 +781,45 @@ const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* Account Actions Section */}
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-4">Account Actions</h4>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {accountIsActive ? (
+                      <Button
+                        variant="outline"
+                        className="border-amber-500 text-amber-500 hover:bg-amber-50"
+                        onClick={() => setIsDeactivateDialogOpen(true)}
+                      >
+                        <PowerOff className="h-4 w-4 mr-2" />
+                        Deactivate Account
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="border-green-500 text-green-500 hover:bg-green-50"
+                        onClick={() => setIsActivateDialogOpen(true)}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Activate Account
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline" 
+                      className="border-red-500 text-red-500 hover:bg-red-50"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Account
+                    </Button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2">
+                    {accountIsActive 
+                      ? "Deactivating will temporarily disable your account. Deleting will permanently remove all your data."
+                      : "Activate your account to make your listings visible again. Deleting will permanently remove all your data."}
+                  </p>
+                </div>
+
                 <div className="pt-4 flex justify-end">
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     Save Settings
@@ -691,6 +830,78 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Activate Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isActivateDialogOpen} 
+        onOpenChange={setIsActivateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Activate Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to activate your account? Your listings will be visible again and you'll receive messages from interested users.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleActivateAccount}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              Activate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Deactivate Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeactivateDialogOpen} 
+        onOpenChange={setIsDeactivateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to deactivate your account? Your listings will be hidden and you won't receive any messages. You can reactivate your account by logging in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeactivateAccount}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove all your data from our servers, including all your property listings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAccount}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

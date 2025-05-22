@@ -4,13 +4,18 @@ const axiosInstance = axios.create({
   baseURL: "https://homeyatraapi.azurewebsites.net",
 });
 
-// Add a request interceptor
+// Add a request interceptor - AuthContext will handle token injection
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Fallback: if token is not injected by AuthContext, try localStorage
+    if (!config.headers.Authorization) {
+      const token = localStorage.getItem("homeYatraToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
+    console.log("Making request to:", config.url);
+    console.log("Has Authorization header:", !!config.headers.Authorization);
     return config;
   },
   (error) => Promise.reject(error)
@@ -24,14 +29,12 @@ axiosInstance.interceptors.response.use(
   (error) => {
     // Check if error is due to token expiry or unauthorized access
     if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token is expired or invalid
-      localStorage.removeItem("token");
+      console.log("Authentication failed - token may be expired or invalid");
+      console.log("Error details:", error.response?.data);
       
-      // Don't redirect automatically - let the protected route handle this
-      // This avoids refresh loops when authentication fails
-      
-      // Instead, let the AuthContext handle redirection through its protection mechanism
-      console.log("Authentication failed - token may be expired");
+      // Clear localStorage tokens on auth failure
+      localStorage.removeItem("homeYatraToken");
+      localStorage.removeItem("homeYatraUser");
     }
     
     return Promise.reject(error);
