@@ -319,24 +319,14 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Send the ID to the API
-      const response = await fetch(
-        `${BASE_URL}/api/Account/DeleteProperty?propertyId=${id}`,
-        {
-          method: "DELETE",
-        }
+     // Send the ID to the API using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeleteProperty?propertyId=${id}`
       );
 
-      console.log("Delete response status:", response.status);
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete property with ID: ${id}`);
-      }
-
-      const result = await response.json();
-      console.log("Delete API response:", result);
-
-      if (result.statusCode === 200) {
+      console.log("Delete response:", response.data);
+      
+      if (response.data.statusCode === 200) {
         // Update the UI by removing the deleted property
         setProperties((prev) => prev.filter((prop) => prop.propertyId !== id));
         toast({
@@ -344,7 +334,7 @@ const Dashboard = () => {
           description: "The property has been removed successfully.",
         });
       } else {
-        throw new Error(result.message || "Failed to delete property");
+        throw new Error(response.data.message || "Failed to delete property");
       }
     } catch (error) {
       console.error("Error deleting property:", error);

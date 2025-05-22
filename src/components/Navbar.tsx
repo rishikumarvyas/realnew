@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Button } from "@/components/ui/button";
 import NotificationIcon from "@/components/NotificationIcon";
 import {
@@ -16,7 +16,6 @@ import {
   LogOut,
   PlusCircle,
   Home,
-  Building,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -33,6 +32,7 @@ export function Navbar() {
   } = useAuth();
   
   const location = useLocation();
+  const navigate = useNavigate(); // Use navigate instead of window.location
 
   const handleLogout = () => {
     logout();
@@ -47,6 +47,14 @@ export function Navbar() {
 
   const handleSignupClick = () => {
     openSignupModal();
+    setIsOpen(false); // Close mobile menu if open
+  };
+
+  // New function to handle proper navigation to post-property
+  const handlePostPropertyClick = () => {
+    if (location.pathname !== "/post-property") {
+      navigate("/post-property"); // Use React Router's navigate
+    }
     setIsOpen(false); // Close mobile menu if open
   };
 
@@ -90,6 +98,18 @@ export function Navbar() {
                 Rent
               </Link>
               <Link
+                to="/properties?type=plot"
+                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+              >
+                Plot
+              </Link>
+              <Link
+                to="/properties?type=commercial"
+                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+              >
+               Commercial
+              </Link>
+              <Link
                 to="/contactus"
                 className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
               >
@@ -103,7 +123,7 @@ export function Navbar() {
               <div className="flex items-center space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => location.pathname !== "/post-property" && window.location.assign("/post-property")}
+                  onClick={handlePostPropertyClick} // Use the new handler
                   className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full"
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
@@ -126,7 +146,7 @@ export function Navbar() {
                     <div className="px-2 py-2 font-medium text-gray-700">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-500" />
-                        {user?.phone}
+                        {user?.name}
                       </div>
                     </div>
                     <DropdownMenuSeparator />
@@ -139,12 +159,7 @@ export function Navbar() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    {/* <DropdownMenuItem asChild className="hover:bg-blue-50">
-                      <Link to="/my-properties" className="cursor-pointer flex items-center py-1">
-                        <Building className="mr-2 h-4 w-4 text-blue-500" />
-                        My Properties
-                      </Link>
-                    </DropdownMenuItem> */}
+                
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleLogout}
@@ -209,6 +224,20 @@ export function Navbar() {
             Rent
           </Link>
           <Link
+            to="/properties?type=plot"
+            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
+            onClick={() => setIsOpen(false)}
+          >
+           Plot
+          </Link>
+          <Link
+            to="/properties?type=commercial"
+            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
+            onClick={() => setIsOpen(false)}
+          >
+          Commercial
+          </Link>
+          <Link
             to="/contactus"
             className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
             onClick={() => setIsOpen(false)}
@@ -218,14 +247,14 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <div className="border-t border-gray-200"></div>
-              <Link
-                to="/post-property"
-                className="block px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
-                onClick={() => setIsOpen(false)}
+              {/* Use button with navigate for Post Property mobile view */}
+              <button
+                className="block w-full text-left px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
+                onClick={handlePostPropertyClick}
               >
                 <PlusCircle className="inline h-4 w-4 mr-2" />
                 Post Property
-              </Link>
+              </button>
               <Link
                 to="/dashboard"
                 className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
@@ -234,14 +263,7 @@ export function Navbar() {
                 <Home className="inline h-4 w-4 mr-2" />
                 Dashboard
               </Link>
-              <Link
-                to="/my-properties"
-                className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
-                onClick={() => setIsOpen(false)}
-              >
-                <Building className="inline h-4 w-4 mr-2" />
-                My Properties
-              </Link>
+          
               <div
                 className="block px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 cursor-pointer border-l-4 border-transparent hover:border-red-500"
                 onClick={() => {
