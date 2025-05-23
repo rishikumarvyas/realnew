@@ -1,10 +1,7 @@
-
-
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -13,7 +10,6 @@ import {
   FilterX, 
   Loader2, 
   Home, 
-  DollarSign, 
   IndianRupeeIcon,
   Calendar, 
   Users, 
@@ -36,7 +32,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import axiosInstance from "../axiosCalls/axiosInstance";
+
 // API interfaces
 interface ApiResponse {
   statusCode: number;
@@ -59,6 +55,9 @@ interface ApiProperty {
   preferenceId?: number; // Tenant preference ID
   amenities?: string[]; // Array of amenity strings
   furnished?: string; // "Fully", "Semi", "Not" furnished status
+  likes?: number; 
+  isLike?: boolean; 
+  propertyType?: string;
 }
 
 // Filter options interface
@@ -73,7 +72,6 @@ interface FilterOptions {
   maxArea: number;
   availableFrom?: string;
   preferenceId?: string;
-  superCategoryId?: number;
   furnished?: string;
   amenities?: string[];
 }
@@ -101,7 +99,17 @@ const amenityOptions = [
   "Security", "Garden", "Club House", "WiFi", "Gas Pipeline"
 ];
 
-const PropertyListing = () => {
+// Property type mapping - Added to help debugging
+const propertyTypeMapping = {
+  "plot": { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
+  "commercial": { superCategoryId: 1, propertyTypeIds: [2, 7], label: "Commercial" },
+  "shop": { superCategoryId: 1, propertyTypeIds: [2], label: "Shop" },
+  "buy": { superCategoryId: 1, propertyFor: 1, label: "Buy" },
+  "rent": { superCategoryId: 2, propertyFor: 2, label: "Rent" },
+  "all": { superCategoryId: 0, label: "All Properties" }
+};
+
+export const PropertyListing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
@@ -117,22 +125,82 @@ const PropertyListing = () => {
   
   // Basic search and filter states
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [priceRange, setPriceRange] = useState([0, 20000000]);
   const [minBedrooms, setMinBedrooms] = useState(0);
   const [minBathrooms, setMinBathrooms] = useState(0);
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
   
+  // Search suggestions state
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
   // Advanced filter states
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(undefined);
   const [preferenceId, setPreferenceId] = useState<string>("0"); // Default to "Any"
   const [furnished, setFurnished] = useState<string>("any");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   
   // UI state for advanced filters visibility
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
+  // Debug state to show API request/response
+  const [apiDebug, setApiDebug] = useState({
+    request: null,
+    response: null,
+    error: null
+  });
+  
+  // Fetch suggestions from API with debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.trim().length > 1) {
+        axios
+          .get(`https://homeyatraapi.azurewebsites.net/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`)
+          .then((res) => {
+            setSuggestions(res.data);
+            setShowSuggestions(true);
+          })
+          .catch((err) => {
+            console.error("Suggestion error:", err);
+            setSuggestions([]);
+          });
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300); // debounce 300ms
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+  
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchTerm(suggestion);
+    setShowSuggestions(false);
+    
+    // Update search params and trigger search
+    searchParams.set("search", suggestion);
+    setSearchParams(searchParams);
+    setSearchQuery(suggestion);
+    
+    toast({
+      title: "Search Applied",
+      description: `Showing results for "${suggestion}"`,
+    });
+  };
+  
+  // Check if advanced filters should be hidden based on property type
+  const shouldShowAdvancedFilters = () => {
+    return activeTab !== "plot" && activeTab !== "commercial";
+  };
+
+  // Toggle mobile filters
+  const toggleMobileFilters = () => {
+    setMobileFiltersVisible(!mobileFiltersVisible);
+  };
+
   // Initialize from URL params and fetch data
   useEffect(() => {
     // Get parameters from URL
@@ -206,12 +274,12 @@ const PropertyListing = () => {
       const filterOptions: FilterOptions = {
         searchTerm: searchParams.get("search") || "",
         minPrice: parseInt(searchParams.get("minPrice") || "0"),
-        maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
+        maxPrice: parseInt(searchParams.get("maxPrice") || "20000000"),
         minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
         minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
         minBalcony: parseInt(searchParams.get("balcony") || "0"),
         minArea: parseInt(searchParams.get("minArea") || "0"),
-        maxArea: 0,
+        maxArea: 50000,
       };
       
       // Add availability date if present
@@ -238,74 +306,173 @@ const PropertyListing = () => {
         filterOptions.amenities = amenitiesParam.split(',');
       }
       
-      // Map type param to superCategoryId: 0 for all, 1 for buy, 2 for rent, 3 for sell
-      let superCategoryId = 0; // Default to all (0)
-      const typeParam = searchParams.get("type");
-      if (typeParam && typeParam !== "all") {
-        const categoryMap: Record<string, number> = {
-          buy: 1,
-          rent: 2,
-          sell: 3
-        };
-        superCategoryId = categoryMap[typeParam as keyof typeof categoryMap] || 0;
+      // --- FIXED: Tab logic ---
+      const typeParam = activeTab;
+      const typeConfig = propertyTypeMapping[typeParam] || propertyTypeMapping.all;
+      
+      let superCategoryId = typeConfig.superCategoryId;
+      let propertyTypeIds = typeConfig.propertyTypeIds || [];
+      let propertyFor = typeConfig.propertyFor;
+      
+      // For commercial/shop tab, handle both possibilities
+      if (typeParam === "shop") {
+        superCategoryId = 1; // always buy for shops
+        propertyTypeIds = [2]; // shop property type
+      } else if (typeParam === "commercial") {
+        // Include both commercial property types (buy and rent)
+        superCategoryId = 0; // don't filter by superCategory
+        propertyTypeIds = [2, 7]; // both commercial property types
       }
+      
+      // Pagination params
+      let pageSize = -1;
+      let pageNumber = 0;
+      
+      if (typeParam !== "all") {
+        pageSize = 10;
+        pageNumber = parseInt(searchParams.get("page") || "1") - 1; // 0-indexed
+      }
+      // --- END FIXED Tab logic ---
 
-     const response = await axiosInstance.post<ApiResponse>(
-    "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+      // Prepare request payload
+      const requestPayload = {
+        superCategoryId,
+        propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
+        propertyFor,
+        accountId: "string", // Replace with actual accountId if available
+        searchTerm: filterOptions.searchTerm,
+        minPrice: filterOptions.minPrice,
+        maxPrice: filterOptions.maxPrice,
+        bedroom: filterOptions.minBedrooms,
+        bathroom: filterOptions.minBathrooms,
+        balcony: filterOptions.minBalcony,
+        minArea: filterOptions.minArea,
+        maxArea: filterOptions.maxArea,
+        availableFrom: filterOptions.availableFrom,
+        preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
+        furnished: filterOptions.furnished,
+        amenities: filterOptions.amenities,
+        pageNumber,
+        pageSize,
+      };
+      
+      // For debugging
+      setApiDebug(prev => ({ ...prev, request: requestPayload }));
 
-        {
-          superCategoryId: superCategoryId, // 0 for all, 1 for buy, 2 for rent, 3 for sell
-          accountId: "string", // Replace with actual accountId if available
-          searchTerm: filterOptions.searchTerm,
-          minPrice: filterOptions.minPrice,
-          maxPrice: filterOptions.maxPrice,
-          bedroom: filterOptions.minBedrooms,
-          bathroom: filterOptions.minBathrooms,
-          balcony: filterOptions.minBalcony,
-          minArea: filterOptions.minArea,
-          maxArea: filterOptions.maxArea,
-          availableFrom: filterOptions.availableFrom,
-          preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
-          furnished: filterOptions.furnished,
-          amenities: filterOptions.amenities,
-          pageNumber: 0, // No pagination
-          pageSize: -1, // Get all properties
-        },
+      const response = await axios.post<ApiResponse>(
+        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+        requestPayload,
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
+      
+      // For debugging
+      setApiDebug(prev => ({ ...prev, response: response.data }));
 
-      // Transform API data to our property format
-      const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => ({
-        id: prop.propertyId,
-        title: prop.title,
-        price: prop.price,
-        location: prop.city,
-        type: prop.superCategory.toLowerCase() as "buy" | "sell" | "rent",
-        bedrooms: prop.bedroom,
-        bathrooms: prop.bathroom,
-        balcony: prop.balcony,
-        area: prop.area,
-        image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
-        availableFrom: prop.availableFrom,
-        preferenceId: prop.preferenceId,
-        amenities: prop.amenities,
-        furnished: prop.furnished
-      }));
+      // FIXED: Transform API data to our property format with correct mapping
+      const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => {
+        // Determine the correct type based on superCategory and propertyType
+        let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
+        
+        // Convert superCategory to lowercase for comparison
+        const superCategoryLower = prop.superCategory?.toLowerCase() || "";
+        const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
+        
+        // Properly map the API response to our property types
+        if (propertyTypeLower.includes("plot") || propertyTypeLower.includes("land")) {
+          type = "plot";
+        } else if (propertyTypeLower.includes("commercial") || propertyTypeLower.includes("shop") || 
+                   propertyTypeLower.includes("office")) {
+          type = "commercial";
+        } else if (superCategoryLower.includes("rent")) {
+          type = "rent";
+        } else if (superCategoryLower.includes("sell") || superCategoryLower.includes("buy")) {
+          type = "buy";
+        }
+        
+        return {
+          id: prop.propertyId,
+          title: prop.title,
+          price: prop.price,
+          location: prop.city,
+          type: type, // Using our revised type determination
+          bedrooms: prop.bedroom,
+          bathrooms: prop.bathroom,
+          balcony: prop.balcony,
+          area: prop.area,
+          image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
+          availableFrom: prop.availableFrom,
+          preferenceId: prop.preferenceId,
+          amenities: prop.amenities,
+          furnished: prop.furnished,
+          likes: prop.likes ?? 0,
+          isLike: prop.isLike ?? false,
+          propertyType: prop.propertyType,
+          status: prop.superCategory,
+        };
+      });
 
       setProperties(transformedData);
-      applyFilters(transformedData);
+      
+      // FIXED: Client-side filtering logic
+      let filtered = transformedData;
+      
+      // If activeTab is 'plot' or 'commercial', make sure we show all related properties
+      if (activeTab === "plot") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "plot" || 
+          (prop.propertyType?.toLowerCase() || "").includes("plot") ||
+          (prop.propertyType?.toLowerCase() || "").includes("land")
+        );
+      } else if (activeTab === "commercial" || activeTab === "shop") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "commercial" || 
+          (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
+          (prop.propertyType?.toLowerCase() || "").includes("shop") ||
+          (prop.propertyType?.toLowerCase() || "").includes("office")
+        );
+      } else {
+        applyFilters(transformedData);
+        return; // No need to continue, regular applyFilters will handle it
+      }
+      
+      // Apply remaining filters to our specialized property types
+      filtered = filtered.filter(property => {
+        // Filter by search query
+        if (
+          searchQuery &&
+          !property.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !property.location.toLowerCase().includes(searchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+        
+        // Filter by price range
+        if (property.price < priceRange[0] || property.price > priceRange[1]) {
+          return false;
+        }
+        
+        // Filter by area
+        if (property.area < minArea) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      setFilteredProperties(filtered);
       
       toast({
         title: "Properties Loaded",
-        description: `Found ${transformedData.length} properties matching your criteria.`,
+        description: `Found ${filtered.length} properties matching your criteria.`,
       });
     } catch (err) {
       console.error("Failed to fetch properties:", err);
       setError("Unable to load properties. Please try again later.");
+      setApiDebug(prev => ({ ...prev, error: err }));
       
       toast({
         variant: "destructive",
@@ -319,6 +486,29 @@ const PropertyListing = () => {
       setLoading(false);
     }
   };
+
+  // Property card interface
+  interface PropertyCardProps {
+    id: string;
+    title: string;
+    price: number;
+    location: string;
+    type: "buy" | "sell" | "rent" | "plot" | "commercial";
+    bedrooms: number;
+    bathrooms: number;
+    balcony?: number;
+    area: number;
+    image: string;
+    availableFrom?: string;
+    preferenceId?: number;
+    amenities?: string[];
+    furnished?: string;
+    likes?: number;
+    isLike?: boolean;
+    propertyType?: string;
+    status?: string;
+    formattedPrice?: string;
+  }
 
   // Enhanced mock data for fallback or development
   const useMockData = () => {
@@ -367,81 +557,50 @@ const PropertyListing = () => {
         amenities: ["WiFi", "Power Backup"],
         furnished: "Semi"
       },
+      // Added mock plot and commercial properties
       {
-        id: "prop4",
-        title: "Spacious 2BHK Apartment",
-        price: 5600000,
-        location: "Powai, Mumbai",
-        type: "buy",
-        bedrooms: 2,
-        bathrooms: 2,
-        balcony: 1,
-        area: 1050,
-        image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80",
-        amenities: ["Parking", "Security"],
-        furnished: "Semi"
+        id: "prop9",
+        title: "Residential Plot in Prime Location",
+        price: 3500000,
+        location: "Electronic City, Bangalore",
+        type: "plot",
+        bedrooms: 0,
+        bathrooms: 0,
+        balcony: 0,
+        area: 2400,
+        image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
+        amenities: ["Power Backup"],
+        propertyType: "Plot/Land"
       },
       {
-        id: "prop5",
-        title: "Elegant 3BHK Villa",
-        price: 48000,
-        location: "Whitefield, Bangalore",
-        type: "rent",
-        bedrooms: 3,
-        bathrooms: 3,
-        balcony: 2,
+        id: "prop10",
+        title: "Commercial Office Space",
+        price: 85000,
+        location: "Connaught Place, Delhi",
+        type: "commercial",
+        bedrooms: 0,
+        bathrooms: 2,
+        balcony: 0,
         area: 1800,
-        image: "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80",
-        availableFrom: "2025-06-01T00:00:00",
-        preferenceId: 1, // Family
-        amenities: ["Garden", "Parking", "Security"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop6",
-        title: "Commercial Space",
-        price: 9500000,
-        location: "Andheri, Mumbai",
-        type: "sell",
-        bedrooms: 0,
-        bathrooms: 2,
-        balcony: 0,
-        area: 2500,
-        image: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup", "Parking"],
-        furnished: "Not"
-      },
-      {
-        id: "prop7",
-        title: "Cozy 1BHK for Rent",
-        price: 22000,
-        location: "HSR Layout, Bangalore",
-        type: "rent",
-        bedrooms: 1,
-        bathrooms: 1,
-        balcony: 1,
-        area: 750,
-        image: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&q=80",
-        availableFrom: "2025-05-10T00:00:00",
-        preferenceId: 2, // Bachelor
-        amenities: ["WiFi", "Power Backup", "Parking"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop8",
-        title: "Corporate Office Space",
-        price: 65000,
-        location: "Cyber City, Gurgaon",
-        type: "rent",
-        bedrooms: 0,
-        bathrooms: 3,
-        balcony: 0,
-        area: 3200,
-        image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80",
-        availableFrom: "2025-07-01T00:00:00",
-        preferenceId: 3, // Company
+        image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
         amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully"
+        furnished: "Fully",
+        propertyType: "Commercial Office"
+      },
+      {
+        id: "prop11",
+        title: "Retail Shop in Mall",
+        price: 120000,
+        location: "Saket, Delhi",
+        type: "commercial",
+        bedrooms: 0,
+        bathrooms: 1,
+        balcony: 0,
+        area: 850,
+        image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
+        amenities: ["Security", "Power Backup"],
+        furnished: "Not",
+        propertyType: "Shop"
       }
     ];
     
@@ -451,12 +610,29 @@ const PropertyListing = () => {
 
   // Apply client-side filters
   const applyFilters = (data: PropertyCardProps[]) => {
-    const filtered = data.filter((property) => {
-      // Filter by tab/type
-      if (activeTab !== "all" && property.type !== activeTab) {
-        return false;
+    // FIXED: Filter by tab/type (special handling for plot and commercial)
+    let filtered = data;
+    if (activeTab !== "all") {
+      if (activeTab === "plot") {
+        filtered = data.filter(property => 
+          property.type === "plot" || 
+          (property.propertyType?.toLowerCase() || "").includes("plot") ||
+          (property.propertyType?.toLowerCase() || "").includes("land")
+        );
+      } else if (activeTab === "commercial" || activeTab === "shop") {
+        filtered = data.filter(property => 
+          property.type === "commercial" || 
+          (property.propertyType?.toLowerCase() || "").includes("commercial") ||
+          (property.propertyType?.toLowerCase() || "").includes("shop") ||
+          (property.propertyType?.toLowerCase() || "").includes("office")
+        );
+      } else {
+        filtered = data.filter(property => property.type === activeTab);
       }
-      
+    }
+    
+    // Apply remaining filters
+    filtered = filtered.filter((property) => {
       // Filter by search query
       if (
         searchQuery &&
@@ -471,49 +647,55 @@ const PropertyListing = () => {
         return false;
       }
       
-      // Filter by bedrooms
-      if (property.bedrooms < minBedrooms) {
-        return false;
-      }
-      
-      // Filter by bathrooms
-      if (property.bathrooms < minBathrooms) {
-        return false;
-      }
+      // Only apply bedroom/bathroom filters for residential properties
+      if (property.type !== "plot" && property.type !== "commercial") {
+        // Filter by bedrooms
+        if (property.bedrooms < minBedrooms) {
+          return false;
+        }
+        
+        // Filter by bathrooms
+        if (property.bathrooms < minBathrooms) {
+          return false;
+        }
 
-      // Filter by balcony
-      if (property.balcony < minBalcony) {
-        return false;
-      }
-      
-      // Filter by area
-      if (property.area < minArea) {
-        return false;
-      }
-      
-      // Filter by availability date
-      if (availableFrom && property.availableFrom) {
-        const propertyDate = new Date(property.availableFrom);
-        if (propertyDate > availableFrom) {
+        // Filter by balcony
+        if (property.balcony < minBalcony) {
           return false;
         }
       }
       
-      // Filter by preference
-      if (preferenceId !== "0" && property.preferenceId !== parseInt(preferenceId)) {
+      // Filter by area (applicable to all property types)
+      if (property.area < minArea) {
         return false;
       }
-
-      // Filter by furnished status
-      if (furnished !== "any" && property.furnished?.toLowerCase() !== furnished) {
-        return false;
-      }
-
-      // Filter by amenities
-      if (selectedAmenities.length > 0 && property.amenities) {
-        for (const amenity of selectedAmenities) {
-          if (!property.amenities.includes(amenity)) {
+      
+      // Only apply these filters for residential properties
+      if (property.type !== "plot" && property.type !== "commercial") {
+        // Filter by availability date
+        if (availableFrom && property.availableFrom) {
+          const propertyDate = new Date(property.availableFrom);
+          if (propertyDate > availableFrom) {
             return false;
+          }
+        }
+        
+        // Filter by preference
+        if (preferenceId !== "0" && property.preferenceId !== parseInt(preferenceId)) {
+          return false;
+        }
+
+        // Filter by furnished status
+        if (furnished !== "any" && property.furnished?.toLowerCase() !== furnished) {
+          return false;
+        }
+
+        // Filter by amenities
+        if (selectedAmenities.length > 0 && property.amenities) {
+          for (const amenity of selectedAmenities) {
+            if (!property.amenities.includes(amenity)) {
+              return false;
+            }
           }
         }
       }
@@ -546,6 +728,11 @@ const PropertyListing = () => {
   // Handle tab change and update URL
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    
+    // Hide advanced filters if plot or commercial is selected
+    if (value === "plot" || value === "commercial") {
+      setShowAdvancedFilters(false);
+    }
     
     if (value !== "all") {
       searchParams.set("type", value);
@@ -707,62 +894,89 @@ const PropertyListing = () => {
     return `₹${price.toLocaleString()}`;
   };
 
-  // Check if property type allows availability filter
-  const showAvailabilityFilter = () => {
-    return activeTab === "buy" || activeTab === "rent" || activeTab === "all";
-  };
-
-  // Toggle mobile filters
-  const toggleMobileFilters = () => {
-    setMobileFiltersVisible(!mobileFiltersVisible);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">Find Your Dream Property</h1>
-            <p className="text-xl opacity-90 mb-10">
-              Discover the perfect home that fits your lifestyle and budget from our extensive listings
-            </p>
-            
-            <form onSubmit={handleSearch} className="relative mx-auto max-w-2xl">
-              <div className="relative flex shadow-xl rounded-full overflow-hidden">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-600" />
-                </div>
-                <Input
-                  type="text"
-                  className="block w-full rounded-l-full pl-12 py-6 bg-white text-gray-800 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Search by location, property name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Button 
-                  type="submit" 
-                  className="rounded-r-full bg-blue-500 hover:bg-blue-600 px-8 py-6 text-base font-medium"
-                  size="lg"
-                >
-                  Search
-                </Button>
-              </div>
-            </form>
+      <div className="relative">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+          }}
+        />
+        
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black opacity-50"></div>
+        
+        {/* Content */}
+        <div className="relative py-20 px-4">
+          <div className="max-w-3xl mx-auto bg-transparent-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
+              
+              <form onSubmit={handleSearch} className="relative mx-auto max-w-2xl">
+                <div className="relative flex shadow-xl rounded-full overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <Input
+                                  type="text"
+                                  className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                                  placeholder="Search Society, Locality, City, State"
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  onFocus={() => setShowSuggestions(true)}
+                                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} // delay to allow click
+                                />
+                                <Button
+                                  type="submit"
+                                  className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-r-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+                                >
+                                  Search
+                                </Button>
+                              </div>
+                  
+                              {showSuggestions && suggestions.length > 0 && (
+                                <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
+                                  {suggestions.map((suggestion, index) => (
+                                    <li
+                                      key={index}
+                                      onMouseDown={() => handleSuggestionClick(suggestion)}
+                                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                                    >
+                                      {suggestion}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+              </form>
+            </div>
           </div>
         </div>
       </div>
-      
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Tab filter */}
-        <div className="mb-6">
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 h-14">
-              <TabsTrigger value="all" className="text-base">All Properties</TabsTrigger>
-              <TabsTrigger value="buy" className="text-base">Buy</TabsTrigger>
-              <TabsTrigger value="rent" className="text-base">Rent</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="mb-8">
+          <div className="w-full max-w-2xl mx-auto bg-blue-700 bg-opacity-40 rounded-lg p-2">
+            <div className="grid grid-cols-5 gap-1 w-full">
+              {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`py-3 px-1 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
+                    activeTab === tab 
+                      ? "bg-white text-blue-600 shadow-md" 
+                      : "text-white hover:bg-blue-500"
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === "all" ? " Properties" : ""}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         
         {/* Mobile filter toggle button - only visible on mobile */}
@@ -899,19 +1113,21 @@ const PropertyListing = () => {
                   </div>
                   
                   <div className="space-y-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
-                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    >
-                      {showAdvancedFilters ? (
-                        <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
-                      ) : (
-                        <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
-                      )}
-                    </Button>
+                    {shouldShowAdvancedFilters() && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      >
+                        {showAdvancedFilters ? (
+                          <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
+                        ) : (
+                          <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
+                        )}
+                      </Button>
+                    )}
                     
                     <Button 
                       variant="outline" 
@@ -927,13 +1143,13 @@ const PropertyListing = () => {
             </Card>
 
             {/* Advanced filters */}
-            {showAdvancedFilters && (
+            {showAdvancedFilters && shouldShowAdvancedFilters() && (
               <Card className="shadow-md">
                 <CardContent className="p-6">
                   <h3 className="font-medium text-lg mb-4 text-blue-800">Advanced Filters</h3>
                   <Accordion type="single" collapsible className="w-full">
-                    {/* Only show availability filter for Buy and Rent property types */}
-                    {(activeTab === "buy" || activeTab === "rent" || activeTab === "all") && (
+                    {/* Only show availability filter for rent property type */}
+                    {(activeTab === "rent" || (activeTab === "all")) && (
                       <AccordionItem value="availability" className="border-b border-blue-100">
                         <AccordionTrigger className="py-3 hover:no-underline">
                           <div className="flex items-center gap-2">
@@ -954,36 +1170,38 @@ const PropertyListing = () => {
                       </AccordionItem>
                     )}
 
-                    {/* Show tenant preference for all property types */}
-                    <AccordionItem value="preference" className="border-b border-blue-100">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-blue-600" />
-                          <span>Tenant Preference</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-2 pb-4">
-                          <Select
-                            value={preferenceId}
-                            onValueChange={handlePreferenceChange}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select preference" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {preferenceOptions.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
+                    {/* Only show tenant preference for rent property type */}
+                    {(activeTab === "rent" || (activeTab === "all")) && (
+                      <AccordionItem value="preference" className="border-b border-blue-100">
+                        <AccordionTrigger className="py-3 hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-blue-600" />
+                            <span>Tenant Preference</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pt-2 pb-4">
+                            <Select
+                              value={preferenceId}
+                              onValueChange={handlePreferenceChange}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select preference" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {preferenceOptions.map((option) => (
+                                  <SelectItem key={option.id} value={option.id}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
 
-                    {/* Show furnished status for all property types */}
+                    {/* Show furnished status for all property types except plot and commercial */}
                     <AccordionItem value="furnished" className="border-b border-blue-100">
                       <AccordionTrigger className="py-3 hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -1012,7 +1230,7 @@ const PropertyListing = () => {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Show amenities for all property types */}
+                    {/* Show amenities for all property types except plot and commercial */}
                     <AccordionItem value="amenities" className="border-b-0">
                       <AccordionTrigger className="py-3 hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -1278,8 +1496,8 @@ const PropertyListing = () => {
               ) : (
                 filteredProperties.map((property) => (
                   <PropertyCard
-                    key={property.id}
-                    {...property}
+                    key={property.id} 
+                    {...property} 
                     formattedPrice={formatPrice(property.price, property.type)}
                   />
                 ))
