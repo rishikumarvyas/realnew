@@ -37,6 +37,7 @@ import {
   Security,
   Elevator,
 } from "@/components/icons/CustomIcons";
+import { getAmenity } from "@/utils/UtilityFunctions";
 
 const EditProperty = () => {
   const { propertyId } = useParams();
@@ -66,23 +67,18 @@ const EditProperty = () => {
     bathroom: "",
     balcony: "",
     area: "",
-    amenities: {
-      parking: false,
-      gym: false,
-      garden: false,
-      pool: false,
-      security: false,
-      elevator: false,
-    },
     propertyId: "",
     images: [],
     mainImageUrl: "",
   });
-
+  const [selectedCheckboxes, setSelectedCheckboxes] = useState([]);
+  const [selectedRadio, setSelectedRadio] = useState("");
   const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   // Track which field is being edited
   const [activeField, setActiveField] = useState<string | null>(null);
+  const checkBoxAmenities: Amenity[] = getAmenity().checkBoxAmenities;
+  const radioAmenities: Amenity[] = getAmenity().radioButtonAmenities;
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -103,41 +99,30 @@ const EditProperty = () => {
         const response = await axiosInstance.get(
           `/api/Account/GetPropertyDetails?propertyId=${propertyId}`
         );
+        if (
+          response?.data?.statusCode === 200 &&
+          response?.data?.propertyDetail
+        ) {
+          const property = response?.data?.propertyDetail;
 
-        if (response.status === 200 && response.data.propertyDetail) {
-          const property = response.data.propertyDetail;
-
-          // Parse amenities from amenityDetails array
-          let parsedAmenities = {
-            parking: false,
-            gym: false,
-            garden: false,
-            pool: false,
-            security: false,
-            elevator: false,
-          };
-
-          try {
-            if (
-              property.amenityDetails &&
-              Array.isArray(property.amenityDetails)
-            ) {
-              property.amenityDetails.forEach((amenity: any) => {
-                const amenityName = amenity.amenity.toLowerCase();
-                if (amenityName.includes("parking"))
-                  parsedAmenities.parking = true;
-                if (amenityName.includes("gym")) parsedAmenities.gym = true;
-                if (amenityName.includes("garden"))
-                  parsedAmenities.garden = true;
-                if (amenityName.includes("pool")) parsedAmenities.pool = true;
-                if (amenityName.includes("security"))
-                  parsedAmenities.security = true;
-                if (amenityName.includes("elevator"))
-                  parsedAmenities.elevator = true;
-              });
-            }
-          } catch (e) {
-            console.error("Error parsing amenities:", e);
+          if (
+            property?.amenityDetails &&
+            Array.isArray(property?.amenityDetails) &&
+            property?.amenityDetails.length > 0
+          ) {
+            const prevSelectedIds = property?.amenityDetails?.map(
+              (item) => item?.amenityId
+            );
+            setSelectedCheckboxes(
+              prevSelectedIds?.filter((id) =>
+                checkBoxAmenities?.some((amenity) => amenity?.id === id)
+              )
+            );
+            setSelectedRadio(
+              prevSelectedIds?.find((id) =>
+                radioAmenities?.some((amenity) => amenity?.id === id)
+              ) || ""
+            );
           }
 
           // Find main image URL
@@ -167,7 +152,6 @@ const EditProperty = () => {
             bathroom: property.bathroom?.toString() || "",
             balcony: property.balcony?.toString() || "",
             area: property.area?.toString() || "",
-            amenities: parsedAmenities,
             propertyId: property.propertyId || propertyId,
             images: property.imageDetails || [],
             mainImageUrl: mainImageUrl,
@@ -183,47 +167,6 @@ const EditProperty = () => {
             "Failed to load property details. Please try again later.",
           variant: "destructive",
         });
-
-        // Set mock data for testing when API fails
-        setFormData({
-          title: "Sample Property Title",
-          description:
-            "This is a sample property description for testing when the API is unavailable.",
-          price: "25000",
-          address: "123 Test Street",
-          city: "Mumbai",
-          cityId: "1",
-          state: "Maharashtra",
-          stateId: "1",
-          superCategory: "rent",
-          superCategoryId: "1",
-          propertyType: "Apartment",
-          propertyTypeId: "1",
-          userTypeId: "1",
-          bedroom: "3",
-          bathroom: "2",
-          balcony: "1",
-          area: "1500",
-          amenities: {
-            parking: true,
-            gym: false,
-            garden: true,
-            pool: false,
-            security: true,
-            elevator: false,
-          },
-          propertyId: propertyId || "",
-          images: [
-            {
-              imageId: "sample-id",
-              imageUrl:
-                "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-              isMainImage: true,
-            },
-          ],
-          mainImageUrl:
-            "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-        });
       } finally {
         setLoading(false);
       }
@@ -231,6 +174,17 @@ const EditProperty = () => {
 
     fetchPropertyDetails();
   }, [propertyId, toast, navigate]);
+
+  // Handle checkbox Amenity selection
+  const handleCheckboxChange = (id) => {
+    setSelectedCheckboxes((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+  // Handle radio button Amenity selection
+  const handleRadioChange = (id) => {
+    setSelectedRadio(id);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -246,16 +200,6 @@ const EditProperty = () => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }));
-  };
-
-  const handleAmenityToggle = (amenity: keyof typeof formData.amenities) => {
-    setFormData((prev) => ({
-      ...prev,
-      amenities: {
-        ...prev.amenities,
-        [amenity]: !prev.amenities[amenity],
-      },
     }));
   };
 
@@ -295,10 +239,6 @@ const EditProperty = () => {
         elevator: "6",
       };
 
-      const amenityIds = Object.entries(formData.amenities)
-        .filter(([_, selected]) => selected)
-        .map(([name, _]) => amenityMap[name] || name);
-
       // Create FormData object for the multipart/form-data request
       const formDataObj = new FormData();
       formDataObj.append("PropertyId", formData.propertyId);
@@ -318,10 +258,13 @@ const EditProperty = () => {
       formDataObj.append("MainImageUrl", formData.mainImageUrl);
 
       // Add amenity IDs
-      amenityIds.forEach((id) => {
+      const finalAmenityIds =
+        selectedRadio === ""
+          ? selectedCheckboxes
+          : [...selectedCheckboxes, selectedRadio];
+      finalAmenityIds.forEach((id) => {
         formDataObj.append("AmenityIds", id);
       });
-
       // Add new images if any
       newImages.forEach((file, index) => {
         formDataObj.append(`NewImages[${index}].File`, file);
@@ -330,8 +273,6 @@ const EditProperty = () => {
           mainImageIndex === index ? "true" : "false"
         );
       });
-
-      console.log("Sending update request...");
 
       // Use axiosInstance instead of direct axios call
       const response = await axiosInstance.post(
@@ -652,92 +593,57 @@ const EditProperty = () => {
                   <h3 className="font-medium text-blue-800 flex items-center">
                     <CheckCircle className="h-4 w-4 mr-2" /> Amenities
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="parking"
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                        checked={formData.amenities.parking}
-                        onChange={() => handleAmenityToggle("parking")}
-                      />
-                      <Label
-                        htmlFor="parking"
-                        className="text-sm cursor-pointer"
-                      >
-                        Parking
-                      </Label>
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                      {checkBoxAmenities.map(({ id, amenity }) => (
+                        <div
+                          key={id}
+                          className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                            selectedCheckboxes.includes(id)
+                              ? "bg-blue-100 border-2 border-blue-300"
+                              : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                          }`}
+                          onClick={() => handleCheckboxChange(id)}
+                        >
+                          <input
+                            type="checkbox"
+                            id={id}
+                            checked={selectedCheckboxes.includes(id)}
+                            onChange={() => {}}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                          />
+                          <Label
+                            htmlFor={amenity}
+                            className="cursor-pointer text-sm"
+                          >
+                            {amenity}
+                          </Label>
+                        </div>
+                      ))}
+                      {radioAmenities.map(({ id, amenity }) => (
+                        <div
+                          className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                            selectedRadio.includes(id)
+                              ? "bg-blue-100 border-2 border-blue-300"
+                              : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                          }`}
+                        >
+                          <label key={id}>
+                            <input
+                              type="radio"
+                              name="furnishing"
+                              value={id}
+                              checked={selectedRadio === id}
+                              onChange={() => handleRadioChange(id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                            />
+                            {amenity}
+                            <br />
+                          </label>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="gym"
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                        checked={formData.amenities.gym}
-                        onChange={() => handleAmenityToggle("gym")}
-                      />
-                      <Label htmlFor="gym" className="text-sm cursor-pointer">
-                        Gym
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="garden"
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                        checked={formData.amenities.garden}
-                        onChange={() => handleAmenityToggle("garden")}
-                      />
-                      <Label
-                        htmlFor="garden"
-                        className="text-sm cursor-pointer"
-                      >
-                        Garden
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="pool"
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                        checked={formData.amenities.pool}
-                        onChange={() => handleAmenityToggle("pool")}
-                      />
-                      <Label htmlFor="pool" className="text-sm cursor-pointer">
-                        Swimming Pool
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="security"
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                        checked={formData.amenities.security}
-                        onChange={() => handleAmenityToggle("security")}
-                      />
-                      <Label
-                        htmlFor="security"
-                        className="text-sm cursor-pointer"
-                      >
-                        Security
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="elevator"
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                        checked={formData.amenities.elevator}
-                        onChange={() => handleAmenityToggle("elevator")}
-                      />
-                      <Label
-                        htmlFor="elevator"
-                        className="text-sm cursor-pointer"
-                      >
-                        Elevator
-                      </Label>
-                    </div>
-                  </div>
+                  </CardContent>
                 </div>
               </CardContent>
             </Card>
