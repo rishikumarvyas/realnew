@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "clean": "rm -rf node_module"
+    "clean": "rm -rf node_modules"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
