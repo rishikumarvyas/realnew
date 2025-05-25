@@ -1,8 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   PlusCircle,
   Edit,
@@ -13,10 +23,13 @@ import {
   MessageSquare,
   Settings,
   ThumbsUp,
+  PowerOff,
+  Check
 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import axiosInstance from "../axiosCalls/axiosInstance";
+
 interface PropertyCardProps {
   id: string;
   title: string;
@@ -136,6 +149,7 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
     status: property.status || "active",
   };
 };
+
 const mockMessages = [
   {
     id: "msg1",
@@ -198,12 +212,18 @@ const Dashboard = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
   const [likeCount, setLikeCount] = useState<number>(0); // New state for like count
-  const { user } = useAuth();
+  const { user, logout, updateUser } = useAuth(); // Make sure to destructure updateUser here
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Add new state for confirmation dialogs
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
+  const [accountIsActive, setAccountIsActive] = useState<boolean>(true);
 
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
+  const userId = user?.userId || "2d366c8f-08dd-4916-8033-b3c7454b5ba4"; // Use the provided userId as fallback
 
   const getNewPropertyIdFromQuery = () => {
     const params = new URLSearchParams(location.search);
@@ -218,11 +238,14 @@ const Dashboard = () => {
     if (user?.name) {
       setUserName(user.name);
     }
+    if (user?.isActive !== undefined) {
+      setAccountIsActive(user.isActive);
+    }
   }, [user]);
 
   useEffect(() => {
     const fetchUserProperties = async () => {
-      if (!user?.userId) {
+      if (!userId) {
         setLoading(false);
         return;
       }
@@ -235,7 +258,7 @@ const Dashboard = () => {
           const response = await axiosInstance.get(
             `/api/Account/GetUserDetails`,
             {
-              params: { userId: user.userId }, // Pass query parameters correctly
+              params: { userId: user?.userId }, // Pass query parameters correctly
             }
           );
 
@@ -254,6 +277,13 @@ const Dashboard = () => {
           // Set the like count from API response
           if (data.likedCount !== undefined) {
             setLikeCount(data.likedCount);
+          }
+          // Set account active status if available
+          if (data.isActive !== undefined) {
+            setAccountIsActive(data.isActive);
+            if (updateUser) {
+              updateUser({ isActive: data.isActive });
+            }
           }
 
           if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
@@ -299,8 +329,114 @@ const Dashboard = () => {
     };
 
     fetchUserProperties();
-  }, [user?.userId, toast, newPropertyId, location.search]);
+  }, [userId, toast, newPropertyId, location.search, updateUser, user?.userId]);
 
+  // Updated to use axiosInstance for account activation
+  const handleActivateAccount = async () => {
+    try {
+      setLoading(true);
+      
+      // Make API call to activate the account using axiosInstance
+      const response = await axiosInstance.post(
+        `/api/Account/ActivateAccount`,
+        JSON.stringify(userId),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      // Update local state
+      setAccountIsActive(true);
+      if (updateUser) {
+        updateUser({ isActive: true });
+      }
+      
+      toast({
+        title: "Account Activated",
+        description: "Your account has been successfully activated.",
+      });
+    } catch (error) {
+      console.error("Error activating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to activate account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsActivateDialogOpen(false);
+    }
+  };
+
+  // Updated to use axiosInstance for account deactivation
+  const handleDeactivateAccount = async () => {
+    try {
+      setLoading(true);
+      
+      // Make API call to deactivate the account using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeactivateAccount?userid=${userId}`
+      );
+      
+      // Update local state
+      setAccountIsActive(false);
+      if (updateUser) {
+        updateUser({ isActive: false });
+      }
+      
+      toast({
+        title: "Account Deactivated",
+        description: "Your account has been deactivated successfully.",
+      });
+    } catch (error) {
+      console.error("Error deactivating account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to deactivate account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeactivateDialogOpen(false);
+    }
+  };
+
+  // Updated to use axiosInstance for account deletion
+  const handleDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      
+      // Make API call to delete the account using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeleteAccount?userid=${userId}`
+      );
+      
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      
+      // After successful deletion, log the user out
+      if (logout) {
+        logout();
+      }
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  // Updated to use axiosInstance for property deletion
   const handleDeleteProperty = async (id: string) => {
     console.log("Deleting property with ID:", id);
 
@@ -319,7 +455,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-     // Send the ID to the API using axiosInstance
+      // Send the ID to the API using axiosInstance
       const response = await axiosInstance.delete(
         `/api/Account/DeleteProperty?propertyId=${id}`
       );
@@ -372,6 +508,11 @@ const Dashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-gray-500 mt-1">Welcome back, {userName}</p>
+          {!accountIsActive && (
+            <p className="text-amber-500 mt-1 font-medium">
+              Your account is currently deactivated
+            </p>
+          )}
         </div>
       </div>
 
@@ -681,6 +822,45 @@ const Dashboard = () => {
                   </div>
                 </div>
 
+                {/* Account Actions Section */}
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-4">Account Actions</h4>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {accountIsActive ? (
+                      <Button
+                        variant="outline"
+                        className="border-amber-500 text-amber-500 hover:bg-amber-50"
+                        onClick={() => setIsDeactivateDialogOpen(true)}
+                      >
+                        <PowerOff className="h-4 w-4 mr-2" />
+                        Deactivate Account
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="border-green-500 text-green-500 hover:bg-green-50"
+                        onClick={() => setIsActivateDialogOpen(true)}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Activate Account
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline" 
+                      className="border-red-500 text-red-500 hover:bg-red-50"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Account
+                    </Button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2">
+                    {accountIsActive 
+                      ? "Deactivating will temporarily disable your account. Deleting will permanently remove all your data."
+                      : "Activate your account to make your listings visible again. Deleting will permanently remove all your data."}
+                  </p>
+                </div>
+
                 <div className="pt-4 flex justify-end">
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     Save Settings
@@ -691,6 +871,78 @@ const Dashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Activate Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isActivateDialogOpen} 
+        onOpenChange={setIsActivateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Activate Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to activate your account? Your listings will be visible again and you'll receive messages from interested users.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleActivateAccount}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              Activate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Deactivate Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeactivateDialogOpen} 
+        onOpenChange={setIsDeactivateDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to deactivate your account? Your listings will be hidden and you won't receive any messages. You can reactivate your account by logging in again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeactivateAccount}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove all your data from our servers, including all your property listings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteAccount}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
