@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import axiosInstance from "../axiosCalls/axiosInstance";
 import {
   Select,
   SelectContent,
@@ -98,8 +99,9 @@ const EditProperty = () => {
       try {
         setLoading(true);
 
-        const response = await axios.get(
-          `${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${propertyId}`
+        // Use axiosInstance instead of direct axios call
+        const response = await axiosInstance.get(
+          `/api/Account/GetPropertyDetails?propertyId=${propertyId}`
         );
 
         if (response.status === 200 && response.data.propertyDetail) {
@@ -331,8 +333,9 @@ const EditProperty = () => {
 
       console.log("Sending update request...");
 
-      const response = await axios.post(
-        `${BASE_URL}/api/Account/EditProperty`,
+      // Use axiosInstance instead of direct axios call
+      const response = await axiosInstance.post(
+        `/api/Account/EditProperty`,
         formDataObj,
         {
           headers: {

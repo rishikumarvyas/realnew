@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
 interface PropertyCardProps {
   id: string;
   title: string;
@@ -232,20 +232,25 @@ const Dashboard = () => {
 
         // For development testing, use mock data if API fails
         try {
-          const response = await fetch(
-            `${BASE_URL}/api/Account/GetUserDetails?userId=${user.userId}`
+          const response = await axiosInstance.get(
+            `/api/Account/GetUserDetails`,
+            {
+              params: { userId: user.userId }, // Pass query parameters correctly
+            }
           );
-          if (!response.ok) {
-            throw new Error(`Failed to fetch user details: ${response.status}`);
+
+          if (!(response?.data?.statusCode === 200)) {
+            throw new Error(
+              `Failed to fetch user details: ${response?.data?.statusCode}`
+            );
           }
 
-          const data = await response.json();
-          console.log("Raw API response for user properties:", data);
+          const data = response?.data;
 
           if (data.name) {
             setUserName(data.name);
           }
-          
+
           // Set the like count from API response
           if (data.likedCount !== undefined) {
             setLikeCount(data.likedCount);
@@ -314,24 +319,14 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Send the ID to the API
-      const response = await fetch(
-        `${BASE_URL}/api/Account/DeleteProperty?propertyId=${id}`,
-        {
-          method: "DELETE",
-        }
+     // Send the ID to the API using axiosInstance
+      const response = await axiosInstance.delete(
+        `/api/Account/DeleteProperty?propertyId=${id}`
       );
 
-      console.log("Delete response status:", response.status);
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete property with ID: ${id}`);
-      }
-
-      const result = await response.json();
-      console.log("Delete API response:", result);
-
-      if (result.statusCode === 200) {
+      console.log("Delete response:", response.data);
+      
+      if (response.data.statusCode === 200) {
         // Update the UI by removing the deleted property
         setProperties((prev) => prev.filter((prop) => prop.propertyId !== id));
         toast({
@@ -339,7 +334,7 @@ const Dashboard = () => {
           description: "The property has been removed successfully.",
         });
       } else {
-        throw new Error(result.message || "Failed to delete property");
+        throw new Error(response.data.message || "Failed to delete property");
       }
     } catch (error) {
       console.error("Error deleting property:", error);

@@ -36,7 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
 // API interfaces
 interface ApiResponse {
   statusCode: number;
@@ -206,12 +206,12 @@ const PropertyListing = () => {
       const filterOptions: FilterOptions = {
         searchTerm: searchParams.get("search") || "",
         minPrice: parseInt(searchParams.get("minPrice") || "0"),
-        maxPrice: parseInt(searchParams.get("maxPrice") || "20000000"),
+        maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
         minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
         minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
         minBalcony: parseInt(searchParams.get("balcony") || "0"),
         minArea: parseInt(searchParams.get("minArea") || "0"),
-        maxArea: 50000,
+        maxArea: 0,
       };
       
       // Add availability date if present
@@ -250,8 +250,9 @@ const PropertyListing = () => {
         superCategoryId = categoryMap[typeParam as keyof typeof categoryMap] || 0;
       }
 
-      const response = await axios.post<ApiResponse>(
-        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+     const response = await axiosInstance.post<ApiResponse>(
+    "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+
         {
           superCategoryId: superCategoryId, // 0 for all, 1 for buy, 2 for rent, 3 for sell
           accountId: "string", // Replace with actual accountId if available

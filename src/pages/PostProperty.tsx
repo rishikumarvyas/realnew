@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import imageCompression from "browser-image-compression";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -377,19 +377,18 @@ const PostProperty = () => {
       }
 
       // API call
-      const response = await fetch(
-        "https://homeyatraapi.azurewebsites.net/api/Account/AddProperty",
+    // API call using axios instance with automatic token handling
+      const response = await axiosInstance.post(
+        "/api/Account/AddProperty",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
 
       // Extract the propertyId from the response, checking both possible field names
       // This handles the API inconsistency where sometimes it returns 'propetyId' (with typo)
