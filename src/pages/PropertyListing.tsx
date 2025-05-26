@@ -99,11 +99,10 @@ const amenityOptions = [
   "Security", "Garden", "Club House", "WiFi", "Gas Pipeline"
 ];
 
-// Property type mapping - Added to help debugging
+// Property type mapping - Updated to merge shop and commercial, remove land/office
 const propertyTypeMapping = {
   "plot": { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
   "commercial": { superCategoryId: 1, propertyTypeIds: [2, 7], label: "Commercial" },
-  "shop": { superCategoryId: 1, propertyTypeIds: [2], label: "Shop" },
   "buy": { superCategoryId: 1, propertyFor: 1, label: "Buy" },
   "rent": { superCategoryId: 2, propertyFor: 2, label: "Rent" },
   "all": { superCategoryId: 0, label: "All Properties" }
@@ -203,290 +202,378 @@ export const PropertyListing = () => {
 
   // Initialize from URL params and fetch data
   useEffect(() => {
-    // Get parameters from URL
-    const typeParam = searchParams.get("type");
-    const searchParam = searchParams.get("search");
-    const minPriceParam = searchParams.get("minPrice");
-    const maxPriceParam = searchParams.get("maxPrice");
-    const bedroomsParam = searchParams.get("bedrooms");
-    const bathroomsParam = searchParams.get("bathrooms");
-    const balconyParam = searchParams.get("balcony");
-    const minAreaParam = searchParams.get("minArea");
+  // Get parameters from URL
+  const typeParam = searchParams.get("type");
+  const searchParam = searchParams.get("search");
+  const minPriceParam = searchParams.get("minPrice");
+  const maxPriceParam = searchParams.get("maxPrice");
+  const bedroomsParam = searchParams.get("bedrooms");
+  const bathroomsParam = searchParams.get("bathrooms");
+  const balconyParam = searchParams.get("balcony");
+  const minAreaParam = searchParams.get("minArea");
+  const availableFromParam = searchParams.get("availableFrom");
+  const preferenceParam = searchParams.get("preference");
+  const furnishedParam = searchParams.get("furnished");
+  const amenitiesParam = searchParams.get("amenities");
+  
+  // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
+  const currentTab = typeParam || "all";
+  if (currentTab !== activeTab) {
+    setActiveTab(currentTab);
+  }
+  
+  // Set other state from URL params if they exist
+  if (searchParam && searchParam !== searchQuery) {
+    setSearchQuery(searchParam);
+    setSearchTerm(searchParam);
+  }
+  
+  if (minPriceParam && maxPriceParam) {
+    const newPriceRange = [parseInt(minPriceParam), parseInt(maxPriceParam)];
+    if (newPriceRange[0] !== priceRange[0] || newPriceRange[1] !== priceRange[1]) {
+      setPriceRange(newPriceRange);
+    }
+  }
+  
+  if (bedroomsParam) {
+    const bedrooms = parseInt(bedroomsParam);
+    if (bedrooms !== minBedrooms) {
+      setMinBedrooms(bedrooms);
+    }
+  }
+  
+  if (bathroomsParam) {
+    const bathrooms = parseInt(bathroomsParam);
+    if (bathrooms !== minBathrooms) {
+      setMinBathrooms(bathrooms);
+    }
+  }
+
+  if (balconyParam) {
+    const balcony = parseInt(balconyParam);
+    if (balcony !== minBalcony) {
+      setMinBalcony(balcony);
+    }
+  }
+  
+  if (minAreaParam) {
+    const area = parseInt(minAreaParam);
+    if (area !== minArea) {
+      setMinArea(area);
+    }
+  }
+  
+  if (availableFromParam) {
+    const date = new Date(availableFromParam);
+    if (!availableFrom || date.getTime() !== availableFrom.getTime()) {
+      setAvailableFrom(date);
+    }
+  }
+  
+  if (preferenceParam && preferenceParam !== preferenceId) {
+    setPreferenceId(preferenceParam);
+  }
+
+  if (furnishedParam && furnishedParam !== furnished) {
+    setFurnished(furnishedParam);
+  }
+
+  if (amenitiesParam) {
+    const amenities = amenitiesParam.split(',');
+    if (JSON.stringify(amenities.sort()) !== JSON.stringify(selectedAmenities.sort())) {
+      setSelectedAmenities(amenities);
+    }
+  }
+  
+  // IMPORTANT: Only fetch when activeTab changes or when component first loads
+  fetchProperties();
+}, [searchParams]); // Only depend on searchParams
+
+// Updated fetchProperties function - remove activeTab dependency issue
+const fetchProperties = async () => {
+  setLoading(true);
+  try {
+    // Get the current type from URL, not from state
+    const currentTypeParam = searchParams.get("type") || "all";
+    
+    // Prepare filter options based on URL parameters
+    const filterOptions: FilterOptions = {
+      searchTerm: searchParams.get("search") || "",
+      minPrice: parseInt(searchParams.get("minPrice") || "0"),
+      maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
+      minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
+      minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
+      minBalcony: parseInt(searchParams.get("balcony") || "0"),
+      minArea: parseInt(searchParams.get("minArea") || "0"),
+      maxArea: 0,
+    };
+    
+    // Add other filter parameters...
     const availableFromParam = searchParams.get("availableFrom");
-    const preferenceParam = searchParams.get("preference");
-    const furnishedParam = searchParams.get("furnished");
-    const amenitiesParam = searchParams.get("amenities");
-    
-    // Set state from URL params if they exist
-    if (typeParam) {
-      setActiveTab(typeParam);
-    }
-    
-    if (searchParam) {
-      setSearchQuery(searchParam);
-      setSearchTerm(searchParam);
-    }
-    
-    if (minPriceParam && maxPriceParam) {
-      setPriceRange([parseInt(minPriceParam), parseInt(maxPriceParam)]);
-    }
-    
-    if (bedroomsParam) {
-      setMinBedrooms(parseInt(bedroomsParam));
-    }
-    
-    if (bathroomsParam) {
-      setMinBathrooms(parseInt(bathroomsParam));
-    }
-
-    if (balconyParam) {
-      setMinBalcony(parseInt(balconyParam));
-    }
-    
-    if (minAreaParam) {
-      setMinArea(parseInt(minAreaParam));
-    }
-    
     if (availableFromParam) {
-      setAvailableFrom(new Date(availableFromParam));
+      filterOptions.availableFrom = availableFromParam;
     }
     
-    if (preferenceParam) {
-      setPreferenceId(preferenceParam);
+    const preferenceParam = searchParams.get("preference");
+    if (preferenceParam && preferenceParam !== "0") {
+      filterOptions.preferenceId = preferenceParam;
     }
 
-    if (furnishedParam) {
-      setFurnished(furnishedParam);
+    const furnishedParam = searchParams.get("furnished");
+    if (furnishedParam && furnishedParam !== "any") {
+      filterOptions.furnished = furnishedParam;
     }
 
+    const amenitiesParam = searchParams.get("amenities");
     if (amenitiesParam) {
-      setSelectedAmenities(amenitiesParam.split(','));
+      filterOptions.amenities = amenitiesParam.split(',');
     }
     
-    fetchProperties();
-  }, [searchParams]);
-
-  // Fetch properties from API
-  const fetchProperties = async () => {
-    setLoading(true);
-    try {
-      // Prepare filter options based on URL parameters
-      const filterOptions: FilterOptions = {
-        searchTerm: searchParams.get("search") || "",
-        minPrice: parseInt(searchParams.get("minPrice") || "0"),
-        maxPrice: parseInt(searchParams.get("maxPrice") || "20000000"),
-        minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
-        minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
-        minBalcony: parseInt(searchParams.get("balcony") || "0"),
-        minArea: parseInt(searchParams.get("minArea") || "0"),
-        maxArea: 50000,
-      };
-      
-      // Add availability date if present
-      const availableFromParam = searchParams.get("availableFrom");
-      if (availableFromParam) {
-        filterOptions.availableFrom = availableFromParam;
-      }
-      
-      // Add preference ID if present
-      const preferenceParam = searchParams.get("preference");
-      if (preferenceParam && preferenceParam !== "0") {
-        filterOptions.preferenceId = preferenceParam;
-      }
-
-      // Add furnished status if present
-      const furnishedParam = searchParams.get("furnished");
-      if (furnishedParam && furnishedParam !== "any") {
-        filterOptions.furnished = furnishedParam;
-      }
-
-      // Add amenities if present
-      const amenitiesParam = searchParams.get("amenities");
-      if (amenitiesParam) {
-        filterOptions.amenities = amenitiesParam.split(',');
-      }
-      
-      // --- FIXED: Tab logic ---
-      const typeParam = activeTab;
-      const typeConfig = propertyTypeMapping[typeParam] || propertyTypeMapping.all;
-      
-      let superCategoryId = typeConfig.superCategoryId;
-      let propertyTypeIds = typeConfig.propertyTypeIds || [];
-      let propertyFor = typeConfig.propertyFor;
-      
-      // For commercial/shop tab, handle both possibilities
-      if (typeParam === "shop") {
-        superCategoryId = 1; // always buy for shops
-        propertyTypeIds = [2]; // shop property type
-      } else if (typeParam === "commercial") {
-        // Include both commercial property types (buy and rent)
-        superCategoryId = 0; // don't filter by superCategory
-        propertyTypeIds = [2, 7]; // both commercial property types
-      }
-      
-      // Pagination params
-      let pageSize = -1;
-      let pageNumber = 0;
-      
-      if (typeParam !== "all") {
-        pageSize = 10;
-        pageNumber = parseInt(searchParams.get("page") || "1") - 1; // 0-indexed
-      }
-      // --- END FIXED Tab logic ---
-
-      // Prepare request payload
-      const requestPayload = {
-        superCategoryId,
-        propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
-        propertyFor,
-        accountId: "string", // Replace with actual accountId if available
-        searchTerm: filterOptions.searchTerm,
-        minPrice: filterOptions.minPrice,
-        maxPrice: filterOptions.maxPrice,
-        bedroom: filterOptions.minBedrooms,
-        bathroom: filterOptions.minBathrooms,
-        balcony: filterOptions.minBalcony,
-        minArea: filterOptions.minArea,
-        maxArea: filterOptions.maxArea,
-        availableFrom: filterOptions.availableFrom,
-        preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
-        furnished: filterOptions.furnished,
-        amenities: filterOptions.amenities,
-        pageNumber,
-        pageSize,
-      };
-      
-      // For debugging
-      setApiDebug(prev => ({ ...prev, request: requestPayload }));
-
-      const response = await axios.post<ApiResponse>(
-        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
-        requestPayload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      
-      // For debugging
-      setApiDebug(prev => ({ ...prev, response: response.data }));
-
-      // FIXED: Transform API data to our property format with correct mapping
-      const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => {
-        // Determine the correct type based on superCategory and propertyType
-        let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
-        
-        // Convert superCategory to lowercase for comparison
-        const superCategoryLower = prop.superCategory?.toLowerCase() || "";
-        const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
-        
-        // Properly map the API response to our property types
-        if (propertyTypeLower.includes("plot") || propertyTypeLower.includes("land")) {
-          type = "plot";
-        } else if (propertyTypeLower.includes("commercial") || propertyTypeLower.includes("shop") || 
-                   propertyTypeLower.includes("office")) {
-          type = "commercial";
-        } else if (superCategoryLower.includes("rent")) {
-          type = "rent";
-        } else if (superCategoryLower.includes("sell") || superCategoryLower.includes("buy")) {
-          type = "buy";
-        }
-        
-        return {
-          id: prop.propertyId,
-          title: prop.title,
-          price: prop.price,
-          location: prop.city,
-          type: type, // Using our revised type determination
-          bedrooms: prop.bedroom,
-          bathrooms: prop.bathroom,
-          balcony: prop.balcony,
-          area: prop.area,
-          image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
-          availableFrom: prop.availableFrom,
-          preferenceId: prop.preferenceId,
-          amenities: prop.amenities,
-          furnished: prop.furnished,
-          likes: prop.likes ?? 0,
-          isLike: prop.isLike ?? false,
-          propertyType: prop.propertyType,
-          status: prop.superCategory,
-        };
-      });
-
-      setProperties(transformedData);
-      
-      // FIXED: Client-side filtering logic
-      let filtered = transformedData;
-      
-      // If activeTab is 'plot' or 'commercial', make sure we show all related properties
-      if (activeTab === "plot") {
-        filtered = transformedData.filter(prop => 
-          prop.type === "plot" || 
-          (prop.propertyType?.toLowerCase() || "").includes("plot") ||
-          (prop.propertyType?.toLowerCase() || "").includes("land")
-        );
-      } else if (activeTab === "commercial" || activeTab === "shop") {
-        filtered = transformedData.filter(prop => 
-          prop.type === "commercial" || 
-          (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-          (prop.propertyType?.toLowerCase() || "").includes("shop") ||
-          (prop.propertyType?.toLowerCase() || "").includes("office")
-        );
-      } else {
-        applyFilters(transformedData);
-        return; // No need to continue, regular applyFilters will handle it
-      }
-      
-      // Apply remaining filters to our specialized property types
-      filtered = filtered.filter(property => {
-        // Filter by search query
-        if (
-          searchQuery &&
-          !property.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !property.location.toLowerCase().includes(searchQuery.toLowerCase())
-        ) {
-          return false;
-        }
-        
-        // Filter by price range
-        if (property.price < priceRange[0] || property.price > priceRange[1]) {
-          return false;
-        }
-        
-        // Filter by area
-        if (property.area < minArea) {
-          return false;
-        }
-        
-        return true;
-      });
-      
-      setFilteredProperties(filtered);
-      
-      toast({
-        title: "Properties Loaded",
-        description: `Found ${filtered.length} properties matching your criteria.`,
-      });
-    } catch (err) {
-      console.error("Failed to fetch properties:", err);
-      setError("Unable to load properties. Please try again later.");
-      setApiDebug(prev => ({ ...prev, error: err }));
-      
-      toast({
-        variant: "destructive",
-        title: "Error loading properties",
-        description: "We're having trouble fetching properties. Using sample data instead.",
-      });
-      
-      // If API fails, use mock data for development/demo purposes
-      useMockData();
-    } finally {
-      setLoading(false);
+    // FIXED: Use current URL type parameter instead of state
+    const typeConfig = propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+    
+    let superCategoryId = typeConfig.superCategoryId;
+    let propertyTypeIds = typeConfig.propertyTypeIds || [];
+    let propertyFor = typeConfig.propertyFor;
+    
+    // Special handling for different property types
+    if (currentTypeParam === "plot") {
+      // Plot: Only buy (superCategoryId: 1, propertyType: 4)
+      superCategoryId = 1;
+      propertyTypeIds = [4];
+    } else if (currentTypeParam === "commercial") {
+      // Commercial: Can be both buy and rent (includes shop)
+      superCategoryId = 0; // Don't filter by superCategory to get both
+      propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
     }
-  };
+    
+    // Pagination params
+    let pageSize = -1;
+    let pageNumber = 0;
+    
+    if (currentTypeParam !== "all") {
+      pageSize = 10;
+      pageNumber = parseInt(searchParams.get("page") || "1") - 1;
+    }
 
+    // Prepare request payload
+    const requestPayload = {
+      superCategoryId,
+      propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
+      propertyFor,
+      accountId: "string",
+      searchTerm: filterOptions.searchTerm,
+      minPrice: filterOptions.minPrice,
+      maxPrice: filterOptions.maxPrice,
+      bedroom: filterOptions.minBedrooms,
+      bathroom: filterOptions.minBathrooms,
+      balcony: filterOptions.minBalcony,
+      minArea: filterOptions.minArea,
+      maxArea: filterOptions.maxArea,
+      availableFrom: filterOptions.availableFrom,
+      preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
+      furnished: filterOptions.furnished,
+      amenities: filterOptions.amenities,
+      pageNumber,
+      pageSize,
+    };
+    
+    console.log(`Fetching properties for type: ${currentTypeParam}`, requestPayload);
+    setApiDebug(prev => ({ ...prev, request: requestPayload }));
+
+    const response = await axios.post<ApiResponse>(
+      "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+      requestPayload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    
+    setApiDebug(prev => ({ ...prev, response: response.data }));
+
+    // Transform API data with proper type mapping - Updated to merge shop/commercial
+    const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => {
+      let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
+      
+      const superCategoryLower = prop.superCategory?.toLowerCase() || "";
+      const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
+      
+      // Map based on API requirements - Updated logic
+      if (prop.propertyType === "4" || propertyTypeLower.includes("plot")) {
+        type = "plot";
+      }
+      else if (prop.propertyType === "2" || prop.propertyType === "7" || 
+               propertyTypeLower.includes("shop") || propertyTypeLower.includes("commercial")) {
+        type = "commercial";
+      }
+      else if (superCategoryLower.includes("rent") || prop.superCategory === "2") {
+        type = "rent";
+      } else if (superCategoryLower.includes("sell") || superCategoryLower.includes("buy") || prop.superCategory === "1") {
+        type = "buy";
+      }
+      
+      return {
+        id: prop.propertyId,
+        title: prop.title,
+        price: prop.price,
+        location: prop.city,
+        type: type,
+        bedrooms: prop.bedroom,
+        bathrooms: prop.bathroom,
+        balcony: prop.balcony,
+        area: prop.area,
+        image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
+        availableFrom: prop.availableFrom,
+        preferenceId: prop.preferenceId,
+        amenities: prop.amenities,
+        furnished: prop.furnished,
+        likes: prop.likes ?? 0,
+        isLike: prop.isLike ?? false,
+        propertyType: prop.propertyType,
+        status: prop.superCategory,
+      };
+    });
+
+    setProperties(transformedData);
+    
+    // Apply client-side filtering based on current URL type
+    let filtered = transformedData;
+    
+    if (currentTypeParam === "plot") {
+      filtered = transformedData.filter(prop => 
+        prop.type === "plot" || 
+        prop.propertyType === "4" ||
+        (prop.propertyType?.toLowerCase() || "").includes("plot")
+      );
+    } else if (currentTypeParam === "commercial") {
+      filtered = transformedData.filter(prop => 
+        prop.type === "commercial" || 
+        prop.propertyType === "2" ||
+        prop.propertyType === "7" ||
+        (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
+        (prop.propertyType?.toLowerCase() || "").includes("shop")
+      );
+    } else if (currentTypeParam !== "all") {
+      filtered = transformedData.filter(property => property.type === currentTypeParam);
+    }
+    
+    // Apply other filters
+    const currentSearchQuery = searchParams.get("search") || "";
+    const currentPriceRange = [
+      parseInt(searchParams.get("minPrice") || "0"),
+      parseInt(searchParams.get("maxPrice") || "20000000")
+    ];
+    const currentMinArea = parseInt(searchParams.get("minArea") || "0");
+    
+    filtered = filtered.filter(property => {
+      if (
+        currentSearchQuery &&
+        !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
+        !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+      
+      if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
+        return false;
+      }
+      
+      if (property.area < currentMinArea) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    setFilteredProperties(filtered);
+    
+    toast({
+      title: "Properties Loaded",
+      description: `Found ${filtered.length} ${currentTypeParam === 'all' ? '' : currentTypeParam} properties.`,
+    });
+    
+  } catch (err) {
+    console.error("Failed to fetch properties:", err);
+    setError("Unable to load properties. Please try again later.");
+    setApiDebug(prev => ({ ...prev, error: err }));
+    
+    toast({
+      variant: "destructive",
+      title: "Error loading properties",
+      description: "We're having trouble fetching properties. Using sample data instead.",
+    });
+    
+    useMockData();
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Update the applyFilters function to use current URL state
+const applyFilters = (data: PropertyCardProps[]) => {
+  // Get current type from URL
+  const currentTypeParam = searchParams.get("type") || "all";
+  
+  let filtered = data;
+  if (currentTypeParam !== "all") {
+    if (currentTypeParam === "plot") {
+      filtered = data.filter(property => 
+        property.type === "plot" || 
+        (property.propertyType?.toLowerCase() || "").includes("plot")
+      );
+    } else if (currentTypeParam === "commercial") {
+      filtered = data.filter(property => 
+        property.type === "commercial" || 
+        (property.propertyType?.toLowerCase() || "").includes("commercial") ||
+        (property.propertyType?.toLowerCase() || "").includes("shop")
+      );
+    } else {
+      filtered = data.filter(property => property.type === currentTypeParam);
+    }
+  }
+  
+  // Apply other filters using URL parameters directly
+  const currentSearchQuery = searchParams.get("search") || "";
+  const currentPriceRange = [
+    parseInt(searchParams.get("minPrice") || "0"),
+    parseInt(searchParams.get("maxPrice") || "20000000")
+  ];
+  const currentMinBedrooms = parseInt(searchParams.get("bedrooms") || "0");
+  const currentMinBathrooms = parseInt(searchParams.get("bathrooms") || "0");
+  const currentMinBalcony = parseInt(searchParams.get("balcony") || "0");
+  const currentMinArea = parseInt(searchParams.get("minArea") || "0");
+  
+  filtered = filtered.filter((property) => {
+    if (
+      currentSearchQuery &&
+      !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
+      !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    
+    if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
+      return false;
+    }
+    
+    // Only apply bedroom/bathroom filters for residential properties
+    if (property.type !== "plot" && property.type !== "commercial") {
+      if (property.bedrooms < currentMinBedrooms) return false;
+      if (property.bathrooms < currentMinBathrooms) return false;
+      if (property.balcony < currentMinBalcony) return false;
+    }
+    
+    if (property.area < currentMinArea) {
+      return false;
+    }
+    
+    return true;
+  });
+  
+  setFilteredProperties(filtered);
+};
   // Property card interface
   interface PropertyCardProps {
     id: string;
@@ -510,7 +597,7 @@ export const PropertyListing = () => {
     formattedPrice?: string;
   }
 
-  // Enhanced mock data for fallback or development
+  // Enhanced mock data for fallback or development - Updated mock data
   const useMockData = () => {
     const mockProperties: PropertyCardProps[] = [
       {
@@ -557,7 +644,7 @@ export const PropertyListing = () => {
         amenities: ["WiFi", "Power Backup"],
         furnished: "Semi"
       },
-      // Added mock plot and commercial properties
+      // Updated mock plot and commercial properties
       {
         id: "prop9",
         title: "Residential Plot in Prime Location",
@@ -570,11 +657,11 @@ export const PropertyListing = () => {
         area: 2400,
         image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
         amenities: ["Power Backup"],
-        propertyType: "Plot/Land"
+        propertyType: "Plot"
       },
       {
         id: "prop10",
-        title: "Commercial Office Space",
+        title: "Commercial Space in Business District",
         price: 85000,
         location: "Connaught Place, Delhi",
         type: "commercial",
@@ -585,11 +672,11 @@ export const PropertyListing = () => {
         image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
         amenities: ["WiFi", "Power Backup", "Security", "Parking"],
         furnished: "Fully",
-        propertyType: "Commercial Office"
+        propertyType: "Commercial"
       },
       {
         id: "prop11",
-        title: "Retail Shop in Mall",
+        title: "Retail Shop in Prime Location",
         price: 120000,
         location: "Saket, Delhi",
         type: "commercial",
@@ -600,7 +687,7 @@ export const PropertyListing = () => {
         image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
         amenities: ["Security", "Power Backup"],
         furnished: "Not",
-        propertyType: "Shop"
+        propertyType: "Commercial"
       }
     ];
     
@@ -608,104 +695,7 @@ export const PropertyListing = () => {
     applyFilters(mockProperties);
   };
 
-  // Apply client-side filters
-  const applyFilters = (data: PropertyCardProps[]) => {
-    // FIXED: Filter by tab/type (special handling for plot and commercial)
-    let filtered = data;
-    if (activeTab !== "all") {
-      if (activeTab === "plot") {
-        filtered = data.filter(property => 
-          property.type === "plot" || 
-          (property.propertyType?.toLowerCase() || "").includes("plot") ||
-          (property.propertyType?.toLowerCase() || "").includes("land")
-        );
-      } else if (activeTab === "commercial" || activeTab === "shop") {
-        filtered = data.filter(property => 
-          property.type === "commercial" || 
-          (property.propertyType?.toLowerCase() || "").includes("commercial") ||
-          (property.propertyType?.toLowerCase() || "").includes("shop") ||
-          (property.propertyType?.toLowerCase() || "").includes("office")
-        );
-      } else {
-        filtered = data.filter(property => property.type === activeTab);
-      }
-    }
-    
-    // Apply remaining filters
-    filtered = filtered.filter((property) => {
-      // Filter by search query
-      if (
-        searchQuery &&
-        !property.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !property.location.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
-      
-      // Filter by price range
-      if (property.price < priceRange[0] || property.price > priceRange[1]) {
-        return false;
-      }
-      
-      // Only apply bedroom/bathroom filters for residential properties
-      if (property.type !== "plot" && property.type !== "commercial") {
-        // Filter by bedrooms
-        if (property.bedrooms < minBedrooms) {
-          return false;
-        }
-        
-        // Filter by bathrooms
-        if (property.bathrooms < minBathrooms) {
-          return false;
-        }
-
-        // Filter by balcony
-        if (property.balcony < minBalcony) {
-          return false;
-        }
-      }
-      
-      // Filter by area (applicable to all property types)
-      if (property.area < minArea) {
-        return false;
-      }
-      
-      // Only apply these filters for residential properties
-      if (property.type !== "plot" && property.type !== "commercial") {
-        // Filter by availability date
-        if (availableFrom && property.availableFrom) {
-          const propertyDate = new Date(property.availableFrom);
-          if (propertyDate > availableFrom) {
-            return false;
-          }
-        }
-        
-        // Filter by preference
-        if (preferenceId !== "0" && property.preferenceId !== parseInt(preferenceId)) {
-          return false;
-        }
-
-        // Filter by furnished status
-        if (furnished !== "any" && property.furnished?.toLowerCase() !== furnished) {
-          return false;
-        }
-
-        // Filter by amenities
-        if (selectedAmenities.length > 0 && property.amenities) {
-          for (const amenity of selectedAmenities) {
-            if (!property.amenities.includes(amenity)) {
-              return false;
-            }
-          }
-        }
-      }
-      
-      return true;
-    });
-    
-    setFilteredProperties(filtered);
-  };
-
+  
   // Update filters when any filter state changes
   useEffect(() => {
     if (properties.length > 0) {
@@ -831,7 +821,6 @@ export const PropertyListing = () => {
     }
     setSearchParams(searchParams);
   };
-
   // Update URL when availability date changes
   const handleDateChange = (date: Date | undefined) => {
     setAvailableFrom(date);
