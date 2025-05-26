@@ -99,11 +99,10 @@ const amenityOptions = [
   "Security", "Garden", "Club House", "WiFi", "Gas Pipeline"
 ];
 
-// Property type mapping - Added to help debugging
+// Property type mapping - Updated to merge shop and commercial, remove land/office
 const propertyTypeMapping = {
   "plot": { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
   "commercial": { superCategoryId: 1, propertyTypeIds: [2, 7], label: "Commercial" },
-  "shop": { superCategoryId: 1, propertyTypeIds: [2], label: "Shop" },
   "buy": { superCategoryId: 1, propertyFor: 1, label: "Buy" },
   "rent": { superCategoryId: 2, propertyFor: 2, label: "Rent" },
   "all": { superCategoryId: 0, label: "All Properties" }
@@ -342,10 +341,10 @@ const fetchProperties = async () => {
       // Plot: Only buy (superCategoryId: 1, propertyType: 4)
       superCategoryId = 1;
       propertyTypeIds = [4];
-    } else if (currentTypeParam === "shop" || currentTypeParam === "commercial") {
-      // Shop/Commercial: Can be both buy and rent
+    } else if (currentTypeParam === "commercial") {
+      // Commercial: Can be both buy and rent (includes shop)
       superCategoryId = 0; // Don't filter by superCategory to get both
-      propertyTypeIds = [2, 7]; // Include both buy and rent shop types
+      propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
     }
     
     // Pagination params
@@ -394,20 +393,19 @@ const fetchProperties = async () => {
     
     setApiDebug(prev => ({ ...prev, response: response.data }));
 
-    // Transform API data with proper type mapping
+    // Transform API data with proper type mapping - Updated to merge shop/commercial
     const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => {
       let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
       
       const superCategoryLower = prop.superCategory?.toLowerCase() || "";
       const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
       
-      // Map based on API requirements
-      if (prop.propertyType === "4" || propertyTypeLower.includes("plot") || propertyTypeLower.includes("land")) {
+      // Map based on API requirements - Updated logic
+      if (prop.propertyType === "4" || propertyTypeLower.includes("plot")) {
         type = "plot";
       }
       else if (prop.propertyType === "2" || prop.propertyType === "7" || 
-               propertyTypeLower.includes("shop") || propertyTypeLower.includes("commercial") || 
-               propertyTypeLower.includes("office")) {
+               propertyTypeLower.includes("shop") || propertyTypeLower.includes("commercial")) {
         type = "commercial";
       }
       else if (superCategoryLower.includes("rent") || prop.superCategory === "2") {
@@ -447,17 +445,15 @@ const fetchProperties = async () => {
       filtered = transformedData.filter(prop => 
         prop.type === "plot" || 
         prop.propertyType === "4" ||
-        (prop.propertyType?.toLowerCase() || "").includes("plot") ||
-        (prop.propertyType?.toLowerCase() || "").includes("land")
+        (prop.propertyType?.toLowerCase() || "").includes("plot")
       );
-    } else if (currentTypeParam === "commercial" || currentTypeParam === "shop") {
+    } else if (currentTypeParam === "commercial") {
       filtered = transformedData.filter(prop => 
         prop.type === "commercial" || 
         prop.propertyType === "2" ||
         prop.propertyType === "7" ||
         (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-        (prop.propertyType?.toLowerCase() || "").includes("shop") ||
-        (prop.propertyType?.toLowerCase() || "").includes("office")
+        (prop.propertyType?.toLowerCase() || "").includes("shop")
       );
     } else if (currentTypeParam !== "all") {
       filtered = transformedData.filter(property => property.type === currentTypeParam);
@@ -525,15 +521,13 @@ const applyFilters = (data: PropertyCardProps[]) => {
     if (currentTypeParam === "plot") {
       filtered = data.filter(property => 
         property.type === "plot" || 
-        (property.propertyType?.toLowerCase() || "").includes("plot") ||
-        (property.propertyType?.toLowerCase() || "").includes("land")
+        (property.propertyType?.toLowerCase() || "").includes("plot")
       );
-    } else if (currentTypeParam === "commercial" || currentTypeParam === "shop") {
+    } else if (currentTypeParam === "commercial") {
       filtered = data.filter(property => 
         property.type === "commercial" || 
         (property.propertyType?.toLowerCase() || "").includes("commercial") ||
-        (property.propertyType?.toLowerCase() || "").includes("shop") ||
-        (property.propertyType?.toLowerCase() || "").includes("office")
+        (property.propertyType?.toLowerCase() || "").includes("shop")
       );
     } else {
       filtered = data.filter(property => property.type === currentTypeParam);
@@ -603,7 +597,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
     formattedPrice?: string;
   }
 
-  // Enhanced mock data for fallback or development
+  // Enhanced mock data for fallback or development - Updated mock data
   const useMockData = () => {
     const mockProperties: PropertyCardProps[] = [
       {
@@ -650,7 +644,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
         amenities: ["WiFi", "Power Backup"],
         furnished: "Semi"
       },
-      // Added mock plot and commercial properties
+      // Updated mock plot and commercial properties
       {
         id: "prop9",
         title: "Residential Plot in Prime Location",
@@ -663,11 +657,11 @@ const applyFilters = (data: PropertyCardProps[]) => {
         area: 2400,
         image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
         amenities: ["Power Backup"],
-        propertyType: "Plot/Land"
+        propertyType: "Plot"
       },
       {
         id: "prop10",
-        title: "Commercial Office Space",
+        title: "Commercial Space in Business District",
         price: 85000,
         location: "Connaught Place, Delhi",
         type: "commercial",
@@ -678,11 +672,11 @@ const applyFilters = (data: PropertyCardProps[]) => {
         image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
         amenities: ["WiFi", "Power Backup", "Security", "Parking"],
         furnished: "Fully",
-        propertyType: "Commercial Office"
+        propertyType: "Commercial"
       },
       {
         id: "prop11",
-        title: "Retail Shop in Mall",
+        title: "Retail Shop in Prime Location",
         price: 120000,
         location: "Saket, Delhi",
         type: "commercial",
@@ -693,7 +687,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
         image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
         amenities: ["Security", "Power Backup"],
         furnished: "Not",
-        propertyType: "Shop"
+        propertyType: "Commercial"
       }
     ];
     
@@ -827,7 +821,6 @@ const applyFilters = (data: PropertyCardProps[]) => {
     }
     setSearchParams(searchParams);
   };
-
   // Update URL when availability date changes
   const handleDateChange = (date: Date | undefined) => {
     setAvailableFrom(date);
