@@ -33,7 +33,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import imageCompression from "browser-image-compression";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
+import { getAmenity } from "@/utils/UtilityFunctions";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -57,35 +58,32 @@ const PostProperty = () => {
   const [imageURLs, setImageURLs] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
 
-  const availableAmenities = [
-    "Swimming Pool",
-    "Gym",
-    "Security",
-    "Power Backup",
-    "Parking",
-    "Garden",
-    "Lift",
-    "Club House",
-  ];
+  const checkBoxAmenities: Amenity[] = getAmenity().checkBoxAmenities;
+  const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
 
   // Available cities
   const availableCities = [
-    { id: 1, name: "Indore" },
-    { id: 2, name: "Bhopal" },
-    { id: 3, name: "Pune" },
+    { id: 140, name: "Indore" },
+    { id: 135, name: "Bhopal" },
+    { id: 184, name: "Pune" },
   ];
 
   // Form validation states
   const [priceValidation, setPriceValidation] = useState(true);
   const [areaValidation, setAreaValidation] = useState(true);
 
-  const handleAmenityToggle = (amenity) => {
+  const handleAmenityCheckBox = (amenity) => {
     if (amenities.includes(amenity)) {
       setAmenities(amenities.filter((item) => item !== amenity));
     } else {
       setAmenities([...amenities, amenity]);
     }
+  };
+
+  const handleAmenityRadioButton = (event) => {
+    setSelectedOption(event.target.value);
   };
 
   const handleImageUpload = async (e) => {
@@ -220,20 +218,6 @@ const PostProperty = () => {
     return ownerTypeMap[type] || 1;
   };
 
-  const mapAmenityToId = (amenity) => {
-    const amenityMap = {
-      "Lift": 1,
-      "Swimming Pool": 2,
-      "Club House": 3,
-      "Garden": 4,
-      "Gym": 5,
-      "Security": 6,
-      "Parking": 8,
-      "Power Backup": 7,
-    };
-    return amenityMap[amenity] || 1;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -298,8 +282,8 @@ const PostProperty = () => {
       const userTypeId = mapOwnerTypeToId(ownerType);
 
       // Map selected amenities to their IDs
-      const amenityIds = amenities.map((amenity) => mapAmenityToId(amenity));
-
+      const amenityIds =
+        selectedOption === "" ? amenities : [...amenities, selectedOption];
       // Create FormData for file uploads
       const formData = new FormData();
 
@@ -350,7 +334,6 @@ const PostProperty = () => {
       amenityIds.forEach((id) => {
         formData.append("AmenityIds", id.toString());
       });
-
       // Upload images with fixed format to match API expectations
       images.forEach((image, index) => {
         formData.append(`Images[${index}].File`, image);
@@ -366,19 +349,18 @@ const PostProperty = () => {
       }
 
       // API call
-      const response = await fetch(
-        "https://homeyatraapi.azurewebsites.net/api/Account/AddProperty",
+      // API call using axios instance with automatic token handling
+      const response = await axiosInstance.post(
+        "/api/Account/AddProperty",
+        formData,
         {
-          method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
 
       // Extract the propertyId from the response, checking both possible field names
       // This handles the API inconsistency where sometimes it returns 'propetyId' (with typo)
@@ -494,11 +476,11 @@ const PostProperty = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="title" className="text-gray-700 font-medium">
-                  Property Title <span className="text-red-500">*</span>
+                  Society Name <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="title"
-                  placeholder="E.g., Modern 3BHK Apartment with Garden View"
+                  placeholder="Society name"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
@@ -724,26 +706,48 @@ const PostProperty = () => {
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {availableAmenities.map((amenity) => (
+                {checkBoxAmenities.map(({ id, amenity }) => (
                   <div
-                    key={amenity}
+                    key={id}
                     className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                      amenities.includes(amenity)
+                      amenities.includes(id)
                         ? "bg-blue-100 border-2 border-blue-300"
                         : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
                     }`}
-                    onClick={() => handleAmenityToggle(amenity)}
+                    onClick={() => handleAmenityCheckBox(id)}
                   >
                     <input
                       type="checkbox"
-                      id={amenity}
-                      checked={amenities.includes(amenity)}
+                      id={id}
+                      checked={amenities.includes(id)}
                       onChange={() => {}}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
                     />
                     <Label htmlFor={amenity} className="cursor-pointer text-sm">
                       {amenity}
                     </Label>
+                  </div>
+                ))}
+                {radioButtonAmenities.map(({ id, amenity }) => (
+                  <div
+                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                      selectedOption.includes(id)
+                        ? "bg-blue-100 border-2 border-blue-300"
+                        : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                    }`}
+                  >
+                    <label key={id}>
+                      <input
+                        type="radio"
+                        name="furnishing"
+                        value={id}
+                        checked={selectedOption === id}
+                        onChange={handleAmenityRadioButton}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                      />
+                      {amenity}
+                      <br />
+                    </label>
                   </div>
                 ))}
               </div>
@@ -780,6 +784,7 @@ const PostProperty = () => {
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="broker">Broker</SelectItem>
                     <SelectItem value="builder">Builder</SelectItem>
+                    <SelectItem value="builder">Normal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

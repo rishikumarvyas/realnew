@@ -69,7 +69,7 @@ export const FormStep = ({
   return (
     <div className="w-full mx-auto mt-2">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-1">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
           <FormField
             control={form.control}
             name="name"

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
@@ -94,6 +95,8 @@ const sliderImages = [
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 
@@ -118,6 +121,36 @@ const Index = () => {
     if (searchTerm.trim()) {
       navigate(`/properties?search=${encodeURIComponent(searchTerm)}`);
     }
+  };
+
+
+  // Fetch suggestions
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.trim().length > 1) {
+        axios
+          .get(`https://homeyatraapi.azurewebsites.net/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`)
+          .then((res) => {
+            setSuggestions(res.data);
+            setShowSuggestions(true);
+          })
+          .catch((err) => {
+            console.error("Suggestion error:", err);
+            setSuggestions([]);
+          });
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300); // debounce 300ms
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchTerm(suggestion);
+    setShowSuggestions(false);
+    navigate(`/properties?search=${encodeURIComponent(suggestion)}`);
   };
 
   return (
@@ -178,25 +211,41 @@ const Index = () => {
             </h2>
             
             <form onSubmit={handleSearch} className="mt-4 sm:mt-6 relative mx-auto">
-              <div className="relative flex shadow-xl">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
-                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
-                </div>
-                <Input
-                  type="text"
-                  className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                  placeholder="Search location, property..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Button 
-                  type="submit" 
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full py-1.5 sm:py-2 md:py-3 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
-                >
-                  Search
-                </Button>
+            <div className="relative flex shadow-xl">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
+                <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
               </div>
-            </form>
+              <Input
+                type="text"
+                className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                placeholder="Search Society, Locality, City, State"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} // delay to allow click
+              />
+              <Button
+                type="submit"
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-r-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+              >
+                Search
+              </Button>
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
+                {suggestions.map((suggestion, index) => (
+                  <li
+                    key={index}
+                    onMouseDown={() => handleSuggestionClick(suggestion)}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  >
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </form>
           </div>
           
           <div className="mt-6 sm:mt-10 flex flex-wrap gap-2 sm:gap-4 justify-center px-2">
@@ -217,6 +266,25 @@ const Index = () => {
             >
               <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Rent
+            </Button>
+
+             <Button 
+              variant="outline"
+              size="sm"
+              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
+              onClick={() => navigate('/properties?type=plot')}
+            >
+              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Plot
+            </Button>
+            <Button 
+              variant="outline"
+              size="sm"
+              className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
+              onClick={() => navigate('/properties?type=commercial')}
+            >
+              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Commercial
             </Button>
           </div>
         </div>
@@ -332,7 +400,7 @@ const Index = () => {
   {/* Removed gradient overlay for clearer background */}
   <div className="absolute inset-0 bg-black/10"></div>
   
-  <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+  <div className="max-w-5x1 mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
     <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-16 border border-white/50 shadow-2xl">
       <div className="inline-flex items-center justify-center w-20 h-20 mb-8 bg-blue-600 rounded-full text-white">
         <Building className="w-10 h-10" />

@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/carousel";
 import { ContactForm } from "@/components/ContactForm";
 import { useAuth } from "@/contexts/AuthContext";
-
+import axiosInstance from "../axiosCalls/axiosInstance";
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [property, setProperty] = useState(null);
@@ -56,37 +56,57 @@ const PropertyDetail = () => {
       setLoading(true);
       try {
         console.log("Fetching property with ID:", id);
-        const response = await fetch(`${BASE_URL}/api/Account/GetPropertyDetails?propertyId=${id}`);
+        // Using axiosInstance instead of fetch
+        const response = await axiosInstance.get(`/api/Account/GetPropertyDetails?propertyId=${id}`);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch property details: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        // Axios automatically parses JSON and puts data in response.data
+        const data = response.data;
         console.log("Raw property data:", data);
         
         if (data.statusCode === 200 && data.propertyDetail) {
           const propertyData = data.propertyDetail;
           
-          // Set the favorite status based on API response
-          setIsFavorite(propertyData.isLiked || false);
+          // Check if property is already liked by current user
+          const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
+          const isLikedByUser = likedProperties[id || ''] || false;
+    
+          
+          // Set the favorite status based on local storage
+          setIsFavorite(isLikedByUser);
           setProperty(propertyData);
+          
+          // Set likes count from API or fallback to a default
+       
+          
           setError(null);
+          
+          // Fetch similar properties after getting property details
+        
         } else {
           throw new Error(data.message || 'Failed to retrieve property details');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching property details:', err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        // With axios, the error message is in err.response.data or err.message
+        const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
+        setError(errorMessage);
         
         // Only use mock data in development
         if (process.env.NODE_ENV === 'development') {
           const mockPropertyDetail = getMockPropertyDetail(id || "");
           if (mockPropertyDetail) {
             console.log("Using mock data in development");
+            
+            
+         
+            
             setProperty(mockPropertyDetail);
-            setIsFavorite(mockPropertyDetail.isLiked || false);
+          
+         
             setError(null);
+            
+            // Fetch mock similar properties
+          
           }
         }
       } finally {
@@ -97,6 +117,8 @@ const PropertyDetail = () => {
     if (id) {
       fetchPropertyDetails();
     }
+    
+ 
   }, [id]);
 
   // Mock property data for development testing only
@@ -608,14 +630,14 @@ const PropertyDetail = () => {
                   WhatsApp Now
                 </Button>
                 
-                <Button
+                {/* <Button
                   onClick={() => handleContactModal("email")} 
                   variant="outline"
                   className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 >
                   <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
                   Send Email
-                </Button>
+                </Button> */}
                 
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
@@ -634,12 +656,7 @@ const PropertyDetail = () => {
                   Schedule Visit
                 </Button>
               </div>
-            </div>
-            
-            {/* Similar Properties Teaser */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-md font-medium mb-3 text-blue-800">Similar Properties</h3>
-              <p className="text-sm text-gray-600 mb-4">Explore more properties like this one in {property.city || "this area"}.</p>
+              <div className="mt-6 pt-6 border-t border-gray-200">
               <Button
                 variant="default" 
                 className="w-full bg-blue-600 hover:bg-blue-700"
@@ -647,6 +664,7 @@ const PropertyDetail = () => {
               >
                 View Similar Properties
               </Button>
+              </div>
             </div>
           </div>
         </div>

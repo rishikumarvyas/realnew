@@ -22,6 +22,7 @@ const USER_TYPES = [
   { id: 1, name: "Owner" },
   { id: 2, name: "Broker" },
   { id: 3, name: "Builder" },
+  { id: 4, name: "Normal" },
 ];
 
 interface SignupProps {
@@ -55,7 +56,11 @@ const Signup = ({ onClose }: SignupProps) => {
   };
 
   const handleFormSubmit = async (formData: any) => {
-    const { name: fullName, phone: phoneNumber, userType: selectedUserType } = formData;
+    const {
+      name: fullName,
+      phone: phoneNumber,
+      userType: selectedUserType,
+    } = formData;
 
     setLoading(true);
     setPhoneError(null);
@@ -65,13 +70,15 @@ const Signup = ({ onClose }: SignupProps) => {
       const users = localStorage.getItem("homeYatra_users");
       const existingUsers = users ? JSON.parse(users) : {};
       const fullPhoneNumber = "+91" + phoneNumber;
-      
+
       if (existingUsers[fullPhoneNumber]) {
-        setPhoneError("This number is already registered. Please login or use another number.");
+        setPhoneError(
+          "This number is already registered. Please login or use another number."
+        );
         setLoading(false);
         return;
       }
-      
+
       setName(fullName);
       setPhone(phoneNumber);
       setUserType(selectedUserType);
@@ -111,9 +118,9 @@ const Signup = ({ onClose }: SignupProps) => {
     try {
       // Pass only the required parameters according to the API spec
       const success = await signup(
-        "+91" + phone, 
-        name, 
-        otp, 
+        "+91" + phone,
+        name,
+        otp,
         userType.toString() // Convert to string as API expects string
       );
 
@@ -170,7 +177,7 @@ const Signup = ({ onClose }: SignupProps) => {
       });
       console.error("Resend OTP error:", error);
     }
-    
+
     return Promise.resolve();
   };
 
@@ -221,22 +228,22 @@ const Signup = ({ onClose }: SignupProps) => {
               </Button>
             )}
             <CardTitle className="text-center text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              Sign up for HomeYatra
+              Sign up
             </CardTitle>
             <CardDescription className="text-center text-sm mt-1">
               {step === "form"
-                ? "Create an account to start your real estate journey"
+                ? "Create an account"
                 : `Enter the verification code sent to +91 ${phone}`}
             </CardDescription>
           </CardHeader>
 
           <CardContent className="px-6 py-2">
             {step === "form" ? (
-              <FormStep 
-                onSubmit={handleFormSubmit} 
+              <FormStep
+                onSubmit={handleFormSubmit}
                 loading={loading}
                 userTypes={USER_TYPES}
-                states={[]} 
+                states={[]}
                 initialUserType={userType}
                 phoneError={phoneError}
               />

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import NotificationIcon from "@/components/NotificationIcon";
 import {
@@ -16,7 +16,6 @@ import {
   LogOut,
   PlusCircle,
   Home,
-  Building,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -24,30 +23,49 @@ import hy from "../Images/hy1-removebg-preview.png";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { 
-    user, 
-    isAuthenticated, 
-    logout, 
-    openLoginModal, 
-    openSignupModal 
+  const {
+    user,
+    isAuthenticated,
+    logout,
+    openLoginModal,
+    openSignupModal,
   } = useAuth();
-  
+
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Parse query param "type" from URL
+  const queryParams = new URLSearchParams(location.search);
+  const currentType = queryParams.get("type") || "";
 
   const handleLogout = () => {
     logout();
-    // No need to navigate away after logout
+    setIsOpen(false);
   };
 
-  // Modified to use modals instead of navigation for login/signup
   const handleLoginClick = () => {
     openLoginModal();
-    setIsOpen(false); // Close mobile menu if open
+    setIsOpen(false);
   };
 
   const handleSignupClick = () => {
     openSignupModal();
-    setIsOpen(false); // Close mobile menu if open
+    setIsOpen(false);
+  };
+
+  const handlePostPropertyClick = () => {
+    if (location.pathname !== "/post-property") {
+      navigate("/post-property");
+    }
+    setIsOpen(false);
+  };
+
+  // Helper to check active link based on pathname & query param
+  const isActive = (path, type = "") => {
+    return (
+      location.pathname === path &&
+      (type ? queryParams.get("type") === type : true)
+    );
   };
 
   return (
@@ -56,7 +74,6 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              {/* Replace text logo with image logo */}
               <img
                 src={hy}
                 alt="HomeYatra Logo"
@@ -71,27 +88,34 @@ export function Navbar() {
                 onMouseOver={(e) =>
                   (e.currentTarget.style.transform = "scale(1.05)")
                 }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.transform = "scale(1)")
-                }
+                onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
               />
             </Link>
             <div className="hidden sm:ml-8 sm:flex sm:space-x-6">
-              <Link
-                to="/properties?type=buy"
-                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
-              >
-                Buy
-              </Link>
-              <Link
-                to="/properties?type=rent"
-                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
-              >
-                Rent
-              </Link>
+              {[
+                { label: "Buy", type: "buy" },
+                { label: "Rent", type: "rent" },
+                { label: "Plot", type: "plot" },
+                { label: "Commercial", type: "commercial" },
+              ].map(({ label, type }) => (
+                <Link
+                  key={type}
+                  to={`/properties?type=${type}`}
+                  className={cn(
+                    "text-gray-800 px-3 py-2 text-sm font-medium border-b-2 transition-all duration-200",
+                    isActive("/properties", type)
+                      ? "text-blue-600 border-blue-600"
+                      : "hover:text-blue-600 hover:border-blue-600 border-transparent"
+                  )}
+                >
+                  {label}
+                </Link>
+              ))}
               <Link
                 to="/contactus"
-                className="text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+                className={cn(
+                  "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+                )}
               >
                 Contact
               </Link>
@@ -103,13 +127,13 @@ export function Navbar() {
               <div className="flex items-center space-x-4">
                 <Button
                   variant="outline"
-                  onClick={() => location.pathname !== "/post-property" && window.location.assign("/post-property")}
+                  onClick={handlePostPropertyClick}
                   className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full"
                 >
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Post Property
                 </Button>
-                <NotificationIcon userId={user?.userId ?? ''} />
+                <NotificationIcon userId={user?.userId ?? ""} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -126,7 +150,7 @@ export function Navbar() {
                     <div className="px-2 py-2 font-medium text-gray-700">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-500" />
-                        {user?.phone}
+                        {user?.name}
                       </div>
                     </div>
                     <DropdownMenuSeparator />
@@ -139,12 +163,7 @@ export function Navbar() {
                         Dashboard
                       </Link>
                     </DropdownMenuItem>
-                    {/* <DropdownMenuItem asChild className="hover:bg-blue-50">
-                      <Link to="/my-properties" className="cursor-pointer flex items-center py-1">
-                        <Building className="mr-2 h-4 w-4 text-blue-500" />
-                        My Properties
-                      </Link>
-                    </DropdownMenuItem> */}
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={handleLogout}
@@ -181,11 +200,7 @@ export function Navbar() {
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-800 hover:text-blue-600"
             >
               <span className="sr-only">Open main menu</span>
-              {isOpen ? (
-                <X className="block h-6 w-6" />
-              ) : (
-                <Menu className="block h-6 w-6" />
-              )}
+              {isOpen ? <X className="block h-6 w-6" /> : <Menu className="block h-6 w-6" />}
             </button>
           </div>
         </div>
@@ -194,20 +209,21 @@ export function Navbar() {
       {/* Mobile menu */}
       <div className={cn("sm:hidden", isOpen ? "block" : "hidden")}>
         <div className="pt-2 pb-3 space-y-1 border-t bg-white">
-          <Link
-            to="/properties?type=buy"
-            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
-            onClick={() => setIsOpen(false)}
-          >
-            Buy
-          </Link>
-          <Link
-            to="/properties?type=rent"
-            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
-            onClick={() => setIsOpen(false)}
-          >
-            Rent
-          </Link>
+          {[
+            { label: "Buy", type: "buy" },
+            { label: "Rent", type: "rent" },
+            { label: "Plot", type: "plot" },
+            { label: "Commercial", type: "commercial" },
+          ].map(({ label, type }) => (
+            <Link
+              key={type}
+              to={`/properties?type=${type}`}
+              className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
+              onClick={() => setIsOpen(false)}
+            >
+              {label}
+            </Link>
+          ))}
           <Link
             to="/contactus"
             className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
@@ -218,14 +234,13 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <div className="border-t border-gray-200"></div>
-              <Link
-                to="/post-property"
-                className="block px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
-                onClick={() => setIsOpen(false)}
+              <button
+                className="block w-full text-left px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
+                onClick={handlePostPropertyClick}
               >
                 <PlusCircle className="inline h-4 w-4 mr-2" />
                 Post Property
-              </Link>
+              </button>
               <Link
                 to="/dashboard"
                 className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
@@ -234,14 +249,7 @@ export function Navbar() {
                 <Home className="inline h-4 w-4 mr-2" />
                 Dashboard
               </Link>
-              <Link
-                to="/my-properties"
-                className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
-                onClick={() => setIsOpen(false)}
-              >
-                <Building className="inline h-4 w-4 mr-2" />
-                My Properties
-              </Link>
+
               <div
                 className="block px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 cursor-pointer border-l-4 border-transparent hover:border-red-500"
                 onClick={() => {
@@ -254,23 +262,21 @@ export function Navbar() {
               </div>
             </>
           ) : (
-            <>
-              <div className="border-t border-gray-200 pt-4 pb-3 px-4 flex flex-col space-y-3">
-                <Button
-                  variant="outline"
-                  onClick={handleLoginClick}
-                  className="w-full justify-center border-blue-500 text-blue-600"
-                >
-                  Login
-                </Button>
-                <Button
-                  onClick={handleSignupClick}
-                  className="w-full justify-center bg-blue-600 text-white"
-                >
-                  Sign Up
-                </Button>
-              </div>
-            </>
+            <div className="border-t border-gray-200 pt-4 pb-3 px-4 flex flex-col space-y-3">
+              <Button
+                variant="outline"
+                onClick={handleLoginClick}
+                className="w-full justify-center border-blue-500 text-blue-600"
+              >
+                Login
+              </Button>
+              <Button
+                onClick={handleSignupClick}
+                className="w-full justify-center bg-blue-600 text-white"
+              >
+                Sign Up
+              </Button>
+            </div>
           )}
         </div>
       </div>

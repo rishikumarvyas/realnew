@@ -82,7 +82,6 @@ export function ContactForm({
               className="h-6 w-6"
               onClick={() => onOpenChange(false)}
             >
-              <X className="h-4 w-4" />
             </Button>
           </DialogTitle>
           <DialogDescription>
