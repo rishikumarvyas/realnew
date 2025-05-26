@@ -454,9 +454,8 @@ const EditProperty = () => {
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">Buy</SelectItem>
-                          <SelectItem value="2">Sell</SelectItem>
-                          <SelectItem value="3">Rent</SelectItem>
+                          <SelectItem value="2">Rent</SelectItem>
+                          <SelectItem value="3">Sell</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -481,11 +480,11 @@ const EditProperty = () => {
                           <SelectValue placeholder="Select property type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">Apartment</SelectItem>
-                          <SelectItem value="2">House</SelectItem>
-                          <SelectItem value="3">Villa</SelectItem>
-                          <SelectItem value="4">Commercial</SelectItem>
-                          <SelectItem value="5">Land</SelectItem>
+                          <SelectItem value="1">Flat/Apartment</SelectItem>
+                          <SelectItem value="2">Shop/Commercial</SelectItem>
+                          <SelectItem value="3">Row House</SelectItem>
+                          <SelectItem value="4">Plot</SelectItem>
+                          <SelectItem value="5">Bunglow</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

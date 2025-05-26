@@ -784,6 +784,7 @@ const PostProperty = () => {
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="broker">Broker</SelectItem>
                     <SelectItem value="builder">Builder</SelectItem>
+                    <SelectItem value="builder">Normal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
