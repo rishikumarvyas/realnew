@@ -226,6 +226,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const decodedToken: decodedToken = jwtDecode(token);
 
         localStorage.setItem("token", token);
+        fetchAmenities(); // Fetch amenities after successful login
+        fetchAllStates(); // Fetch all states after successful login
+        fetchUserTypes(); // Fetch user types after successful login
+        fetchSuperCategory(); // Fetch super categories after successful login
 
         // Create user data with API values
         const userData = {
@@ -251,9 +255,125 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const fetchAmenities = async () => {
+    // Fetch Amenity data after successful login and save to localStorage
+    try {
+      const amenityRes = await axios.get(
+        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=Amenity",
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (
+        amenityRes?.data?.statusCode === 200 &&
+        amenityRes?.data?.data.length > 0
+      ) {
+        localStorage.setItem(
+          "amenities",
+          JSON.stringify(amenityRes?.data?.data)
+        );
+      } else {
+        console.error("Failed to fetch amenities:", amenityRes.status);
+      }
+    } catch (err) {
+      console.error("Error fetching amenities:", err);
+    }
+  };
+
+  const fetchAllStates = async () => {
+    // Fetch Amenity data after successful login and save to localStorage
+    try {
+      const allStatesRes = await axios.get(
+        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=State",
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (
+        allStatesRes?.data?.statusCode === 200 &&
+        allStatesRes?.data?.data.length > 0
+      ) {
+        localStorage.setItem(
+          "allStates",
+          JSON.stringify(allStatesRes?.data?.data)
+        );
+      } else {
+        console.error("Failed to fetch allStates:", allStatesRes.status);
+      }
+    } catch (err) {
+      console.error("Error fetching allStates:", err);
+    }
+  };
+
+  const fetchUserTypes = async () => {
+    // Fetch Amenity data after successful login and save to localStorage
+    try {
+      const UserTypesRes = await axios.get(
+        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=userType",
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (
+        UserTypesRes?.data?.statusCode === 200 &&
+        UserTypesRes?.data?.data.length > 0
+      ) {
+        localStorage.setItem(
+          "userType",
+          JSON.stringify(UserTypesRes?.data?.data)
+        );
+      } else {
+        console.error("Failed to fetch userType:", UserTypesRes.status);
+      }
+    } catch (err) {
+      console.error("Error fetching userType:", err);
+    }
+  };
+
+  const fetchSuperCategory = async () => {
+    // Fetch Amenity data after successful login and save to localStorage
+    try {
+      const superCategoryRes = await axios.get(
+        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=superCategory",
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (
+        superCategoryRes?.data?.statusCode === 200 &&
+        superCategoryRes?.data?.data.length > 0
+      ) {
+        localStorage.setItem(
+          "superCategory",
+          JSON.stringify(superCategoryRes?.data?.data)
+        );
+      } else {
+        console.error(
+          "Failed to fetch superCategory:",
+          superCategoryRes.status
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching superCategory:", err);
+    }
+  };
+
   const logout = () => {
+    // Clear user data and token
     setUser(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("amenities");
+    localStorage.removeItem("allStates");
+    localStorage.removeItem("userType");
+    localStorage.removeItem("superCategory");
   };
 
   const value = {
