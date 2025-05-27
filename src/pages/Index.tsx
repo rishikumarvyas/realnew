@@ -22,7 +22,9 @@ import {
   Key,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Map,
+  Store
 } from "lucide-react";
 
 // Mock data for featured properties
@@ -274,7 +276,7 @@ const Index = () => {
               className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
               onClick={() => navigate('/properties?type=plot')}
             >
-              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <Map className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Plot
             </Button>
             <Button 
@@ -283,7 +285,7 @@ const Index = () => {
               className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
               onClick={() => navigate('/properties?type=commercial')}
             >
-              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <Store className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Commercial
             </Button>
           </div>

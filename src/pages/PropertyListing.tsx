@@ -948,7 +948,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Tab filter */}
         <div className="mb-8">
-          <div className="w-full max-w-2xl mx-auto bg-blue-700 bg-opacity-40 rounded-lg p-2">
+          <div className="w-full bg-blue-700 bg-opacity-40 rounded-lg p-2 pl-8">
             <div className="grid grid-cols-5 gap-1 w-full">
               {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
                 <button
