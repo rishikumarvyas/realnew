@@ -634,10 +634,7 @@ const PropertyDetail = () => {
                             loading={index === 0 ? "eager" : "lazy"}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Button variant="ghost" className="text-white bg-black/30 hover:bg-black/50">
-                              <Maximize2 className="h-5 w-5 mr-1" />
-                              View Image
-                            </Button>
+                           
                           </div>
                         </div>
                       </div>
@@ -927,16 +924,7 @@ const PropertyDetail = () => {
                   </div>
                   
                   {/* Property images button */}
-                  <div className="mt-6">
-                    <Button 
-                      variant="outline"
-                      className="w-full flex items-center justify-center hover:bg-blue-50"
-                      onClick={() => setGalleryOpen(true)}
-                    >
-                      <Image className="h-4 w-4 mr-2 text-blue-600" />
-                      View All Images ({images.length})
-                    </Button>
-                  </div>
+               
                 </TabsContent>
               </Tabs>
             </div>
@@ -966,7 +954,6 @@ const PropertyDetail = () => {
           
           {/* Sidebar - Contact Info */}
           {/* Updated Contact Info Section */}
-
 <div>
   <div className="bg-white p-6 rounded-xl shadow-sm mb-6 sticky top-24 hover:shadow-lg transition-shadow">
     <div className="border-b pb-4 space-y-4">
@@ -1005,8 +992,6 @@ const PropertyDetail = () => {
       )}
     </div>
     
-
-    
     {/* Owner/Publisher Info Section - Updated to use API data */}
     <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
       <div className="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center text-white shadow-inner">
@@ -1023,12 +1008,11 @@ const PropertyDetail = () => {
             : (property.postedBy || "Property Owner")
           }
         </div>
-         <div className="font-medium">
-          {showContactInfo && ownerContactInfo?.publisherPhone 
-            ? ownerContactInfo.publisherPhone
-            : (property.postedBy || "Property Owner")
-          }
-        </div>
+        {showContactInfo && ownerContactInfo?.publisherPhone && (
+          <div className="font-medium">
+            {ownerContactInfo.publisherPhone}
+          </div>
+        )}
         <div className="text-sm text-gray-500 flex items-center gap-1">
           {property.userType || "Owner"}
           {/* Add verified badge if needed */}
@@ -1048,15 +1032,6 @@ const PropertyDetail = () => {
           WhatsApp Now
         </Button>
         
-        {/* <Button
-          onClick={() => handleContactModal("email")} 
-          variant="outline"
-          className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
-        >
-          <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
-          Send Email
-        </Button> */}
-        
         <Button
           className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
           onClick={() => window.open(`tel:${ownerContactInfo.publisherPhone}`, '_self')}
@@ -1074,12 +1049,18 @@ const PropertyDetail = () => {
             Schedule Visit
           </Button>
         </div>
-        
-      
       </div>
-    ) : (
+    ) : null}
+    
+    {/* Contact Count Display - show when toggle is ON and user has viewed contacts */}
+    {showContactInfo && user && contactsViewed > 0 && (
       <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-       
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-sm">
+            <Eye className="w-4 h-4" />
+            <span>{contactsViewed} contacts viewed</span>
+          </div>
+        </div>
       </div>
     )}
   </div>
