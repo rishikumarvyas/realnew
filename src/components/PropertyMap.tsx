@@ -15,62 +15,106 @@ const PropertyMap = ({ address, city, state, className = "h-[300px]" }: Property
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Create map instance
-    const map = L.map(mapRef.current).setView([20.5937, 78.9629], 5); // Default to India center
+    // Create custom marker icon
+    const locationIcon = L.divIcon({
+      html: `
+        <div style="
+          background-color: #ef4444;
+          width: 20px;
+          height: 20px;
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <div style="
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            transform: rotate(45deg);
+          "></div>
+        </div>
+      `,
+      className: '',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30],
+    });
 
-    // Add OpenStreetMap tile layer
+    // Initialize map
+    const map = L.map(mapRef.current).setView([20.5937, 78.9629], 5);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map);
 
-    // Try to geocode the address using Nominatim
     const fullAddress = `${address}${city ? `, ${city}` : ''}${state ? `, ${state}` : ''}`;
-    
+
+    // Geocode full address
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`)
-      .then(response => response.json())
+      .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
           const { lat, lon } = data[0];
-          const location = [parseFloat(lat), parseFloat(lon)];
-          
-          // Update map view
-          map.setView(location as [number, number], 16);
-          
-          // Add marker
-          const marker = L.marker(location as [number, number]).addTo(map);
-          marker.bindPopup(`<b>${fullAddress}</b>`).openPopup();
+          const location: [number, number] = [parseFloat(lat), parseFloat(lon)];
+
+          map.setView(location, 16);
+
+          L.marker(location, { icon: locationIcon }).addTo(map)
+            .bindPopup(`
+              <div style="font-family: sans-serif;">
+                <b style="color: #1f2937;">${fullAddress}</b>
+                <br>
+                <small style="color: #6b7280;">📍 Exact Location</small>
+              </div>
+            `).openPopup();
         } else {
-          console.warn('Could not geocode address:', fullAddress);
-          
-          // If we couldn't find the specific address, try with just city and state
-          if (city) {
-            const cityState = `${city}${state ? `, ${state}` : ''}`;
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityState)}`)
-              .then(response => response.json())
-              .then(cityData => {
-                if (cityData && cityData.length > 0) {
-                  const { lat, lon } = cityData[0];
-                  const location = [parseFloat(lat), parseFloat(lon)];
-                  map.setView(location as [number, number], 13);
-                  L.marker(location as [number, number]).addTo(map)
-                    .bindPopup(`<b>${cityState}</b><br>Approximate location`).openPopup();
-                }
-              });
-          }
+          // Retry with city + state
+          const fallback = `${city || ''}${state ? `, ${state}` : ''}`;
+          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallback)}`)
+            .then(res => res.json())
+            .then(cityData => {
+              if (cityData && cityData.length > 0) {
+                const { lat, lon } = cityData[0];
+                const location: [number, number] = [parseFloat(lat), parseFloat(lon)];
+
+                map.setView(location, 13);
+
+                L.marker(location, { icon: locationIcon }).addTo(map)
+                  .bindPopup(`
+                    <div style="font-family: sans-serif;">
+                      <b style="color: #1f2937;">${fallback}</b>
+                      <br>
+                      <small style="color: #f59e0b;">⚠️ Approximate Location</small>
+                    </div>
+                  `).openPopup();
+              }
+            });
         }
       })
       .catch(err => {
-        console.error('Error geocoding address:', err);
+        console.error('Geocoding failed:', err);
       });
 
-    // Cleanup function
     return () => {
       map.remove();
     };
   }, [address, city, state]);
 
-  return <div ref={mapRef} className={`rounded-lg overflow-hidden border ${className}`}></div>;
+  return (
+    <div
+      ref={mapRef}
+      className={`relative border rounded-lg ${className}`}
+      style={{
+        zIndex: 1
+      }}
+    />
+  );
 };
 
 export default PropertyMap;

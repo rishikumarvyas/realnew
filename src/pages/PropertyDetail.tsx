@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,57 +56,51 @@ const PropertyDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // New states for image gallery and likes
+  // Ref for carousel API access
+  const carouselApiRef = useRef<any>(null);
+
+  // States for image gallery and likes
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [similarProperties, setSimilarProperties] = useState<any[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   
-  // New states for contact toggle and contact count
+  // States for contact toggle and contact count
   const [showContactInfo, setShowContactInfo] = useState(false);
-  const [contactsViewed, setContactsViewed] = useState(0);
   const [ownerContactInfo, setOwnerContactInfo] = useState<any>(null);
-  
-  // Track whether the user has already liked this property
-  const [hasLiked, setHasLiked] = useState(false);
+  const [contactsViewed, setContactsViewed] = useState(0);
+  const [likingProperty, setLikingProperty] = useState(false);
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       setLoading(true);
       try {
         console.log("Fetching property with ID:", id);
-        // Using axiosInstance instead of fetch
         const response = await axiosInstance.get(`/api/Account/GetPropertyDetails?propertyId=${id}`);
         
-        // Axios automatically parses JSON and puts data in response.data
         const data = response.data;
         console.log("Raw property data:", data);
         
         if (data.statusCode === 200 && data.propertyDetail) {
           const propertyData = data.propertyDetail;
           
-          // Check if property is already liked by current user
-          const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
-          const isLikedByUser = likedProperties[id || ''] || false;
-          setHasLiked(isLikedByUser);
-          
-          // Set the favorite status based on local storage
-          setIsFavorite(isLikedByUser);
           setProperty(propertyData);
-          
-          // Set likes count from API or fallback to a default
           setLikesCount(propertyData.likesCount || 0);
+          
+          // FIXED: Ensure like status is properly set from API response
+          const userLikeStatus = propertyData.isLikedByCurrentUser || false;
+          setIsFavorite(userLikeStatus);
+          console.log("Setting initial like status:", userLikeStatus);
           
           setError(null);
           
-          // Fetch similar properties after getting property details
+          // Fetch similar properties
           fetchSimilarProperties(propertyData.city, propertyData.propertyType);
         } else {
           throw new Error(data.message || 'Failed to retrieve property details');
         }
       } catch (err: any) {
         console.error('Error fetching property details:', err);
-        // With axios, the error message is in err.response.data or err.message
         const errorMessage = err.response?.data?.message || err.message || 'An unknown error occurred';
         setError(errorMessage);
         
@@ -115,18 +109,10 @@ const PropertyDetail = () => {
           const mockPropertyDetail = getMockPropertyDetail(id || "");
           if (mockPropertyDetail) {
             console.log("Using mock data in development");
-            
-            // Check if property is already liked by current user
-            const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
-            const isLikedByUser = likedProperties[id || ''] || false;
-            setHasLiked(isLikedByUser);
-            
             setProperty(mockPropertyDetail);
-            setIsFavorite(isLikedByUser);
+            setIsFavorite(mockPropertyDetail.isLikedByCurrentUser || false);
             setLikesCount(mockPropertyDetail.likesCount || 0);
             setError(null);
-            
-            // Fetch mock similar properties
             getMockSimilarProperties(mockPropertyDetail.city, mockPropertyDetail.propertyType);
           }
         }
@@ -138,13 +124,14 @@ const PropertyDetail = () => {
     if (id) {
       fetchPropertyDetails();
     }
-    
-    // Initialize contacts viewed count from localStorage
-    const viewedContacts = localStorage.getItem('contactsViewed');
-    if (viewedContacts) {
-      setContactsViewed(parseInt(viewedContacts));
-    }
   }, [id]);
+
+  // FIXED: Add effect to sync carousel with activeImageIndex
+  useEffect(() => {
+    if (carouselApiRef.current && typeof carouselApiRef.current.scrollTo === 'function') {
+      carouselApiRef.current.scrollTo(activeImageIndex);
+    }
+  }, [activeImageIndex]);
   
   // Fetch similar properties based on location and property type
   const fetchSimilarProperties = async (city: string, propertyType: string) => {
@@ -152,14 +139,7 @@ const PropertyDetail = () => {
     
     setLoadingSimilar(true);
     try {
-      // In a real implementation, you would call an API endpoint here using axiosInstance
-      // For now, using the mock implementation
       console.log(`Fetching similar properties for city: ${city}, type: ${propertyType}`);
-      
-      // In a production app, you would do:
-      // const response = await axiosInstance.get(`/api/Properties/Similar?city=${city}&propertyType=${propertyType}`);
-      // setSimilarProperties(response.data.properties);
-      
       // For development/demo purposes, use mock data
       getMockSimilarProperties(city, propertyType);
     } catch (err) {
@@ -171,7 +151,6 @@ const PropertyDetail = () => {
   
   // Mock similar properties (for development purposes)
   const getMockSimilarProperties = (city: string, propertyType: string) => {
-    // Generate 3 mock similar properties
     const mockProperties = Array(3).fill(0).map((_, index) => ({
       propertyId: `mock_similar_${index}`,
       title: `${propertyType} in ${city} - Property ${index + 1}`,
@@ -208,7 +187,8 @@ const PropertyDetail = () => {
       bedroom: 3,
       bathroom: 2,
       balcony: 1,
-      likesCount: 42, // Added likesCount property
+      likesCount: 42,
+      isLikedByCurrentUser: false,
       amenityDetails: [
         { amenityId: "1", amenity: "Wifi" },
         { amenityId: "2", amenity: "Parking" },
@@ -243,7 +223,6 @@ const PropertyDetail = () => {
           isMainImage: false 
         }
       ],
-      // New fields from PostProperty
       ownerType: "Owner",
       isReraApproved: true,
       isOCApproved: false,
@@ -258,9 +237,8 @@ const PropertyDetail = () => {
     setContactModalOpen(true);
   };
 
-  // Updated handleToggleContactInfo function
+  // Handle contact info toggle with proper API response handling
   const handleToggleContactInfo = async (checked: boolean) => {
-    // If user wants to view contact info but is not logged in
     if (checked && !user) {
       toast({
         title: "Login Required",
@@ -270,24 +248,22 @@ const PropertyDetail = () => {
       return;
     }
 
-    // If user is logged in and wants to view contact info
+    if (checked && user && property && isPropertyOwner()) {
+      toast({
+        title: "Action not allowed",
+        description: "You cannot view contact information for your own property.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (checked && user) {
       try {
         const userId = user.userId || user.id;
         const propertyId = property.propertyId || id;
         
-        console.log('=== API Request Debug Info ===');
-        console.log('User Object:', user);
-        console.log('Property Object:', property);
-        console.log('UserId:', userId, 'Type:', typeof userId);
-        console.log('PropertyId:', propertyId, 'Type:', typeof propertyId);
-        
-        if (!userId) {
-          throw new Error('User ID is missing from decoded token');
-        }
-        
-        if (!propertyId) {
-          throw new Error('Property ID is missing');
+        if (!userId || !propertyId) {
+          throw new Error('User ID or Property ID is missing');
         }
 
         const response = await axiosInstance.get('/api/Account/GetPropertyContact', {
@@ -300,76 +276,58 @@ const PropertyDetail = () => {
         console.log('API Response:', response.data);
 
         if (response.data.statusCode === 200) {
-          // Store the contact information in state
+          // Store the contact information from API response
           setOwnerContactInfo({
             publisherName: response.data.publisherName,
             publisherPhone: response.data.publisherPhone,
             alreadyViewed: response.data.alreadyViewed
           });
           
-          // Set the toggle to show contact info
           setShowContactInfo(true);
           
-          // Update contact viewed count only if not already viewed
-          if (!response.data.alreadyViewed) {
-            const newCount = contactsViewed + 1;
-            setContactsViewed(newCount);
-            localStorage.setItem('contactsViewed', newCount.toString());
-            
-            toast({
-              title: "Contact information visible",
-              description: `You've viewed ${newCount} property contacts so far.`
-            });
-          } else {
-            toast({
-              title: "Contact information visible",
-              description: "You've already viewed this contact before."
-            });
+          // Extract contact count from message
+          const message = response.data.message || '';
+          const match = message.match(/(\d+)/);
+          if (match) {
+            setContactsViewed(parseInt(match[1]));
           }
-        } else if (response.data.statusCode === 400 && response.data.message?.includes("limit reached")) {
+          
           toast({
-            title: "View Limit Reached",
-            description: response.data.message,
-            variant: "destructive",
+            title: "Contact information visible",
+            description: response.data.alreadyViewed 
+              ? "You've already viewed this contact before."
+              : "Contact details are now visible."
           });
-          setShowContactInfo(false);
         } else {
           throw new Error(response.data.message || 'Failed to get contact information');
         }
       } catch (error: any) {
         console.error('Error loading contact info:', error);
         
-        if (error.response?.status === 401) {
-          toast({
-            title: "Authentication Required",
-            description: "Please login again to view contact information.",
-            variant: "destructive",
-          });
-        } else if (error.response?.status === 500) {
-          toast({
-            title: "Server Error",
-            description: "The server encountered an error. Please try again in a few moments.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: error.response?.data?.message || error.message || "Failed to load contact information.",
-            variant: "destructive",
-          });
-        }
+        const errorMessage = error.response?.data?.message || error.message || "Failed to load contact information.";
+        toast({
+          title: error.response?.status === 400 ? "View Limit Reached" : "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
         
         setShowContactInfo(false);
         setOwnerContactInfo(null);
+        
+        // Still extract contact count from error message if available
+        if (error.response?.data?.message) {
+          const match = error.response.data.message.match(/(\d+)/);
+          if (match) {
+            setContactsViewed(parseInt(match[1]));
+          }
+        }
       }
     } else {
-      // User is turning off the toggle
       setShowContactInfo(false);
-      // Keep the contact info in state so it can be shown again without API call
     }
   };
 
-  // Also update the button click handler in the contact info section
+  // Handle show contact click
   const handleShowContactClick = () => {
     if (!user) {
       toast({
@@ -377,18 +335,33 @@ const PropertyDetail = () => {
         description: "Please login to view contact information.",
         variant: "destructive",
       });
-      // Trigger your existing login modal
-      // setLoginModalOpen(true);
       return;
     }
     
-    // If user is logged in, toggle the switch
+    if (isPropertyOwner()) {
+      toast({
+        title: "Action not allowed",
+        description: "You cannot view contact information for your own property.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     handleToggleContactInfo(true);
   };
 
+  // FIXED: Enhanced toggleFavorite function with better state management
   const toggleFavorite = async () => {
-    // Check if the user is the property owner
-    if (property && user && property.postedBy === user.name) {
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to like this property.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isPropertyOwner()) {
       toast({
         title: "Action not allowed",
         description: "You cannot like your own property.",
@@ -397,68 +370,86 @@ const PropertyDetail = () => {
       return;
     }
     
-    // Check if the user has already liked this property
-    if (hasLiked) {
-      toast({
-        title: "Already liked",
-        description: "You have already liked this property.",
-      });
-      return;
-    }
+    // Prevent multiple rapid clicks
+    if (likingProperty) return;
+    
+    setLikingProperty(true);
+    
+    // Store previous state for rollback if needed
+    const previousLikeStatus = isFavorite;
+    const previousLikesCount = likesCount;
     
     try {
-      // Toggle the UI state immediately for better UX
-      const newFavoriteState = true; // Always set to true since we're only allowing to like, not unlike
-      setIsFavorite(newFavoriteState);
-      setHasLiked(true);
+      const userId = user.userId || user.id;
+      const propertyId = property.propertyId || id;
+      const newLikeStatus = !isFavorite;
       
-      // Update likes count (increment by 1)
-      setLikesCount(prevCount => prevCount + 1);
+      // Optimistic update
+      setIsFavorite(newLikeStatus);
+      setLikesCount(prev => newLikeStatus ? prev + 1 : Math.max(0, prev - 1));
       
-      // Store the liked status in localStorage
-      const likedProperties = JSON.parse(localStorage.getItem('likedProperties') || '{}');
-      likedProperties[id || ''] = true;
-      localStorage.setItem('likedProperties', JSON.stringify(likedProperties));
-      
-      // Send update to the server using axiosInstance
       const response = await axiosInstance.post('/api/Account/UpdateProperty', {
-        propertyId: id,
-        isLiked: newFavoriteState
+        propertyId: propertyId,
+        isLiked: newLikeStatus,
+        accountId: userId
       });
       
-      if (response.data.statusCode !== 200) {
-        throw new Error('Failed to update favorite status');
+      if (response.data.statusCode === 200) {
+        // Update likes count from API response if provided
+        if (response.data.likesCount !== undefined) {
+          setLikesCount(response.data.likesCount);
+        }
+        
+        // Also update the property object to maintain consistency
+        setProperty(prev => ({
+          ...prev,
+          isLikedByCurrentUser: newLikeStatus,
+          likesCount: response.data.likesCount || (newLikeStatus ? prev.likesCount + 1 : Math.max(0, prev.likesCount - 1))
+        }));
+        
+        toast({
+          title: newLikeStatus ? "Added to favorites" : "Removed from favorites",
+          description: newLikeStatus 
+            ? "This property has been added to your favorites." 
+            : "This property has been removed from your favorites.",
+        });
+        
+        console.log('Property like status updated successfully');
+      } else {
+        throw new Error(response.data.message || 'Failed to update like status');
       }
+    } catch (error: any) {
+      console.error('Error updating like status:', error);
       
-      toast({
-        title: "Added to favorites",
-        description: "This property has been added to your favorites.",
-      });
+      // Rollback optimistic update
+      setIsFavorite(previousLikeStatus);
+      setLikesCount(previousLikesCount);
       
-      console.log('Property favorite status updated successfully');
-    } catch (error) {
-      console.error('Error updating favorite status:', error);
       toast({
         title: "Action failed",
-        description: "There was an error updating your favorites. Please try again.",
+        description: error.response?.data?.message || "There was an error updating your favorites. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLikingProperty(false);
     }
   };
 
+  // FIXED: Enhanced handleImageClick function
   const handleImageClick = (index: number) => {
+    console.log('Thumbnail clicked, changing to index:', index);
     setActiveImageIndex(index);
   };
   
-  // Use posted by and phone information from the property details
+  // Use posted by and phone information from the property details or API response
   const ownerDetails = {
-    name: property?.postedBy || "Property Owner",
-    phone: property?.phone || "+91 98765 43210",
+    name: ownerContactInfo?.publisherName || property?.postedBy || "Property Owner",
+    phone: ownerContactInfo?.publisherPhone || property?.phone || "+91 98765 43210",
     email: "contact@homeyatra.com",
     verified: true
   };
   
-  // Format date function for displaying the created date
+  // Format date function
   const formatDate = (dateString: string) => {
     if (!dateString) return "Not specified";
     try {
@@ -487,7 +478,13 @@ const PropertyDetail = () => {
   
   // Check if current user is the property owner
   const isPropertyOwner = () => {
-    return property && user && property.postedBy === user.name;
+    if (!property || !user) return false;
+    
+    if (property.userId && user.userId) {
+      return property.userId === user.userId;
+    }
+    
+    return property.postedBy === user.name;
   };
 
   if (loading) {
@@ -503,12 +500,16 @@ const PropertyDetail = () => {
 
   if (error || !property) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center bg-gray-50">
-        <h1 className="text-3xl font-bold mb-4">Property Not Found</h1>
-        <p className="mb-8 text-gray-600">{error || "The property you are looking for doesn't exist or has been removed."}</p>
-        <Button className="bg-blue-600 hover:bg-blue-700 shadow-lg transition-all" onClick={() => navigate("/")}>
-          <Home className="mr-2 h-4 w-4" /> Back to Home
-        </Button>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Property Not Found</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => navigate(-1)} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Go Back
+          </Button>
+        </div>
       </div>
     );
   }
@@ -522,54 +523,56 @@ const PropertyDetail = () => {
         ? 'Selling' 
         : property.superCategory;
 
-  // Get images directly without compression
+  // Get images directly
   const images = property.imageDetails && property.imageDetails.length > 0 
     ? property.imageDetails 
     : [];
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
-      {/* Fixed top navigation bar */}
-      <div className="sticky top-0 z-10 bg-white shadow-md backdrop-blur-sm bg-white/90">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> 
-            <span className="hidden sm:inline">Back to Home</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            {/* Like/Favorite Button - WITH Counter */}
-            <div className="flex items-center">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className={`rounded-full transition-all duration-300 ${isFavorite ? 'bg-red-50 border-red-200' : ''}`}
-                onClick={toggleFavorite}
-                disabled={isPropertyOwner()} // Disable if user is the owner
-                title={isPropertyOwner() ? "You cannot like your own property" : hasLiked ? "You already liked this property" : "Like this property"}
-              >
-                <Heart className={`h-4 w-4 transition-all duration-300 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-              </Button>
-              <span className="ml-1.5 text-sm font-medium">{likesCount}</span>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="rounded-full"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header with back button and actions */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2"
             >
-              <Share2 className="h-4 w-4" />
+              <ArrowLeft className="w-5 h-5" />
+              Back
             </Button>
+            
+            <div className="flex items-center gap-3">
+              {/* Contact Count Display - only show when user has viewed contacts */}
+              {user && contactsViewed > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-sm">
+                  <Eye className="w-4 h-4" />
+                  <span>{contactsViewed} contacts viewed</span>
+                </div>
+              )}
+              
+              {/* Like Button */}
+              <Button
+                variant={isFavorite ? "default" : "outline"}
+                size="sm"
+                onClick={toggleFavorite}
+                disabled={likingProperty}
+                className="flex items-center gap-2"
+              >
+                <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                <span>{likesCount}</span>
+                {likingProperty && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white ml-1"></div>}
+              </Button>
+              
+              {/* Share Button */}
+              <Button variant="outline" size="sm">
+                <Share2 className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-
       <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         {/* Property Title and Location Section */}
         <div className="mb-6 animate-fade-in">
@@ -604,14 +607,17 @@ const PropertyDetail = () => {
           </div>
         </div>
 
-        {/* Image Gallery with carousel component - MODIFIED FOR THUMBNAIL CLICK FUNCTIONALITY */}
+        {/* FIXED: Image Gallery with proper carousel integration */}
         <div className="mb-8 bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow animate-scale-in">
           {images.length > 0 ? (
             <div className="relative">
               <Carousel 
-                className="w-full" 
-                selectedIndex={activeImageIndex}
-                onSlideChange={setActiveImageIndex}
+                className="w-full"
+                setApi={carouselApiRef.current}
+                opts={{
+                  startIndex: activeImageIndex,
+                  loop: true
+                }}
               >
                 <CarouselContent>
                   {images.map((image: any, index: number) => (
@@ -647,19 +653,24 @@ const PropertyDetail = () => {
                 </div>
               </Carousel>
               
-              {/* Thumbnails */}
+              {/* FIXED: Thumbnails with better click handling */}
               {images.length > 1 && (
                 <div className="flex p-4 gap-2 overflow-x-auto pb-2 bg-gray-50">
                   {images.map((image: any, index: number) => (
-                    <div 
+                    <button
                       key={image.imageId || index}
-                      className={`w-20 h-14 sm:w-24 sm:h-16 flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all ${
+                      className={`w-20 h-14 sm:w-24 sm:h-16 flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         index === activeImageIndex ? 'ring-2 ring-blue-600 transform scale-105' : 'opacity-70 hover:opacity-100'
                       }`}
                       onClick={() => handleImageClick(index)}
+                      aria-label={`View image ${index + 1}`}
                     >
-                      <img src={image.imageUrl} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
-                    </div>
+                      <img 
+                        src={image.imageUrl} 
+                        alt={`Thumbnail ${index + 1}`} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </button>
                   ))}
                 </div>
               )}
@@ -670,6 +681,8 @@ const PropertyDetail = () => {
             </div>
           )}
         </div>
+
+  
 
         {/* Property Details and Sidebar layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
@@ -929,23 +942,26 @@ const PropertyDetail = () => {
             </div>
             
             {/* Map Section - Updated with OpenStreetMap */}
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-lg font-medium mb-3 inline-flex items-center">
-                <MapPin className="text-blue-600 mr-2" size={18} />
-                Location
-              </h3>
-              
-              <PropertyMap 
-                address={property.address || ''}
-                city={property.city || ''}
-                state={property.state || ''}
-                className="h-[300px]"
-              />
-              
-              <p className="mt-3 text-sm text-gray-600">
-                {property.address}{property.city ? `, ${property.city}` : ''}{property.state ? `, ${property.state}` : ''}
-              </p>
-            </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+  <h3 className="text-lg font-medium mb-3 inline-flex items-center">
+    <MapPin className="text-blue-600 mr-2" size={18} />
+    Location
+  </h3>
+
+  <PropertyMap 
+    address={property.address || ''}
+    city={property.city || ''}
+    state={property.state || ''}
+    className="h-[300px]"
+  />
+
+  <p className="mt-3 text-sm text-gray-600">
+    {property.address}
+    {property.city ? `, ${property.city}` : ''}
+    {property.state ? `, ${property.state}` : ''}
+  </p>
+</div>
+
           </div>
           
           {/* Sidebar - Contact Info */}
@@ -989,13 +1005,7 @@ const PropertyDetail = () => {
       )}
     </div>
     
-    {/* Contact info viewed counter - only show if user is logged in */}
-    {user && (
-      <div className="mb-4 flex items-center justify-center bg-blue-50 py-2 px-3 rounded-md text-sm text-blue-700">
-        <Eye className="h-3.5 w-3.5 mr-1.5" />
-        <span>You have viewed {contactsViewed} contacts</span>
-      </div>
-    )}
+
     
     {/* Owner/Publisher Info Section - Updated to use API data */}
     <div className="flex items-center gap-3 mb-6 bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
@@ -1005,10 +1015,17 @@ const PropertyDetail = () => {
           : (property.postedBy ? property.postedBy.charAt(0).toUpperCase() : 'O')
         }
       </div>
+      
       <div>
         <div className="font-medium">
           {showContactInfo && ownerContactInfo?.publisherName 
             ? ownerContactInfo.publisherName 
+            : (property.postedBy || "Property Owner")
+          }
+        </div>
+         <div className="font-medium">
+          {showContactInfo && ownerContactInfo?.publisherPhone 
+            ? ownerContactInfo.publisherPhone
             : (property.postedBy || "Property Owner")
           }
         </div>
@@ -1031,14 +1048,14 @@ const PropertyDetail = () => {
           WhatsApp Now
         </Button>
         
-        <Button
+        {/* <Button
           onClick={() => handleContactModal("email")} 
           variant="outline"
           className="w-full justify-start hover:bg-blue-50 hover:text-blue-600 transition-colors"
         >
           <Mail className="mr-2 h-5 w-5 text-blue-600" /> 
           Send Email
-        </Button>
+        </Button> */}
         
         <Button
           className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
@@ -1058,39 +1075,11 @@ const PropertyDetail = () => {
           </Button>
         </div>
         
-        {/* Show contact details clearly */}
-        <div className="pt-4 border-t border-gray-200 bg-green-50 p-3 rounded-lg">
-          <h4 className="font-medium text-green-800 mb-2">Contact Details:</h4>
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-green-600" />
-              <span className="font-medium">{ownerContactInfo.publisherName}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-green-600" />
-              <span>{ownerContactInfo.publisherPhone}</span>
-            </div>
-          </div>
-        </div>
+      
       </div>
     ) : (
       <div className="flex flex-col items-center justify-center py-8 px-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-        <EyeOff className="h-12 w-12 text-gray-400 mb-3" />
-        <p className="text-gray-600 text-center mb-4">
-          {!user 
-            ? "Please login to view the property owner's contact information"
-            : "Toggle the switch above to view the property owner's contact information"
-          }
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => handleToggleContactInfo(true)}
-          className="bg-white"
-          disabled={!user}
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          {!user ? "Login to View Contact" : "Show Contact Info"}
-        </Button>
+       
       </div>
     )}
   </div>
