@@ -11,109 +11,209 @@ interface PropertyMapProps {
 
 const PropertyMap = ({ address, city, state, className = "h-[300px]" }: PropertyMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
+
+    // Clean up existing map
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+    }
 
     // Create custom marker icon
     const locationIcon = L.divIcon({
       html: `
         <div style="
           background-color: #ef4444;
-          width: 20px;
-          height: 20px;
+          width: 24px;
+          height: 24px;
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
-          border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          border: 3px solid white;
+          box-shadow: 0 3px 6px rgba(0,0,0,0.4);
           display: flex;
           align-items: center;
           justify-content: center;
         ">
           <div style="
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             background-color: white;
             border-radius: 50%;
             transform: rotate(45deg);
           "></div>
         </div>
       `,
-      className: '',
-      iconSize: [30, 30],
-      iconAnchor: [15, 30],
-      popupAnchor: [0, -30],
+      className: 'custom-location-icon',
+      iconSize: [24, 24],
+      iconAnchor: [12, 24],
+      popupAnchor: [0, -24],
     });
 
     // Initialize map
-    const map = L.map(mapRef.current).setView([20.5937, 78.9629], 5);
+    const map = L.map(mapRef.current, {
+      zoomControl: true,
+      scrollWheelZoom: true,
+    }).setView([20.5937, 78.9629], 5);
 
+    mapInstanceRef.current = map;
+
+    // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(map);
 
-    const fullAddress = `${address}${city ? `, ${city}` : ''}${state ? `, ${state}` : ''}`;
+    // Build full address
+    const fullAddress = [address, city, state].filter(Boolean).join(', ');
+    
+    console.log('Searching for:', fullAddress);
 
-    // Geocode full address
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) {
-          const { lat, lon } = data[0];
-          const location: [number, number] = [parseFloat(lat), parseFloat(lon)];
-
-          map.setView(location, 16);
-
-          L.marker(location, { icon: locationIcon }).addTo(map)
-            .bindPopup(`
-              <div style="font-family: sans-serif;">
-                <b style="color: #1f2937;">${fullAddress}</b>
-                <br>
-                <small style="color: #6b7280;">📍 Exact Location</small>
-              </div>
-            `).openPopup();
-        } else {
-          // Retry with city + state
-          const fallback = `${city || ''}${state ? `, ${state}` : ''}`;
-          fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallback)}`)
-            .then(res => res.json())
-            .then(cityData => {
-              if (cityData && cityData.length > 0) {
-                const { lat, lon } = cityData[0];
-                const location: [number, number] = [parseFloat(lat), parseFloat(lon)];
-
-                map.setView(location, 13);
-
-                L.marker(location, { icon: locationIcon }).addTo(map)
-                  .bindPopup(`
-                    <div style="font-family: sans-serif;">
-                      <b style="color: #1f2937;">${fallback}</b>
-                      <br>
-                      <small style="color: #f59e0b;">⚠️ Approximate Location</small>
-                    </div>
-                  `).openPopup();
-              }
-            });
+    // Geocoding function
+    const geocodeLocation = async (searchQuery: string, isExact: boolean = true) => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'PropertyMap/1.0'
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      })
-      .catch(err => {
-        console.error('Geocoding failed:', err);
-      });
+        
+        const data = await response.json();
+        console.log('Geocoding response:', data);
+        
+        if (data && data.length > 0) {
+          const result = data[0];
+          const lat = parseFloat(result.lat);
+          const lon = parseFloat(result.lon);
+          
+          if (!isNaN(lat) && !isNaN(lon)) {
+            const location: [number, number] = [lat, lon];
+            const zoomLevel = isExact ? 16 : 13;
+            
+            map.setView(location, zoomLevel);
+            
+            // Create popup content
+            const popupContent = `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-width: 200px;">
+                <div style="font-weight: 600; color: #1f2937; margin-bottom: 8px; font-size: 14px;">
+                  📍 ${fullAddress}
+                </div>
+                <div style="color: ${isExact ? '#059669' : '#f59e0b'}; font-size: 12px; font-weight: 500;">
+                  ${isExact ? '✅ Exact Location' : '⚠️ Approximate Location'}
+                </div>
+                <div style="color: #6b7280; font-size: 11px; margin-top: 4px;">
+                  Lat: ${lat.toFixed(6)}, Lng: ${lon.toFixed(6)}
+                </div>
+              </div>
+            `;
+            
+            // Add marker
+            const marker = L.marker(location, { icon: locationIcon })
+              .addTo(map)
+              .bindPopup(popupContent, {
+                maxWidth: 300,
+                className: 'custom-popup'
+              });
+            
+            // Auto-open popup
+            setTimeout(() => {
+              marker.openPopup();
+            }, 500);
+            
+            return true;
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        return false;
+      }
+    };
 
+    // Try geocoding with different strategies
+    const attemptGeocoding = async () => {
+      // Strategy 1: Full address
+      if (fullAddress) {
+        const success = await geocodeLocation(fullAddress, true);
+        if (success) return;
+      }
+
+      // Strategy 2: City + State
+      if (city && state) {
+        const cityState = `${city}, ${state}`;
+        const success = await geocodeLocation(cityState, false);
+        if (success) return;
+      }
+
+      // Strategy 3: Just city
+      if (city) {
+        const success = await geocodeLocation(city, false);
+        if (success) return;
+      }
+
+      // Strategy 4: Just state
+      if (state) {
+        const success = await geocodeLocation(state, false);
+        if (success) return;
+      }
+
+      // If all fail, show error
+      console.warn('Could not geocode location:', fullAddress);
+      
+      // Add a default marker at center of India with error message
+      const defaultLocation: [number, number] = [20.5937, 78.9629];
+      L.marker(defaultLocation, { icon: locationIcon })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-family: sans-serif; color: #dc2626;">
+            <b>❌ Location Not Found</b><br>
+            <small>${fullAddress || 'No address provided'}</small>
+          </div>
+        `)
+        .openPopup();
+    };
+
+    // Start geocoding
+    attemptGeocoding();
+
+    // Cleanup function
     return () => {
-      map.remove();
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, [address, city, state]);
 
   return (
-    <div
-      ref={mapRef}
-      className={`relative border rounded-lg ${className}`}
-      style={{
-        zIndex: 1
-      }}
-    />
+    <>
+      <style>{`
+        .custom-popup .leaflet-popup-content-wrapper {
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .custom-popup .leaflet-popup-tip {
+          background: white;
+        }
+        .custom-location-icon {
+          background: transparent !important;
+          border: none !important;
+        }
+      `}</style>
+      <div
+        ref={mapRef}
+        className={`relative border rounded-lg overflow-hidden ${className}`}
+        style={{ zIndex: 1 }}
+      />
+    </>
   );
 };
 
