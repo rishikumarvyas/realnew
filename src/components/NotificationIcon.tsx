@@ -23,6 +23,14 @@ interface NotificationResponse {
   notifications: Notification[];
 }
 
+// Interface for the mark as read request body
+interface MarkAsReadRequest {
+  type: string;
+  userId: string;
+  notificationId: string;
+  propertyId?: string;
+}
+
 const NotificationIcon: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -168,30 +176,43 @@ const NotificationIcon: React.FC = () => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const markAsRead = async (notificationId: string, propertyId?: string) => {
+  const markAsRead = async (notificationId: string, notificationType?: 'user' | 'property', propertyId?: string) => {
     if (!user || !user.userId) {
       updateNotificationState(notificationId);
       return;
     }
 
     try {
-      const payload: any = {
+      // Create payload based on the API schema
+      const payload: MarkAsReadRequest = {
+        type: notificationType || 'user', // Set the type field
         userId: user.userId,
         notificationId: notificationId,
       };
       
-      // Add propertyId to payload if it exists
-      if (propertyId) {
+      // Add propertyId only for property notifications
+      if (notificationType === 'property' && propertyId) {
         payload.propertyId = propertyId;
       }
+
+      console.log('Sending payload:', payload); // Debug log
 
       const response = await axiosInstance.put('/api/Notification/MarkAsRead', payload);
 
       if (response.status === 200) {
         updateNotificationState(notificationId);
+        console.log('Notification marked as read successfully');
       }
     } catch (error: any) {
       console.error("Error marking notification as read:", error);
+      
+      // Log the response data for debugging
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+      }
+      
       // Still update UI even if API call fails
       updateNotificationState(notificationId);
       
@@ -217,13 +238,19 @@ const NotificationIcon: React.FC = () => {
     if (user && user.userId) {
       try {
         await Promise.all(
-          unreadNotifications.map(notification =>
-            axiosInstance.put('/api/Notification/MarkAsRead', {
-              userId: user.userId,
+          unreadNotifications.map(notification => {
+            const payload: MarkAsReadRequest = {
+              type: notification.notificationType || 'user',
+              userId: user.userId!,
               notificationId: notification.notificationId,
-              ...(notification.propertyId && { propertyId: notification.propertyId })
-            })
-          )
+            };
+            
+            if (notification.notificationType === 'property' && notification.propertyId) {
+              payload.propertyId = notification.propertyId;
+            }
+            
+            return axiosInstance.put('/api/Notification/MarkAsRead', payload);
+          })
         );
       } catch (error) {
         console.error("Error marking all notifications as read:", error);
@@ -271,7 +298,7 @@ const NotificationIcon: React.FC = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
-      markAsRead(notification.notificationId, notification.propertyId);
+      markAsRead(notification.notificationId, notification.notificationType, notification.propertyId);
     }
 
     toast({
