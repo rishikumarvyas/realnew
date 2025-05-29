@@ -108,6 +108,38 @@ const propertyTypeMapping = {
   "all": { superCategoryId: 0, label: "All Properties" }
 };
 
+// Add price range configuration
+const priceRangeConfig = {
+  rent: {
+    min: 0,
+    max: 1000000, // 10 lakh
+    step: 500,
+    format: (value: number) => `₹${value.toLocaleString()}/month`,
+    displayMax: "₹10 Lakh/month"
+  },
+  buy: {
+    min: 0,
+    max: 1000000000, // 100 crore
+    step: 100000, // 1 lakh
+    format: (value: number) => `₹${value.toLocaleString()}`,
+    displayMax: "₹100 Cr"
+  },
+  plot: {
+    min: 0,
+    max: 1000000000, // 100 crore
+    step: 100000, // 1 lakh
+    format: (value: number) => `₹${value.toLocaleString()}`,
+    displayMax: "₹100 Cr"
+  },
+  commercial: {
+    min: 0,
+    max: 1000000000, // 100 crore
+    step: 100000, // 1 lakh
+    format: (value: number) => `₹${value.toLocaleString()}`,
+    displayMax: "₹100 Cr"
+  }
+};
+
 export const PropertyListing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -121,7 +153,93 @@ export const PropertyListing = () => {
   
   // Active tab for property type
   const [activeTab, setActiveTab] = useState<string>("all");
-  
+
+  // Add state for commercial type
+  const [commercialType, setCommercialType] = useState<"buy" | "rent">("buy");
+
+  // Define filter visibility types
+  type FilterVisibility = {
+    showPrice: boolean;
+    showArea: boolean;
+    showBedrooms: boolean;
+    showBathrooms: boolean;
+    showBalcony: boolean;
+    showAvailableFrom: boolean | ((type: string) => boolean);
+    showTenantPreference: boolean;
+    showFurnished: boolean;
+    showAmenities: boolean;
+  };
+
+  // Filter visibility configuration
+  const filterVisibilityConfig: Record<string, FilterVisibility> = {
+    plot: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: false,
+      showBathrooms: false,
+      showBalcony: false,
+      showAvailableFrom: false,
+      showTenantPreference: false,
+      showFurnished: false,
+      showAmenities: false
+    },
+    commercial: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: false,
+      showBathrooms: false,
+      showBalcony: false,
+      showAvailableFrom: (type: string) => type === "rent",
+      showTenantPreference: false,
+      showFurnished: false,
+      showAmenities: true
+    },
+    rent: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: true,
+      showBathrooms: true,
+      showBalcony: true,
+      showAvailableFrom: true,
+      showTenantPreference: true,
+      showFurnished: true,
+      showAmenities: true
+    },
+    buy: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: true,
+      showBathrooms: true,
+      showBalcony: true,
+      showAvailableFrom: false,
+      showTenantPreference: false,
+      showFurnished: true,
+      showAmenities: true
+    }
+  };
+
+  // Helper function to check if filter should be visible
+  const shouldShowFilter = (filterName: keyof FilterVisibility): boolean => {
+    if (activeTab === "plot") {
+      const config = filterVisibilityConfig.plot[filterName];
+      return typeof config === "function" ? config(activeTab) : config;
+    }
+    if (activeTab === "commercial") {
+      const config = filterVisibilityConfig.commercial[filterName];
+      return typeof config === "function" ? config(commercialType) : config;
+    }
+    if (activeTab === "rent") {
+      const config = filterVisibilityConfig.rent[filterName];
+      return typeof config === "function" ? config(activeTab) : config;
+    }
+    if (activeTab === "buy") {
+      const config = filterVisibilityConfig.buy[filterName];
+      return typeof config === "function" ? config(activeTab) : config;
+    }
+    // For "all" tab, show all filters
+    return true;
+  };
+
   // Basic search and filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -719,6 +837,11 @@ const applyFilters = (data: PropertyCardProps[]) => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     
+    // Reset commercial type when switching away from commercial tab
+    if (value !== "commercial") {
+      setCommercialType("buy");
+    }
+    
     // Hide advanced filters if plot or commercial is selected
     if (value === "plot" || value === "commercial") {
       setShowAdvancedFilters(false);
@@ -726,10 +849,23 @@ const applyFilters = (data: PropertyCardProps[]) => {
     
     if (value !== "all") {
       searchParams.set("type", value);
+      if (value === "commercial") {
+        searchParams.set("commercialType", commercialType);
+      } else {
+        searchParams.delete("commercialType");
+      }
     } else {
       searchParams.delete("type");
+      searchParams.delete("commercialType");
     }
     
+    setSearchParams(searchParams);
+  };
+
+  // Add handler for commercial type change
+  const handleCommercialTypeChange = (value: "buy" | "rent") => {
+    setCommercialType(value);
+    searchParams.set("commercialType", value);
     setSearchParams(searchParams);
   };
 
@@ -877,11 +1013,21 @@ const applyFilters = (data: PropertyCardProps[]) => {
 
   // Format price display based on property type
   const formatPrice = (price: number, type: string) => {
-    if (type === "rent") {
-      return `₹${price.toLocaleString()}/month`;
-    }
-    return `₹${price.toLocaleString()}`;
+    const config = priceRangeConfig[type as keyof typeof priceRangeConfig] || priceRangeConfig.buy;
+    return config.format(price);
   };
+
+  // Update price range when property type changes
+  useEffect(() => {
+    const config = priceRangeConfig[activeTab as keyof typeof priceRangeConfig] || priceRangeConfig.buy;
+    setPriceRange([config.min, config.max]);
+    searchParams.set("minPrice", config.min.toString());
+    searchParams.set("maxPrice", config.max.toString());
+    setSearchParams(searchParams);
+  }, [activeTab]);
+
+  // Add state for sidebar visibility
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -945,24 +1091,55 @@ const applyFilters = (data: PropertyCardProps[]) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
         {/* Tab filter */}
-        <div className="mb-8">
-          <div className="w-full bg-blue-700 bg-opacity-40 rounded-lg p-2 pl-8">
-            <div className="grid grid-cols-5 gap-1 w-full">
-              {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab)}
-                  className={`py-3 px-1 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
-                    activeTab === tab 
-                      ? "bg-white text-blue-600 shadow-md" 
-                      : "text-white hover:bg-blue-500"
-                  }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  {tab === "all" ? " Properties" : ""}
-                </button>
+        <div className="mb-8 flex justify-center">
+          <div className="w-full max-w-screen-md bg-blue-700 bg-opacity-40 rounded-lg p-2 pl-4 overflow-x-auto whitespace-nowrap scrollbar-hide mx-auto">
+            <div className="flex gap-x-3 w-full min-w-[400px] md:min-w-0">
+              {['all', 'buy', 'rent', 'plot', 'commercial'].map((tab) => (
+                <div key={tab} className="relative inline-block align-top">
+                  <button
+                    onClick={() => handleTabChange(tab)}
+                    className={`max-w-xs px-4 py-3 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
+                      activeTab === tab 
+                        ? 'bg-white text-blue-600 shadow-md' 
+                        : 'text-white hover:bg-blue-500'
+                    }`}
+                  >
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tab === 'all' ? ' Properties' : ''}
+                  </button>
+                  {/* Commercial type dropdown */}
+                  {tab === 'commercial' && activeTab === 'commercial' && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 min-w-[140px] bg-blue-50 border border-blue-200 rounded-md shadow-xl z-50">
+                      <div className="p-2 flex flex-col gap-1">
+                        <div className="text-xs font-medium text-blue-700 mb-1 px-2">
+                          Select Type
+                        </div>
+                        <button
+                          onClick={() => handleCommercialTypeChange('buy')}
+                          className={`w-full text-left px-2 py-1.5 text-sm rounded-md ${
+                            commercialType === 'buy'
+                              ? 'bg-blue-100 text-blue-700 font-semibold'
+                              : 'text-blue-700 hover:bg-blue-100'
+                          }`}
+                        >
+                          Buy
+                        </button>
+                        <button
+                          onClick={() => handleCommercialTypeChange('rent')}
+                          className={`w-full text-left px-2 py-1.5 text-sm rounded-md ${
+                            commercialType === 'rent'
+                              ? 'bg-blue-100 text-blue-700 font-semibold'
+                              : 'text-blue-700 hover:bg-blue-100'
+                          }`}
+                        >
+                          Rent
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -987,271 +1164,325 @@ const applyFilters = (data: PropertyCardProps[]) => {
           </Button>
         </div>
         
-        <div className="grid md:grid-cols-[300px_1fr] gap-8">
-          {/* Sidebar filters - hidden on mobile unless toggled */}
-          <div className={`space-y-5 ${mobileFiltersVisible ? 'block' : 'hidden md:block'}`}>
-            <Card className="shadow-md">
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <IndianRupeeIcon className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium">Price Range</h3>
-                      </div>
-                      <span className="text-xs font-medium text-blue-600">
-                        ₹{priceRange[0].toLocaleString()} - ₹{priceRange[1].toLocaleString()}
-                      </span>
-                    </div>
-                    <Slider
-                      defaultValue={[0, 20000000]}
-                      max={20000000}
-                      step={100000}
-                      value={priceRange}
-                      onValueChange={handlePriceRangeChange}
-                      className="mb-2"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>₹0</span>
-                      <span>₹2 Cr+</span>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Bed className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium">Bedrooms</h3>
-                    </div>
-                    <div className="flex space-x-2">
-                      {[0, 1, 2, 3, 4].map((num) => (
-                        <Button
-                          key={num}
-                          variant={minBedrooms === num ? "default" : "outline"}
-                          size="sm"
-                          className={`flex-1 ${minBedrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                          onClick={() => handleBedroomChange(num)}
-                        >
-                          {num === 0 ? "Any" : num === 4 ? "4+" : num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Bath className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium">Bathrooms</h3>
-                    </div>
-                    <div className="flex space-x-2">
-                      {[0, 1, 2, 3].map((num) => (
-                        <Button
-                          key={num}
-                          variant={minBathrooms === num ? "default" : "outline"}
-                          size="sm"
-                          className={`flex-1 ${minBathrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                          onClick={() => handleBathroomChange(num)}
-                        >
-                          {num === 0 ? "Any" : num === 3 ? "3+" : num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <LayoutDashboard className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium">Balcony</h3>
-                    </div>
-                    <div className="flex space-x-2">
-                      {[0, 1, 2, 3].map((num) => (
-                        <Button
-                          key={num}
-                          variant={minBalcony === num ? "default" : "outline"}
-                          size="sm"
-                          className={`flex-1 ${minBalcony === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                          onClick={() => handleBalconyChange(num)}
-                        >
-                          {num === 0 ? "Any" : num === 3 ? "3+" : num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Ruler className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium">Area (sq.ft)</h3>
-                      </div>
-                      <span className="text-xs font-medium text-blue-600">
-                        {minArea}+ sq.ft
-                      </span>
-                    </div>
-                    <Slider
-                      defaultValue={[0]}
-                      max={5000}
-                      step={100}
-                      value={[minArea]}
-                      onValueChange={handleAreaChange}
-                      className="mb-2"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>0 sq.ft</span>
-                      <span>5000+ sq.ft</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {shouldShowAdvancedFilters() && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
-                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                      >
-                        {showAdvancedFilters ? (
-                          <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
-                        ) : (
-                          <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
-                        )}
-                      </Button>
-                    )}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full flex items-center gap-2" 
-                      onClick={resetFilters}
-                    >
-                      <FilterX className="h-4 w-4" />
-                      Reset All Filters
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Advanced filters */}
-            {showAdvancedFilters && shouldShowAdvancedFilters() && (
-              <Card className="shadow-md">
-                <CardContent className="p-6">
-                  <h3 className="font-medium text-lg mb-4 text-blue-800">Advanced Filters</h3>
-                  <Accordion type="single" collapsible className="w-full">
-                    {/* Only show availability filter for rent property type */}
-                    {(activeTab === "rent" || (activeTab === "all")) && (
-                      <AccordionItem value="availability" className="border-b border-blue-100">
-                        <AccordionTrigger className="py-3 hover:no-underline">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                            <span>Availability</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="pt-2 pb-4">
-                            <p className="text-sm text-gray-600 mb-2">Available from</p>
-                            <DatePicker 
-                              date={availableFrom} 
-                              setDate={handleDateChange} 
-                              className="w-full"
-                            />
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Only show tenant preference for rent property type */}
-                    {(activeTab === "rent" || (activeTab === "all")) && (
-                      <AccordionItem value="preference" className="border-b border-blue-100">
-                        <AccordionTrigger className="py-3 hover:no-underline">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-blue-600" />
-                            <span>Tenant Preference</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="pt-2 pb-4">
-                            <Select
-                              value={preferenceId}
-                              onValueChange={handlePreferenceChange}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select preference" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {preferenceOptions.map((option) => (
-                                  <SelectItem key={option.id} value={option.id}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Show furnished status for all property types except plot and commercial */}
-                    <AccordionItem value="furnished" className="border-b border-blue-100">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <Home className="h-5 w-5 text-blue-600" />
-                          <span>Furnished Status</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-2 pb-4">
-                          <Select
-                            value={furnished}
-                            onValueChange={handleFurnishedChange}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Furnished status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {furnishedOptions.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Show amenities for all property types except plot and commercial */}
-                    <AccordionItem value="amenities" className="border-b-0">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <CheckSquare className="h-5 w-5 text-blue-600" />
-                          <span>Amenities</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-2 pb-4 grid grid-cols-2 gap-3">
-                          {amenityOptions.map((amenity) => (
-                            <div key={amenity} className="flex items-center space-x-2">
-                              <Switch
-                                id={`amenity-${amenity}`}
-                                checked={selectedAmenities.includes(amenity)}
-                                onCheckedChange={() => handleAmenityToggle(amenity)}
-                              />
-                              <Label htmlFor={`amenity-${amenity}`} className="text-sm">
-                                {amenity}
-                              </Label>
+        {/* Main content area with sidebar and property listings using flex */}
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Collapsible Sidebar filters - always rendered, width transitions between collapsed and expanded */}
+          <div
+            className={`transition-all duration-300 mb-8 md:mb-0 shrink-0 overflow-hidden flex flex-col
+              ${sidebarVisible ? 'w-full md:w-[280px]' : 'w-12 md:w-12'}
+              bg-white border-r border-gray-200 relative`}
+            style={{ minWidth: sidebarVisible ? undefined : '3rem', maxWidth: sidebarVisible ? undefined : '3rem' }}
+          >
+            {/* Sidebar toggle button - always visible, absolutely positioned when collapsed */}
+            <div className={`hidden md:flex items-center justify-${sidebarVisible ? 'end' : 'center'} h-12 w-full`}
+              style={{ minHeight: '3rem' }}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                className="mb-2"
+              >
+                {sidebarVisible ? (
+                  <><Minus className="h-4 w-4 mr-2" /> Hide Filters</>
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            {/* Sidebar content, only visible when expanded */}
+            <div className={`flex-1 transition-opacity duration-300 ${sidebarVisible ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 overflow-hidden'}`}>
+              {sidebarVisible && (
+                <Card className="shadow-md">
+                  <CardContent className="p-6">
+                    <div className="space-y-6">
+                      {/* Price Range Filter */}
+                      {shouldShowFilter("showPrice") && (
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <IndianRupeeIcon className="h-5 w-5 text-blue-600" />
+                              <h3 className="font-medium">Price Range</h3>
                             </div>
-                          ))}
+                            <span className="text-xs font-medium text-blue-600">
+                              {activeTab === "rent" 
+                                ? `₹${priceRange[0].toLocaleString()}/month - ₹${priceRange[1].toLocaleString()}/month`
+                                : `₹${priceRange[0].toLocaleString()} - ₹${priceRange[1].toLocaleString()}`
+                              }
+                            </span>
+                          </div>
+                          <Slider
+                            defaultValue={[0, activeTab === "rent" ? 1000000 : 1000000000]}
+                            max={activeTab === "rent" ? 1000000 : 1000000000}
+                            step={activeTab === "rent" ? 500 : 100000}
+                            value={priceRange}
+                            onValueChange={handlePriceRangeChange}
+                            className="mb-2"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>₹0</span>
+                            <span>{activeTab === "rent" ? "₹10 Lakh/month" : "₹100 Cr"}</span>
+                          </div>
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </CardContent>
-              </Card>
-            )}
+                      )}
+
+                      {/* Bedrooms Filter */}
+                      {shouldShowFilter("showBedrooms") && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Bed className="h-5 w-5 text-blue-600" />
+                            <h3 className="font-medium">Bedrooms</h3>
+                          </div>
+                          <div className="flex space-x-2">
+                            {[0, 1, 2, 3, 4].map((num) => (
+                              <Button
+                                key={num}
+                                variant={minBedrooms === num ? "default" : "outline"}
+                                size="sm"
+                                className={`flex-1 ${minBedrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                                onClick={() => handleBedroomChange(num)}
+                              >
+                                {num === 0 ? "Any" : num === 4 ? "4+" : num}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bathrooms Filter */}
+                      {shouldShowFilter("showBathrooms") && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Bath className="h-5 w-5 text-blue-600" />
+                            <h3 className="font-medium">Bathrooms</h3>
+                          </div>
+                          <div className="flex space-x-2">
+                            {[0, 1, 2, 3].map((num) => (
+                              <Button
+                                key={num}
+                                variant={minBathrooms === num ? "default" : "outline"}
+                                size="sm"
+                                className={`flex-1 ${minBathrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                                onClick={() => handleBathroomChange(num)}
+                              >
+                                {num === 0 ? "Any" : num === 3 ? "3+" : num}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Balcony Filter */}
+                      {shouldShowFilter("showBalcony") && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <LayoutDashboard className="h-5 w-5 text-blue-600" />
+                            <h3 className="font-medium">Balcony</h3>
+                          </div>
+                          <div className="flex space-x-2">
+                            {[0, 1, 2, 3].map((num) => (
+                              <Button
+                                key={num}
+                                variant={minBalcony === num ? "default" : "outline"}
+                                size="sm"
+                                className={`flex-1 ${minBalcony === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                                onClick={() => handleBalconyChange(num)}
+                              >
+                                {num === 0 ? "Any" : num === 3 ? "3+" : num}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Area Filter */}
+                      {shouldShowFilter("showArea") && (
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                              <Ruler className="h-5 w-5 text-blue-600" />
+                              <h3 className="font-medium">Area (sq.ft)</h3>
+                            </div>
+                            <span className="text-xs font-medium text-blue-600">
+                              {minArea}+ sq.ft
+                            </span>
+                          </div>
+                          <Slider
+                            defaultValue={[0]}
+                            max={5000}
+                            step={100}
+                            value={[minArea]}
+                            onValueChange={handleAreaChange}
+                            className="mb-2"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>0 sq.ft</span>
+                            <span>5000+ sq.ft</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Advanced Filters */}
+                      {(shouldShowFilter("showAvailableFrom") || 
+                        shouldShowFilter("showTenantPreference") || 
+                        shouldShowFilter("showFurnished") || 
+                        shouldShowFilter("showAmenities")) && (
+                        <div className="space-y-4">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
+                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                          >
+                            {showAdvancedFilters ? (
+                              <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
+                            ) : (
+                              <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
+                            )}
+                          </Button>
+                          
+                          <Button 
+                            variant="outline" 
+                            className="w-full flex items-center gap-2" 
+                            onClick={resetFilters}
+                          >
+                            <FilterX className="h-4 w-4" />
+                            Reset All Filters
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Advanced Filters Content */}
+                      {showAdvancedFilters && (
+                        <Card className="shadow-md">
+                          <CardContent className="p-6">
+                            <h3 className="font-medium text-lg mb-4 text-blue-800">Advanced Filters</h3>
+                            <Accordion type="single" collapsible className="w-full">
+                              {/* Availability Filter */}
+                              {shouldShowFilter("showAvailableFrom") && (
+                                <AccordionItem value="availability" className="border-b border-blue-100">
+                                  <AccordionTrigger className="py-3 hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="h-5 w-5 text-blue-600" />
+                                      <span>Availability</span>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="pt-2 pb-4">
+                                      <p className="text-sm text-gray-600 mb-2">Available from</p>
+                                      <DatePicker 
+                                        date={availableFrom} 
+                                        setDate={handleDateChange} 
+                                        className="w-full"
+                                      />
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              )}
+
+                              {/* Tenant Preference Filter */}
+                              {shouldShowFilter("showTenantPreference") && (
+                                <AccordionItem value="preference" className="border-b border-blue-100">
+                                  <AccordionTrigger className="py-3 hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                      <Users className="h-5 w-5 text-blue-600" />
+                                      <span>Tenant Preference</span>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="pt-2 pb-4">
+                                      <Select
+                                        value={preferenceId}
+                                        onValueChange={handlePreferenceChange}
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Select preference" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {preferenceOptions.map((option) => (
+                                            <SelectItem key={option.id} value={option.id}>
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              )}
+
+                              {/* Furnished Status Filter */}
+                              {shouldShowFilter("showFurnished") && (
+                                <AccordionItem value="furnished" className="border-b border-blue-100">
+                                  <AccordionTrigger className="py-3 hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                      <Home className="h-5 w-5 text-blue-600" />
+                                      <span>Furnished Status</span>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="pt-2 pb-4">
+                                      <Select
+                                        value={furnished}
+                                        onValueChange={handleFurnishedChange}
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Furnished status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {furnishedOptions.map((option) => (
+                                            <SelectItem key={option.id} value={option.id}>
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              )}
+
+                              {/* Amenities Filter */}
+                              {shouldShowFilter("showAmenities") && (
+                                <AccordionItem value="amenities" className="border-b-0">
+                                  <AccordionTrigger className="py-3 hover:no-underline">
+                                    <div className="flex items-center gap-2">
+                                      <CheckSquare className="h-5 w-5 text-blue-600" />
+                                      <span>Amenities</span>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                    <div className="pt-2 pb-4 grid grid-cols-2 gap-3">
+                                      {amenityOptions.map((amenity) => (
+                                        <div key={amenity} className="flex items-center space-x-2">
+                                          <Switch
+                                            id={`amenity-${amenity}`}
+                                            checked={selectedAmenities.includes(amenity)}
+                                            onCheckedChange={() => handleAmenityToggle(amenity)}
+                                          />
+                                          <Label htmlFor={`amenity-${amenity}`} className="text-sm">
+                                            {amenity}
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </AccordionContent>
+                                </AccordionItem>
+                              )}
+                            </Accordion>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
 
-          {/* Property listings */}
-          <div>
+          {/* Property listings - takes full remaining width */}
+          <div className="flex-1 min-w-0 w-full">
             {/* Applied filters display */}
             {(searchQuery || minBedrooms > 0 || minBathrooms > 0 || minBalcony > 0 || minArea > 0 || 
               availableFrom || preferenceId !== "0" || furnished !== "any" || selectedAmenities.length > 0) && (
@@ -1461,13 +1692,13 @@ const applyFilters = (data: PropertyCardProps[]) => {
               </Card>
             )}
 
-            {/* Results grid */}
-            <div className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+            {/* Results grid - modern card design, 3 per row on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8 mb-10 w-full">
               {loading ? (
                 // Loading skeletons
                 Array(6).fill(0).map((_, index) => (
-                  <Card key={index} className="overflow-hidden shadow-md">
-                    <div className="h-48 bg-gray-200 animate-pulse" />
+                  <Card key={index} className="overflow-hidden shadow-lg rounded-2xl border-0 bg-white animate-pulse">
+                    <div className="h-48 bg-gray-200 animate-pulse rounded-t-2xl" />
                     <CardContent className="p-4">
                       <div className="h-4 bg-gray-200 rounded-full animate-pulse mb-4" />
                       <div className="h-6 bg-gray-200 rounded-full animate-pulse w-3/4 mb-4" />
@@ -1483,13 +1714,51 @@ const applyFilters = (data: PropertyCardProps[]) => {
                   </Card>
                 ))
               ) : (
-                filteredProperties.map((property) => (
-                  <PropertyCard
-                    key={property.id} 
-                    {...property} 
-                    formattedPrice={formatPrice(property.price, property.type)}
-                  />
-                ))
+                <>
+                  {/* Commercial Buy Properties */}
+                  {activeTab === "commercial" && commercialType === "buy" && (
+                    <>
+                      <h3 className="col-span-full text-lg font-semibold mb-4">Commercial Properties for Buy</h3>
+                      {filteredProperties
+                        .filter(prop => prop.type === "commercial" && !prop.status?.toLowerCase().includes("rent"))
+                        .map((property) => (
+                          <div key={property.id} className="w-full">
+                            <PropertyCard
+                              {...property} 
+                              formattedPrice={formatPrice(property.price, property.type)}
+                            />
+                          </div>
+                        ))}
+                    </>
+                  )}
+
+                  {/* Commercial Rent Properties */}
+                  {activeTab === "commercial" && commercialType === "rent" && (
+                    <>
+                      <h3 className="col-span-full text-lg font-semibold mb-4">Commercial Properties for Rent</h3>
+                      {filteredProperties
+                        .filter(prop => prop.type === "commercial" && prop.status?.toLowerCase().includes("rent"))
+                        .map((property) => (
+                          <div key={property.id} className="w-full">
+                            <PropertyCard
+                              {...property} 
+                              formattedPrice={formatPrice(property.price, property.type)}
+                            />
+                          </div>
+                        ))}
+                    </>
+                  )}
+
+                  {/* Other Property Types */}
+                  {activeTab !== "commercial" && filteredProperties.map((property) => (
+                    <div key={property.id} className="w-full">
+                      <PropertyCard
+                        {...property} 
+                        formattedPrice={formatPrice(property.price, property.type)}
+                      />
+                    </div>
+                  ))}
+                </>
               )}
             </div>
 

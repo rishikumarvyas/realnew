@@ -117,10 +117,10 @@ export function PropertyCard({
             {/* Conditionally show bedroom/bathroom info */}
             {showBedroomBathroom && (
               <>
-                <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
-                  <Bed size={18} />
-                  <span className="font-medium">
-                    {bedrooms} {bedrooms === 1 ? "Bed" : "Beds"}
+                <div className="flex items-center gap-2">
+                  <Bed className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-500">
+                    {bedrooms >= 4 ? "4+" : bedrooms} Beds
                   </span>
                 </div>
                 <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
