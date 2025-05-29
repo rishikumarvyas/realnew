@@ -229,16 +229,6 @@ const EditProperty = () => {
     try {
       setSaving(true);
 
-      // Format amenities for API as array of IDs
-      const amenityMap: Record<string, string> = {
-        parking: "1",
-        gym: "2",
-        garden: "3",
-        pool: "4",
-        security: "5",
-        elevator: "6",
-      };
-
       // Create FormData object for the multipart/form-data request
       const formDataObj = new FormData();
       formDataObj.append("PropertyId", formData.propertyId);
