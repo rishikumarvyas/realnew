@@ -1,7 +1,7 @@
-// Modified Signup.tsx to fix the signup call and remove stateId parameter
+// Modified Signup.tsx to fix the signup call and modal switching
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -32,14 +32,14 @@ interface SignupProps {
 const Signup = ({ onClose }: SignupProps) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
-  const [userType, setUserType] = useState(1); // Default to Owner (id: 1)
+  const [userType, setUserType] = useState<number>(0); // Set to 0 (no selection)
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { requestOtp, signup } = useAuth();
+  const { requestOtp, signup, openLoginModal } = useAuth(); // Added openLoginModal
 
   const handleClose = () => {
     // First hide the modal with animation
@@ -52,6 +52,17 @@ const Signup = ({ onClose }: SignupProps) => {
       } else {
         navigate("/");
       }
+    }, 300);
+  };
+
+  // New function to switch to login modal
+  const handleSwitchToLogin = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      if (onClose) {
+        onClose(); // Close current modal
+      }
+      openLoginModal(); // Open login modal
     }, 300);
   };
 
@@ -244,7 +255,7 @@ const Signup = ({ onClose }: SignupProps) => {
                 loading={loading}
                 userTypes={USER_TYPES}
                 states={[]}
-                initialUserType={userType}
+                initialUserType={undefined} // Don't pass any initial value
                 phoneError={phoneError}
               />
             ) : (
@@ -260,12 +271,12 @@ const Signup = ({ onClose }: SignupProps) => {
           <CardFooter className="flex justify-center border-t p-3">
             <div className="text-sm text-gray-500">
               Already have an account?{" "}
-              <Link
-                to="/login"
-                className="text-blue-600 hover:underline font-medium"
+              <button
+                onClick={handleSwitchToLogin}
+                className="text-blue-600 hover:underline font-medium cursor-pointer"
               >
                 Log in
-              </Link>
+              </button>
             </div>
           </CardFooter>
         </Card>
