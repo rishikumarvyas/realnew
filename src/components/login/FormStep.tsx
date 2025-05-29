@@ -30,7 +30,9 @@ const formSchema = z.object({
   phone: z.string().refine((val) => phoneRegex.test(val), {
     message: "Please enter a valid 10-digit Indian phone number.",
   }),
-  userType: z.coerce.number(),
+  userType: z.coerce.number().min(1, {
+    message: "Please select a user type.",
+  }),
 });
 
 interface FormStepProps {
@@ -48,7 +50,7 @@ export const FormStep = ({
   loading, 
   userTypes = [], 
   states = [],
-  initialUserType = 1,
+  initialUserType,
   phoneError = null
 }: FormStepProps) => {
   const form = useForm({
@@ -56,7 +58,7 @@ export const FormStep = ({
     defaultValues: {
       name: "",
       phone: "",
-      userType: initialUserType,
+      userType: initialUserType || 0, // Set to 0 when no initial value provided
     },
   });
 
@@ -126,7 +128,7 @@ export const FormStep = ({
                 <FormLabel className="text-xs font-medium">I am a</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
-                  defaultValue={field.value.toString()}
+                  value={field.value > 0 ? field.value.toString() : ""}
                 >
                   <FormControl>
                     <SelectTrigger className="h-9">
