@@ -32,6 +32,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // API interfaces
 interface ApiResponse {
@@ -1152,6 +1153,172 @@ const applyFilters = (data: PropertyCardProps[]) => {
           </div>
         </div>
         
+        {/* Horizontal Filter Bar */}
+        <div className="w-full max-w-[1200px] mx-auto mb-6 px-2">
+          <div className="flex flex-wrap gap-3 md:gap-4 bg-white rounded-xl shadow-md p-4 md:p-6 items-end justify-between">
+            {/* Price Range Dropdown */}
+            {shouldShowFilter("showPrice") && (
+              <div className="w-[140px] md:w-[180px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Price</label>
+                <Select value={priceRange.join('-')} onValueChange={v => {
+                  const [min, max] = v.split('-').map(Number);
+                  handlePriceRangeChange([min, max]);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Price" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0-500000">0–5 Lakh</SelectItem>
+                    <SelectItem value="500000-1000000">5–10 Lakh</SelectItem>
+                    <SelectItem value="1000000-2000000">10–20 Lakh</SelectItem>
+                    <SelectItem value="2000000-5000000">20–50 Lakh</SelectItem>
+                    <SelectItem value="5000000-50000000">50 Lakh–5 Cr</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Bedrooms Dropdown */}
+            {shouldShowFilter("showBedrooms") && (
+              <div className="w-[110px] md:w-[120px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Bedrooms</label>
+                <Select value={minBedrooms ? String(minBedrooms) : ""} onValueChange={v => handleBedroomChange(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Any</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5">5+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Bathrooms Dropdown */}
+            {shouldShowFilter("showBathrooms") && (
+              <div className="w-[110px] md:w-[120px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Bathrooms</label>
+                <Select value={minBathrooms ? String(minBathrooms) : ""} onValueChange={v => handleBathroomChange(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Any</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5">5+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Balconies Dropdown */}
+            {shouldShowFilter("showBalcony") && (
+              <div className="w-[110px] md:w-[120px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Balconies</label>
+                <Select value={minBalcony ? String(minBalcony) : ""} onValueChange={v => handleBalconyChange(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Any</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5">5+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Area Dropdown */}
+            {shouldShowFilter("showArea") && (
+              <div className="w-[140px] md:w-[160px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Area (sq.ft)</label>
+                <Select value={minArea ? String(minArea) : ""} onValueChange={v => handleAreaChange([Number(v)])}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Any</SelectItem>
+                    <SelectItem value="500">500+</SelectItem>
+                    <SelectItem value="1000">1000+</SelectItem>
+                    <SelectItem value="1500">1500+</SelectItem>
+                    <SelectItem value="2000">2000+</SelectItem>
+                    <SelectItem value="3000">3000+</SelectItem>
+                    <SelectItem value="4000">4000+</SelectItem>
+                    <SelectItem value="5000">5000+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Amenities Multi-Select Dropdown */}
+            {shouldShowFilter("showAmenities") && (
+              <div className="w-[180px] md:w-[220px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Amenities</label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full flex justify-between">
+                      {selectedAmenities.length > 0 ? `${selectedAmenities.length} Selected` : "Select Amenities"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-full min-w-[180px] max-h-60 overflow-y-auto">
+                    {amenityOptions.map((amenity) => (
+                      <DropdownMenuCheckboxItem
+                        key={amenity}
+                        checked={selectedAmenities.includes(amenity)}
+                        onCheckedChange={() => handleAmenityToggle(amenity)}
+                      >
+                        {amenity}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+
+            {/* Preferences Dropdown */}
+            {shouldShowFilter("showTenantPreference") && (
+              <div className="w-[140px] md:w-[160px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Preferences</label>
+                <Select value={preferenceId} onValueChange={handlePreferenceChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {preferenceOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Available From Date Picker */}
+            {shouldShowFilter("showAvailableFrom") && (
+              <div className="w-[160px] md:w-[180px]">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Available From</label>
+                <DatePicker date={availableFrom} setDate={handleDateChange} />
+              </div>
+            )}
+
+            {/* Reset Button */}
+            <div className="w-full md:w-auto flex justify-end mt-2 md:mt-0">
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50">
+                Reset Filters
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">
           <Button 
@@ -1173,321 +1340,6 @@ const applyFilters = (data: PropertyCardProps[]) => {
         
         {/* Main content area with sidebar and property listings using flex */}
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Collapsible Sidebar filters - always rendered, width transitions between collapsed and expanded */}
-          <div
-            className={`transition-all duration-300 mb-8 md:mb-0 shrink-0 overflow-hidden flex flex-col
-              ${sidebarVisible ? 'w-full md:w-[280px]' : 'w-12 md:w-12'}
-              bg-white border-r border-gray-200 relative`}
-            style={{ minWidth: sidebarVisible ? undefined : '3rem', maxWidth: sidebarVisible ? undefined : '3rem' }}
-          >
-            {/* Sidebar toggle button - always visible, absolutely positioned when collapsed */}
-            <div className={`hidden md:flex items-center justify-${sidebarVisible ? 'end' : 'center'} h-12 w-full`}
-              style={{ minHeight: '3rem' }}
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSidebarVisible(!sidebarVisible)}
-                className="mb-2"
-              >
-                {sidebarVisible ? (
-                  <><Minus className="h-4 w-4 mr-2" /> Hide Filters</>
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            {/* Sidebar content, only visible when expanded */}
-            <div className={`flex-1 transition-opacity duration-300 ${sidebarVisible ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 overflow-hidden'}`}>
-              {sidebarVisible && (
-                <Card className="shadow-md">
-                  <CardContent className="p-6">
-                    <div className="space-y-6">
-                      {/* Price Range Filter */}
-                      {shouldShowFilter("showPrice") && (
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <IndianRupeeIcon className="h-5 w-5 text-blue-600" />
-                              <h3 className="font-medium">Price Range</h3>
-                            </div>
-                            <span className="text-xs font-medium text-blue-600">
-                              {activeTab === "rent" 
-                                ? `₹${priceRange[0].toLocaleString()}/month - ₹${priceRange[1].toLocaleString()}/month`
-                                : `₹${priceRange[0].toLocaleString()} - ₹${priceRange[1].toLocaleString()}`
-                              }
-                            </span>
-                          </div>
-                          <Slider
-                            defaultValue={[0, activeTab === "rent" ? 1000000 : 1000000000]}
-                            max={activeTab === "rent" ? 1000000 : 1000000000}
-                            step={activeTab === "rent" ? 500 : 100000}
-                            value={priceRange}
-                            onValueChange={handlePriceRangeChange}
-                            className="mb-2"
-                          />
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>₹0</span>
-                            <span>{activeTab === "rent" ? "₹10 Lakh/month" : "₹100 Cr"}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Bedrooms Filter */}
-                      {shouldShowFilter("showBedrooms") && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-4">
-                            <Bed className="h-5 w-5 text-blue-600" />
-                            <h3 className="font-medium">Bedrooms</h3>
-                          </div>
-                          <div className="flex space-x-2">
-                            {[0, 1, 2, 3, 4].map((num) => (
-                              <Button
-                                key={num}
-                                variant={minBedrooms === num ? "default" : "outline"}
-                                size="sm"
-                                className={`flex-1 ${minBedrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                                onClick={() => handleBedroomChange(num)}
-                              >
-                                {num === 0 ? "Any" : num === 4 ? "4+" : num}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Bathrooms Filter */}
-                      {shouldShowFilter("showBathrooms") && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-4">
-                            <Bath className="h-5 w-5 text-blue-600" />
-                            <h3 className="font-medium">Bathrooms</h3>
-                          </div>
-                          <div className="flex space-x-2">
-                            {[0, 1, 2, 3].map((num) => (
-                              <Button
-                                key={num}
-                                variant={minBathrooms === num ? "default" : "outline"}
-                                size="sm"
-                                className={`flex-1 ${minBathrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                                onClick={() => handleBathroomChange(num)}
-                              >
-                                {num === 0 ? "Any" : num === 3 ? "3+" : num}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Balcony Filter */}
-                      {shouldShowFilter("showBalcony") && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-4">
-                            <LayoutDashboard className="h-5 w-5 text-blue-600" />
-                            <h3 className="font-medium">Balcony</h3>
-                          </div>
-                          <div className="flex space-x-2">
-                            {[0, 1, 2, 3].map((num) => (
-                              <Button
-                                key={num}
-                                variant={minBalcony === num ? "default" : "outline"}
-                                size="sm"
-                                className={`flex-1 ${minBalcony === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                                onClick={() => handleBalconyChange(num)}
-                              >
-                                {num === 0 ? "Any" : num === 3 ? "3+" : num}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Area Filter */}
-                      {shouldShowFilter("showArea") && (
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <Ruler className="h-5 w-5 text-blue-600" />
-                              <h3 className="font-medium">Area (sq.ft)</h3>
-                            </div>
-                            <span className="text-xs font-medium text-blue-600">
-                              {minArea}+ sq.ft
-                            </span>
-                          </div>
-                          <Slider
-                            defaultValue={[0]}
-                            max={5000}
-                            step={100}
-                            value={[minArea]}
-                            onValueChange={handleAreaChange}
-                            className="mb-2"
-                          />
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>0 sq.ft</span>
-                            <span>5000+ sq.ft</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Advanced Filters */}
-                      {(shouldShowFilter("showAvailableFrom") || 
-                        shouldShowFilter("showTenantPreference") || 
-                        shouldShowFilter("showFurnished") || 
-                        shouldShowFilter("showAmenities")) && (
-                        <div className="space-y-4">
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
-                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                          >
-                            {showAdvancedFilters ? (
-                              <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
-                            ) : (
-                              <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
-                            )}
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            className="w-full flex items-center gap-2" 
-                            onClick={resetFilters}
-                          >
-                            <FilterX className="h-4 w-4" />
-                            Reset All Filters
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Advanced Filters Content */}
-                      {showAdvancedFilters && (
-                        <Card className="shadow-md">
-                          <CardContent className="p-6">
-                            <h3 className="font-medium text-lg mb-4 text-blue-800">Advanced Filters</h3>
-                            <Accordion type="single" collapsible className="w-full">
-                              {/* Availability Filter */}
-                              {shouldShowFilter("showAvailableFrom") && (
-                                <AccordionItem value="availability" className="border-b border-blue-100">
-                                  <AccordionTrigger className="py-3 hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                      <Calendar className="h-5 w-5 text-blue-600" />
-                                      <span>Availability</span>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <div className="pt-2 pb-4">
-                                      <p className="text-sm text-gray-600 mb-2">Available from</p>
-                                      <DatePicker 
-                                        date={availableFrom} 
-                                        setDate={handleDateChange} 
-                                        className="w-full"
-                                      />
-                                    </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              )}
-
-                              {/* Tenant Preference Filter */}
-                              {shouldShowFilter("showTenantPreference") && (
-                                <AccordionItem value="preference" className="border-b border-blue-100">
-                                  <AccordionTrigger className="py-3 hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-5 w-5 text-blue-600" />
-                                      <span>Tenant Preference</span>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <div className="pt-2 pb-4">
-                                      <Select
-                                        value={preferenceId}
-                                        onValueChange={handlePreferenceChange}
-                                      >
-                                        <SelectTrigger className="w-full">
-                                          <SelectValue placeholder="Select preference" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {preferenceOptions.map((option) => (
-                                            <SelectItem key={option.id} value={option.id}>
-                                              {option.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              )}
-
-                              {/* Furnished Status Filter */}
-                              {shouldShowFilter("showFurnished") && (
-                                <AccordionItem value="furnished" className="border-b border-blue-100">
-                                  <AccordionTrigger className="py-3 hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                      <Home className="h-5 w-5 text-blue-600" />
-                                      <span>Furnished Status</span>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <div className="pt-2 pb-4">
-                                      <Select
-                                        value={furnished}
-                                        onValueChange={handleFurnishedChange}
-                                      >
-                                        <SelectTrigger className="w-full">
-                                          <SelectValue placeholder="Furnished status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {furnishedOptions.map((option) => (
-                                            <SelectItem key={option.id} value={option.id}>
-                                              {option.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              )}
-
-                              {/* Amenities Filter */}
-                              {shouldShowFilter("showAmenities") && (
-                                <AccordionItem value="amenities" className="border-b-0">
-                                  <AccordionTrigger className="py-3 hover:no-underline">
-                                    <div className="flex items-center gap-2">
-                                      <CheckSquare className="h-5 w-5 text-blue-600" />
-                                      <span>Amenities</span>
-                                    </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <div className="pt-2 pb-4 grid grid-cols-2 gap-3">
-                                      {amenityOptions.map((amenity) => (
-                                        <div key={amenity} className="flex items-center space-x-2">
-                                          <Switch
-                                            id={`amenity-${amenity}`}
-                                            checked={selectedAmenities.includes(amenity)}
-                                            onCheckedChange={() => handleAmenityToggle(amenity)}
-                                          />
-                                          <Label htmlFor={`amenity-${amenity}`} className="text-sm">
-                                            {amenity}
-                                          </Label>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              )}
-                            </Accordion>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-
           {/* Property listings - takes full remaining width */}
           <div className="flex-1 min-w-0 w-full">
             {/* Applied filters display */}
