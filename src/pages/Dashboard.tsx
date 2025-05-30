@@ -570,6 +570,12 @@ const Dashboard = () => {
             <span className="block truncate">Listed Properties</span>
           </TabsTrigger>
           <TabsTrigger
+            value="liked"
+            className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
+          >
+            <span className="block truncate">Liked Properties</span>
+          </TabsTrigger>
+          <TabsTrigger
             value="messages"
             className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
           >
@@ -715,6 +721,119 @@ const Dashboard = () => {
                             }
                           >
                             <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="liked">
+          {properties.filter(p => p.isLikedByUser === true).length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-lg border">
+              <ThumbsUp className="mx-auto h-12 w-12 text-rose-400" />
+              <h3 className="mt-2 text-lg font-medium">No Liked Properties</h3>
+              <p className="mt-1 text-gray-500">
+                You haven't liked any properties yet.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Property
+                    </th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      Price
+                    </th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      Type
+                    </th>
+                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      Status
+                    </th>
+                    <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {properties.filter(p => p.isLikedByUser === true).map((property) => (
+                    <tr
+                      key={property.propertyId || `liked-property-${Math.random()}`}
+                    >
+                      <td className="py-4 px-4">
+                        <div className="flex items-center">
+                          <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
+                            <img
+                              src={property.image}
+                              alt={property.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="ml-3">
+                            <div className="font-medium text-gray-900 line-clamp-1">
+                              {property.title}
+                            </div>
+                            <div className="text-gray-500 text-sm line-clamp-1">
+                              {property.location || "No location specified"}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden sm:table-cell">
+                        <div className="text-gray-900">
+                          ₹
+                          {property.price > 0
+                            ? property.price.toLocaleString()
+                            : "Not specified"}
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                          {property.type === "rent" ? "/month" : ""}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 hidden md:table-cell">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">
+                          {property.type === "buy"
+                            ? "For Sale"
+                            : property.type === "rent"
+                            ? "For Rent"
+                            : "Selling"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            property.status === "active"
+                              ? "bg-green-100 text-green-800"
+                              : property.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {property.status === "active"
+                            ? "Active"
+                            : property.status === "pending"
+                            ? "Pending"
+                            : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() =>
+                              navigate(`/properties/${property.propertyId}`)
+                            }
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
