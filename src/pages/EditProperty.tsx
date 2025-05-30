@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
@@ -35,14 +33,6 @@ import {
   AreaChart,
   CheckCircle,
 } from "lucide-react";
-import {
-  Parking,
-  Gym,
-  Garden,
-  Pool,
-  Security,
-  Elevator,
-} from "@/components/icons/CustomIcons";
 import { getAmenity } from "@/utils/UtilityFunctions";
 
 const EditProperty = () => {
@@ -80,7 +70,6 @@ const EditProperty = () => {
   });
   const [selectedCheckboxes, setSelectedCheckboxes] = useState([]);
   const [selectedRadio, setSelectedRadio] = useState("");
-  const BASE_URL = "https://homeyatraapi.azurewebsites.net";
 
   // Track which field is being edited
   const [activeField, setActiveField] = useState<string | null>(null);
