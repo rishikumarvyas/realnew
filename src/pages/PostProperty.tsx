@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import imageCompression from "browser-image-compression";
 import axiosInstance from "../axiosCalls/axiosInstance";
 import { getAmenity } from "@/utils/UtilityFunctions";
+import axios from "axios";
+import { Loader2 } from "lucide-react";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -47,7 +49,7 @@ const PostProperty = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
+  const [cityId, setCityId] = useState("");
   const [bedrooms, setBedrooms] = useState("");
   const [bathrooms, setBathrooms] = useState("");
   const [balcony, setBalcony] = useState("");
@@ -59,17 +61,38 @@ const PostProperty = () => {
   const [mainImageIndex, setMainImageIndex] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
+  const [selectedStateId, setSelectedStateId] = useState("");
+  const [cityList, setCityList] = useState([]);
+  const [locality, setLocality] = useState("");
+  const [cityLoading, setCityLoading] = useState(false);
+
+  useEffect(() => {
+    if (selectedStateId) {
+      setCityId(""); // Reset city selection
+      setCityLoading(true);
+      axios
+        .get(
+          `https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=City&parentTableName=State&parentField=StateId&parentId=${selectedStateId}`
+        )
+        .then((res) => {
+          if (res?.data?.statusCode === 200 && res?.data?.data?.length > 0) {
+            setCityList(res?.data?.data);
+          } else {
+            setCityList([]);
+          }
+        })
+        .catch(() => setCityList([]))
+        .finally(() => setCityLoading(false));
+    } else {
+      setCityList([]);
+      setCityLoading(false);
+    }
+  }, [selectedStateId]);
 
   const checkBoxAmenities: Amenity[] = getAmenity().checkBoxAmenities;
   const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
 
-  // Available cities
-  const availableCities = [
-    { id: 140, name: "Indore" },
-    { id: 135, name: "Bhopal" },
-    { id: 184, name: "Pune" },
-  ];
-
+  const allStates = JSON.parse(localStorage.getItem("allStates"));
   // Form validation states
   const [priceValidation, setPriceValidation] = useState(true);
   const [areaValidation, setAreaValidation] = useState(true);
@@ -200,15 +223,6 @@ const PostProperty = () => {
     return propertyTypeMap[type] || 1;
   };
 
-  const getCityStateId = (cityId) => {
-    const cityStateMap = {
-      1: 1, // Indore -> Madhya Pradesh
-      2: 1, // Bhopal -> Madhya Pradesh
-      3: 2, // Pune -> Maharashtra
-    };
-    return cityStateMap[cityId] || 1;
-  };
-
   const mapOwnerTypeToId = (type) => {
     const ownerTypeMap = {
       owner: 1,
@@ -222,7 +236,16 @@ const PostProperty = () => {
     e.preventDefault();
 
     // Basic validation
-    if (!propertyType || !category || !title || !price || !address || !city) {
+    if (
+      !propertyType ||
+      !category ||
+      !title ||
+      !price ||
+      !address ||
+      !cityId ||
+      !selectedStateId ||
+      !locality
+    ) {
       toast({
         title: "Missing Information",
         description: "Please fill all required fields.",
@@ -277,8 +300,6 @@ const PostProperty = () => {
       // Map your form selections to API IDs
       const categoryId = mapCategoryToId(propertyType);
       const propertyTypeId = mapPropertyTypeToId(category);
-      const cityId = parseInt(city); // Use the direct city ID from the dropdown
-      const stateId = getCityStateId(cityId);
       const userTypeId = mapOwnerTypeToId(ownerType);
 
       // Map selected amenities to their IDs
@@ -327,7 +348,8 @@ const PostProperty = () => {
       if (balcony) formData.append("Balcony", balcony);
       formData.append("Address", address);
       formData.append("CityId", cityId.toString());
-      formData.append("StateId", stateId.toString());
+      formData.append("StateId", selectedStateId.toString());
+      formData.append("Locality", locality.toString());
       formData.append("UserTypeId", userTypeId.toString());
 
       // Add amenities
@@ -639,7 +661,6 @@ const PostProperty = () => {
               </div>
             </CardContent>
           </Card>
-
           {/* Location Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -652,6 +673,97 @@ const PostProperty = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* State Dropdown*/}
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-gray-700 font-medium">
+                    State <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={selectedStateId}
+                    onValueChange={(val) => setSelectedStateId(val)}
+                    required
+                  >
+                    <SelectTrigger
+                      id="state"
+                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allStates.map((state) => (
+                        <SelectItem key={state.id} value={state.id}>
+                          {state.state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/*City Dropdown*/}
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-gray-700 font-medium">
+                    City <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={cityId}
+                    onValueChange={(val) => setCityId(val)}
+                    required
+                    disabled={!selectedStateId || cityLoading}
+                  >
+                    <SelectTrigger
+                      id="city"
+                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    >
+                      {cityLoading ? (
+                        <span className="flex items-center">
+                          <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                          Loading...
+                        </span>
+                      ) : (
+                        <SelectValue
+                          placeholder={
+                            selectedStateId
+                              ? "Select City"
+                              : "Select State First"
+                          }
+                        />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cityLoading ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                          Loading cities...
+                        </div>
+                      ) : (
+                        cityList.map((cityObj) => (
+                          <SelectItem key={cityObj.id} value={cityObj.id}>
+                            {cityObj.city}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Locality */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="locality"
+                    className="text-gray-700 font-medium"
+                  >
+                    Locality <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="locality"
+                    placeholder="Enter locality or area (e.g. MG Road, Sector 10)"
+                    value={locality}
+                    onChange={(e) => setLocality(e.target.value)}
+                    className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    required
+                  />
+                </div>
+              </div>
+              {/* Address */}
               <div className="space-y-2">
                 <Label htmlFor="address" className="text-gray-700 font-medium">
                   Address <span className="text-red-500">*</span>
@@ -664,35 +776,8 @@ const PostProperty = () => {
                   className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-gray-700 font-medium">
-                    City <span className="text-red-500">*</span>
-                  </Label>
-                  <Select value={city} onValueChange={setCity}>
-                    <SelectTrigger
-                      id="city"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select City" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableCities.map((cityOption) => (
-                        <SelectItem
-                          key={cityOption.id}
-                          value={cityOption.id.toString()}
-                        >
-                          {cityOption.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             </CardContent>
           </Card>
-
           {/* Amenities */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -705,55 +790,62 @@ const PostProperty = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {checkBoxAmenities.map(({ id, amenity }) => (
-                  <div
-                    key={id}
-                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                      amenities.includes(id)
-                        ? "bg-blue-100 border-2 border-blue-300"
-                        : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                    }`}
-                    onClick={() => handleAmenityCheckBox(id)}
-                  >
-                    <input
-                      type="checkbox"
-                      id={id}
-                      checked={amenities.includes(id)}
-                      onChange={() => {}}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                    />
-                    <Label htmlFor={amenity} className="cursor-pointer text-sm">
-                      {amenity}
-                    </Label>
-                  </div>
-                ))}
-                {radioButtonAmenities.map(({ id, amenity }) => (
-                  <div
-                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                      selectedOption.includes(id)
-                        ? "bg-blue-100 border-2 border-blue-300"
-                        : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                    }`}
-                  >
-                    <label key={id}>
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {checkBoxAmenities.map(({ id, amenity }) => (
+                    <div
+                      key={id}
+                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                        amenities.includes(id)
+                          ? "bg-blue-100 border-2 border-blue-300"
+                          : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                      }`}
+                      onClick={() => handleAmenityCheckBox(id)}
+                    >
                       <input
-                        type="radio"
-                        name="furnishing"
-                        value={id}
-                        checked={selectedOption === id}
-                        onChange={handleAmenityRadioButton}
+                        type="checkbox"
+                        id={id}
+                        checked={amenities.includes(id)}
+                        onChange={() => {}}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
                       />
-                      {amenity}
-                      <br />
-                    </label>
-                  </div>
-                ))}
+                      <Label
+                        htmlFor={amenity}
+                        className="cursor-pointer text-sm"
+                      >
+                        {amenity}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <div className="my-6" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {radioButtonAmenities.map(({ id, amenity }) => (
+                    <div
+                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                        selectedOption.includes(id)
+                          ? "bg-blue-100 border-2 border-blue-300"
+                          : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                      }`}
+                    >
+                      <label key={id}>
+                        <input
+                          type="radio"
+                          name="furnishing"
+                          value={id}
+                          checked={selectedOption === id}
+                          onChange={handleAmenityRadioButton}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                        />
+                        {amenity}
+                        <br />
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
-
           {/* Owner Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -790,7 +882,6 @@ const PostProperty = () => {
               </div>
             </CardContent>
           </Card>
-
           {/* Upload Images */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -881,8 +972,7 @@ const PostProperty = () => {
               </div>
             </CardContent>
           </Card>
-
-          <CardFooter className="flex justify-between px-0">
+          <CardFooter className="flex justify-center space-x-4">
             <Button variant="outline" onClick={() => navigate(-1)}>
               Cancel
             </Button>
