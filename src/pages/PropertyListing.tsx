@@ -153,7 +153,7 @@ export const PropertyListing = () => {
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
   
   // Active tab for property type
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("all");
 
   // Add state for commercial type
   const [commercialType, setCommercialType] = useState<"buy" | "rent">("buy");
@@ -847,6 +847,9 @@ const applyFilters = (data: PropertyCardProps[]) => {
     // Reset commercial type when switching away from commercial tab
     if (value !== "commercial") {
       setCommercialType("buy");
+      setShowCommercialDropdown(false);
+    } else {
+      setShowCommercialDropdown(true);
     }
     
     // Hide advanced filters if plot or commercial is selected
@@ -872,6 +875,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
   // Add handler for commercial type change
   const handleCommercialTypeChange = (value: "buy" | "rent") => {
     setCommercialType(value);
+    setShowCommercialDropdown(false);
     searchParams.set("commercialType", value);
     setSearchParams(searchParams);
   };
@@ -1036,6 +1040,9 @@ const applyFilters = (data: PropertyCardProps[]) => {
   // Add state for sidebar visibility
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
+  // Add state for commercial dropdown visibility
+  const [showCommercialDropdown, setShowCommercialDropdown] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
@@ -1099,59 +1106,126 @@ const applyFilters = (data: PropertyCardProps[]) => {
       </div>
 
       <div className="max-w-[1200px] mx-auto px-4 py-8">
-        {/* Tab filter */}
-        <div className="mb-8 flex justify-center">
-          <div className="w-full max-w-screen-md bg-blue-700 bg-opacity-40 rounded-lg p-2 pl-4 overflow-x-auto whitespace-nowrap scrollbar-hide mx-auto">
-            <div className="flex gap-x-3 w-full min-w-[400px] md:min-w-0">
-              {['all', 'buy', 'rent', 'plot', 'commercial'].map((tab) => (
-                <div key={tab} className="relative inline-block align-top">
-                  <button
-                    onClick={() => handleTabChange(tab)}
-                    className={`max-w-xs px-4 py-3 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
-                      activeTab === tab 
-                        ? 'bg-white text-blue-600 shadow-md' 
-                        : 'text-white hover:bg-blue-500'
-                    }`}
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    {tab === 'all' ? ' Properties' : ''}
-                  </button>
-                  {/* Commercial type dropdown */}
-                  {tab === 'commercial' && activeTab === 'commercial' && (
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-40 min-w-[140px] bg-blue-50 border border-blue-200 rounded-md shadow-xl z-50">
-                      <div className="p-2 flex flex-col gap-1">
-                        <div className="text-xs font-medium text-blue-700 mb-1 px-2">
-                          Select Type
+        {/* Modern Tab Bar */}
+        <div className="w-full px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="relative">
+              <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-1 shadow-2xl backdrop-blur-sm">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
+                  <div className="overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-2 min-w-max md:min-w-0 md:justify-center">
+                      {[
+                        { key: 'all', label: 'All Properties', icon: '🏘️' },
+                        { key: 'buy', label: 'Buy', icon: '🏠' },
+                        { key: 'rent', label: 'Rent', icon: '🔑' },
+                        { key: 'plot', label: 'Plot', icon: '🏞️' },
+                        { key: 'commercial', label: 'Commercial', icon: '🏢' }
+                      ].map((tab) => (
+                        <div key={tab.key} className="relative">
+                          <button
+                            onClick={() => handleTabChange(tab.key)}
+                            className={`group relative flex items-center gap-2 px-4 py-3 md:px-6 md:py-4 rounded-xl text-sm md:text-base font-semibold transition-all duration-300 ease-out transform hover:scale-105 min-w-max ${
+                              activeTab === tab.key
+                                ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/25 border border-blue-100'
+                                : 'text-white hover:bg-white/20 hover:backdrop-blur-md hover:shadow-lg'
+                            }`}
+                          >
+                            <span className="text-lg md:text-xl">{tab.icon}</span>
+                            <span className="whitespace-nowrap">{tab.label}</span>
+                            {tab.key === 'commercial' && (
+                              <ChevronDown 
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  showCommercialDropdown && activeTab === 'commercial' ? 'rotate-180' : ''
+                                }`}
+                              />
+                            )}
+                            {activeTab === tab.key && (
+                              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleCommercialTypeChange('buy')}
-                          className={`w-full text-left px-2 py-1.5 text-sm rounded-md ${
-                            commercialType === 'buy'
-                              ? 'bg-blue-100 text-blue-700 font-semibold'
-                              : 'text-blue-700 hover:bg-blue-100'
-                          }`}
-                        >
-                          Buy
-                        </button>
-                        <button
-                          onClick={() => handleCommercialTypeChange('rent')}
-                          className={`w-full text-left px-2 py-1.5 text-sm rounded-md ${
-                            commercialType === 'rent'
-                              ? 'bg-blue-100 text-blue-700 font-semibold'
-                              : 'text-blue-700 hover:bg-blue-100'
-                          }`}
-                        >
-                          Rent
-                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Commercial Dropdown */}
+              {showCommercialDropdown && activeTab === 'commercial' && (
+                <div className="absolute top-full left-0 right-0 mt-3 z-50 flex justify-center">
+                  <div className="bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🏢</span>
+                        <h3 className="text-sm font-semibold text-gray-700">Commercial Type</h3>
                       </div>
                     </div>
-                  )}
+                    <div className="p-2">
+                      {[
+                        { key: 'buy' as const, label: 'Buy Commercial', icon: '💰', desc: 'Purchase commercial property' },
+                        { key: 'rent' as const, label: 'Rent Commercial', icon: '📋', desc: 'Lease commercial space' }
+                      ].map((option) => (
+                        <button
+                          key={option.key}
+                          onClick={() => handleCommercialTypeChange(option.key)}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 hover:scale-[1.02] ${
+                            commercialType === option.key
+                              ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500 shadow-sm'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="text-xl flex-shrink-0">{option.icon}</span>
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm">{option.label}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{option.desc}</div>
+                          </div>
+                          {commercialType === option.key && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-auto"></div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ))}
+              )}
+            </div>
+
+            {/* Current Selection Display */}
+            <div className="mt-6 text-center">
+              <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-lg border border-gray-100">
+                <span className="text-sm text-gray-600">Currently selected:</span>
+                <span className="font-semibold text-blue-600">
+                  {activeTab === 'commercial' 
+                    ? `Commercial - ${commercialType.charAt(0).toUpperCase() + commercialType.slice(1)}`
+                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
+                        (['All Properties','Buy','Rent','Plot','Commercial'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
+                      )
+                  }
+                </span>
+                <span className="text-lg">
+                  {activeTab === 'commercial' 
+                    ? (commercialType === 'buy' ? '💰' : '📋')
+                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
+                        (['🏘️','🏠','🔑','🏞️','🏢'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
+                      )
+                  }
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500 md:hidden">
+                ← Swipe horizontally to see all tabs →
+              </p>
             </div>
           </div>
+          {showCommercialDropdown && (
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={() => setShowCommercialDropdown(false)}
+            ></div>
+          )}
         </div>
-        
+
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">
           <Button 
@@ -1248,26 +1322,27 @@ const applyFilters = (data: PropertyCardProps[]) => {
                     </div>
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
-                      <div className="mb-2 bg-blue-100 rounded-xl p-4">
+                      <div className="mb-2">
                         <div className="font-semibold text-blue-700 text-sm mb-2">Price Range</div>
-                        <div className="flex flex-col gap-2">
-                          <Slider
-                            min={0}
-                            max={1000000}
-                            step={500}
-                            value={priceRange}
-                            onValueChange={handlePriceRangeChange}
-                            className="mb-2"
-                          />
-                          <div className="flex justify-between items-center gap-2">
-                            <div className="bg-white border border-blue-300 rounded-lg px-4 py-1 text-blue-700 font-semibold text-base min-w-[80px] text-center">
-                              ₹{priceRange[0].toLocaleString()}
-                            </div>
-                            <div className="bg-white border border-blue-300 rounded-lg px-4 py-1 text-blue-700 font-semibold text-base min-w-[80px] text-center">
-                              ₹{priceRange[1].toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
+                        <Select value={priceRange.join('-')} onValueChange={v => {
+                          const [min, max] = v.split('-').map(Number);
+                          handlePriceRangeChange([min, max]);
+                        }}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Select Price" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            <SelectItem value="0-5000">0–5,000</SelectItem>
+                            <SelectItem value="0-10000">0–10,000</SelectItem>
+                            <SelectItem value="0-25000">0–25,000</SelectItem>
+                            <SelectItem value="0-50000">0–50,000</SelectItem>
+                            <SelectItem value="0-100000">0–1 Lakh</SelectItem>
+                            <SelectItem value="0-500000">0–5 Lakh</SelectItem>
+                            <SelectItem value="0-1000000">0–10 Lakh</SelectItem>
+                            <SelectItem value="0-10000000">0–1 Cr</SelectItem>
+                            <SelectItem value="0-1000000000">0–100 Cr</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                     {/* Rooms & Features Section */}
@@ -1330,26 +1405,25 @@ const applyFilters = (data: PropertyCardProps[]) => {
                           </Select>
                         </div>
                       )}
-                      {/* Area Slider */}
+                      {/* Area Dropdown */}
                       {shouldShowFilter("showArea") && (
-                        <div className="bg-blue-50 rounded-lg p-3">
-                          <label className="block text-xs font-semibold text-blue-700 mb-2">Area (sq.ft)</label>
-                          <Slider
-                            min={0}
-                            max={5000}
-                            step={100}
-                            value={[minArea]}
-                            onValueChange={handleAreaChange}
-                            className="mb-2"
-                          />
-                          <div className="flex justify-between items-center gap-2">
-                            <div className="bg-white border border-blue-300 rounded-lg px-4 py-1 text-blue-700 font-semibold text-base min-w-[80px] text-center">
-                              {minArea}+ sq.ft
-                            </div>
-                            <div className="bg-white border border-blue-300 rounded-lg px-4 py-1 text-blue-700 font-semibold text-base min-w-[80px] text-center">
-                              5000+ sq.ft
-                            </div>
-                          </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-blue-700 mb-1">Area (sq.ft)</label>
+                          <Select value={minArea ? String(minArea) : "0"} onValueChange={v => handleAreaChange([Number(v)])}>
+                            <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                              <SelectValue placeholder="Any" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-blue-200">
+                              <SelectItem value="0">Any</SelectItem>
+                              <SelectItem value="500">500+</SelectItem>
+                              <SelectItem value="1000">1000+</SelectItem>
+                              <SelectItem value="1500">1500+</SelectItem>
+                              <SelectItem value="2000">2000+</SelectItem>
+                              <SelectItem value="3000">3000+</SelectItem>
+                              <SelectItem value="4000">4000+</SelectItem>
+                              <SelectItem value="5000">5000+</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </div>
