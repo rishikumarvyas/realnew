@@ -27,6 +27,7 @@ interface ApiProperty {
   preferenceId?: number; // Tenant preference ID
   amenities?: string[]; // Array of amenity strings
   furnished?: string; // "Fully", "Semi", "Not" furnished status
+  likeCount?: number; // Optional like count
 }
 
 // Property card props type
@@ -46,6 +47,7 @@ interface PropertyCardProps {
   amenities?: string[];
   furnished?: string;
   formattedPrice?: string;
+  likeCount?: number;
 }
 
 // Filter options interface for API request
@@ -131,7 +133,8 @@ const AllProperty = () => {
         availableFrom: prop.availableFrom,
         preferenceId: prop.preferenceId,
         amenities: prop.amenities,
-        furnished: prop.furnished
+        furnished: prop.furnished,
+        likeCount: prop.likeCount || 0,
       }));
 
       setProperties(transformedData);
@@ -356,7 +359,7 @@ const AllProperty = () => {
             <PropertyCard
               key={property.id}
               {...property}
-              // Format price according to property type
+              likeCount={property.likeCount}
               formattedPrice={formatPrice(property.price, property.type)}
             />
           ))

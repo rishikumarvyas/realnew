@@ -85,10 +85,10 @@ const PropertyDetail = () => {
           const propertyData = data.propertyDetail;
           
           setProperty(propertyData);
-          setLikesCount(propertyData.likesCount || 0);
+          setLikesCount(propertyData.likeCount || 0);
           
-          // FIXED: Ensure like status is properly set from API response
-          const userLikeStatus = propertyData.isLikedByCurrentUser || false;
+          // Use correct API field for like status
+          const userLikeStatus = propertyData.isLikedByUser || false;
           setIsFavorite(userLikeStatus);
           console.log("Setting initial like status:", userLikeStatus);
           
@@ -110,8 +110,8 @@ const PropertyDetail = () => {
           if (mockPropertyDetail) {
             console.log("Using mock data in development");
             setProperty(mockPropertyDetail);
-            setIsFavorite(mockPropertyDetail.isLikedByCurrentUser || false);
-            setLikesCount(mockPropertyDetail.likesCount || 0);
+            setIsFavorite(mockPropertyDetail.isLikedByUser || false);
+            setLikesCount(mockPropertyDetail.likeCount || 0);
             setError(null);
             getMockSimilarProperties(mockPropertyDetail.city, mockPropertyDetail.propertyType);
           }
@@ -187,8 +187,8 @@ const PropertyDetail = () => {
       bedroom: 3,
       bathroom: 2,
       balcony: 1,
-      likesCount: 42,
-      isLikedByCurrentUser: false,
+      likeCount: 42,
+      isLikedByUser: false,
       amenityDetails: [
         { amenityId: "1", amenity: "Wifi" },
         { amenityId: "2", amenity: "Parking" },
@@ -259,7 +259,7 @@ const PropertyDetail = () => {
 
     if (checked && user) {
       try {
-        const userId = user.userId || user.id;
+        const userId = user.userId;
         const propertyId = property.propertyId || id;
         
         if (!userId || !propertyId) {
@@ -380,7 +380,7 @@ const PropertyDetail = () => {
     const previousLikesCount = likesCount;
     
     try {
-      const userId = user.userId || user.id;
+      const userId = user.userId;
       const propertyId = property.propertyId || id;
       const newLikeStatus = !isFavorite;
       
@@ -396,15 +396,15 @@ const PropertyDetail = () => {
       
       if (response.data.statusCode === 200) {
         // Update likes count from API response if provided
-        if (response.data.likesCount !== undefined) {
-          setLikesCount(response.data.likesCount);
+        if (response.data.likeCount !== undefined) {
+          setLikesCount(response.data.likeCount);
         }
         
         // Also update the property object to maintain consistency
         setProperty(prev => ({
           ...prev,
-          isLikedByCurrentUser: newLikeStatus,
-          likesCount: response.data.likesCount || (newLikeStatus ? prev.likesCount + 1 : Math.max(0, prev.likesCount - 1))
+          isLikedByUser: newLikeStatus,
+          likeCount: response.data.likeCount || (newLikeStatus ? prev.likeCount + 1 : Math.max(0, prev.likeCount - 1))
         }));
         
         toast({
@@ -911,13 +911,23 @@ const PropertyDetail = () => {
                       </span>
                     </div>
                     <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Likes</span>
+                      <span className="text-gray-600">Like Count</span>
                       <span className="font-medium flex items-center">
                         <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
                         {likesCount}
                       </span>
                     </div>
-                   <div className="flex justify-between border-b pb-3">
+                    <div className="flex justify-between border-b pb-3">
+                      <span className="text-gray-600">Liked by You</span>
+                      <span className="font-medium flex items-center">
+                        {isFavorite ? (
+                          <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-b pb-3">
                       <span className="text-gray-600">Listed Date</span>
                       <span className="font-medium">{formatDate(property.createdDt)}</span>
                     </div>
@@ -1156,8 +1166,8 @@ const PropertyDetail = () => {
         open={contactModalOpen} 
         onOpenChange={setContactModalOpen} 
         propertyTitle={property.title}
-        contactType={contactType}
-        contactInfo={contactType === "whatsapp" ? (property.phone || ownerDetails.phone) : ownerDetails.email}
+        contactType={contactType === 'whatsapp' ? 'whatsapp' : 'email'}
+        contactInfo={contactType === 'whatsapp' ? (property.phone || ownerDetails.phone) : ownerDetails.email}
       />
       
       {/* Image Gallery Dialog */}

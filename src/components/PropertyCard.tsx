@@ -24,6 +24,7 @@ export interface PropertyCardProps {
   propertyType?: string;
   status?: string;
   formattedPrice?: string;
+  likeCount?: number;
 }
 
 export function PropertyCard({
@@ -38,6 +39,7 @@ export function PropertyCard({
   area,
   image,
   likes = 0,
+  likeCount = 0,
 }: PropertyCardProps) {
   // Get badge color based on property type - Updated for all types
   const getBadgeStyle = () => {
@@ -95,7 +97,7 @@ export function PropertyCard({
           {/* Likes counter */}
           <div className="absolute top-3 left-3 z-20 flex items-center bg-black/50 text-white px-2 py-1 rounded-md">
             <Heart size={16} className="mr-1 fill-white text-white" />
-            <span className="text-xs font-medium">{likes}</span>
+            <span className="text-xs font-medium">{likeCount}</span>
           </div>
         </div>
         <CardContent className="p-5">

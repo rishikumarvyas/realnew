@@ -58,6 +58,7 @@ interface ApiProperty {
   likes?: number; 
   isLike?: boolean; 
   propertyType?: string;
+  likeCount?: number;
 }
 
 // Filter options interface
@@ -547,7 +548,7 @@ const fetchProperties = async () => {
         preferenceId: prop.preferenceId,
         amenities: prop.amenities,
         furnished: prop.furnished,
-        likes: prop.likes ?? 0,
+        likeCount: prop.likeCount || 0,
         isLike: prop.isLike ?? false,
         propertyType: prop.propertyType,
         status: prop.superCategory,
@@ -708,7 +709,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
     preferenceId?: number;
     amenities?: string[];
     furnished?: string;
-    likes?: number;
+    likeCount: number;
     isLike?: boolean;
     propertyType?: string;
     status?: string;
@@ -730,7 +731,8 @@ const applyFilters = (data: PropertyCardProps[]) => {
         area: 1450,
         image: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
         amenities: ["Parking", "Security", "Power Backup"],
-        furnished: "Fully"
+        furnished: "Fully",
+        likeCount: 0,
       },
       {
         id: "prop2",
@@ -744,7 +746,8 @@ const applyFilters = (data: PropertyCardProps[]) => {
         area: 2100,
         image: "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
         amenities: ["Swimming Pool", "Gym", "Club House", "Parking"],
-        furnished: "Fully"
+        furnished: "Fully",
+        likeCount: 0,
       },
       {
         id: "prop3",
@@ -760,7 +763,8 @@ const applyFilters = (data: PropertyCardProps[]) => {
         availableFrom: "2025-05-15T00:00:00",
         preferenceId: 2, // Bachelor
         amenities: ["WiFi", "Power Backup"],
-        furnished: "Semi"
+        furnished: "Semi",
+        likeCount: 0,
       },
       // Updated mock plot and commercial properties
       {
@@ -775,7 +779,8 @@ const applyFilters = (data: PropertyCardProps[]) => {
         area: 2400,
         image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
         amenities: ["Power Backup"],
-        propertyType: "Plot"
+        propertyType: "Plot",
+        likeCount: 0,
       },
       {
         id: "prop10",
@@ -790,7 +795,8 @@ const applyFilters = (data: PropertyCardProps[]) => {
         image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
         amenities: ["WiFi", "Power Backup", "Security", "Parking"],
         furnished: "Fully",
-        propertyType: "Commercial"
+        propertyType: "Commercial",
+        likeCount: 0,
       },
       {
         id: "prop11",
@@ -805,7 +811,8 @@ const applyFilters = (data: PropertyCardProps[]) => {
         image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
         amenities: ["Security", "Power Backup"],
         furnished: "Not",
-        propertyType: "Commercial"
+        propertyType: "Commercial",
+        likeCount: 0,
       }
     ];
     
@@ -1725,6 +1732,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
                           <div key={property.id} className="w-full">
                             <PropertyCard
                               {...property} 
+                              likeCount={property.likeCount}
                               formattedPrice={formatPrice(property.price, property.type)}
                             />
                           </div>
@@ -1742,6 +1750,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
                           <div key={property.id} className="w-full">
                             <PropertyCard
                               {...property} 
+                              likeCount={property.likeCount}
                               formattedPrice={formatPrice(property.price, property.type)}
                             />
                           </div>
@@ -1754,6 +1763,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
                     <div key={property.id} className="w-full">
                       <PropertyCard
                         {...property} 
+                        likeCount={property.likeCount}
                         formattedPrice={formatPrice(property.price, property.type)}
                       />
                     </div>
