@@ -1204,16 +1204,16 @@ const applyFilters = (data: PropertyCardProps[]) => {
                 <span className="font-semibold text-blue-600">
                   {activeTab === 'commercial' 
                     ? `Commercial - ${commercialType.charAt(0).toUpperCase() + commercialType.slice(1)}`
-                    : (['all','buy','rent','plot','commercial'].includes(activeTab) ? 
-                        ['All Properties','Buy','Rent','Plot','Commercial'][['all','buy','rent','plot','commercial'].indexOf(activeTab)] : ''
+                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
+                        (['All Properties','Buy','Rent','Plot','Commercial'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
                       )
                   }
                 </span>
                 <span className="text-lg">
                   {activeTab === 'commercial' 
                     ? (commercialType === 'buy' ? '💰' : '📋')
-                    : (['all','buy','rent','plot','commercial'].includes(activeTab) ? 
-                        ['🏘️','🏠','🔑','🏞️','🏢'][['all','buy','rent','plot','commercial'].indexOf(activeTab)] : ''
+                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
+                        (['🏘️','🏠','🔑','🏞️','🏢'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
                       )
                   }
                 </span>
@@ -1299,58 +1299,64 @@ const applyFilters = (data: PropertyCardProps[]) => {
                         Clear All
                       </Button>
                     </div>
-
+                    {/* Search Bar */}
+                    <div className="mb-2">
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          className="w-full rounded-lg pl-10 pr-4 py-2 bg-blue-50 border border-blue-200 text-blue-900 placeholder:text-blue-400 focus:ring-2 focus:ring-blue-400"
+                          placeholder="Search properties..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          onFocus={() => setShowSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-400" />
+                        {showSuggestions && suggestions.length > 0 && (
+                          <ul className="absolute z-10 bg-white border border-blue-200 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
+                            {suggestions.map((suggestion, index) => (
+                              <li
+                                key={index}
+                                onMouseDown={() => handleSuggestionClick(suggestion)}
+                                className="px-4 py-2 cursor-pointer hover:bg-blue-50 text-blue-700"
+                              >
+                                {suggestion}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
-                      <div className="mb-4">
-                        <div className="font-semibold text-blue-700 text-sm mb-2">
-                          {activeTab === "buy" ? "Price Range (₹)" : "Price Range"}
-                        </div>
-                        <div className="px-2">
-                          <Slider
-                            min={priceRangeConfig[activeTab as keyof typeof priceRangeConfig].min}
-                            max={priceRangeConfig[activeTab as keyof typeof priceRangeConfig].max}
-                            step={priceRangeConfig[activeTab as keyof typeof priceRangeConfig].step}
-                            value={priceRange}
-                            onValueChange={handlePriceRangeChange}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between mt-2 text-sm text-gray-600">
-                            <span>{formatPrice(priceRange[0], activeTab)}</span>
-                            <span>{formatPrice(priceRange[1], activeTab)}</span>
-                          </div>
-                        </div>
+                      <div className="mb-2">
+                        <div className="font-semibold text-blue-700 text-sm mb-2">Price Range</div>
+                        <Select value={priceRange.join('-')} onValueChange={v => {
+                          const [min, max] = v.split('-').map(Number);
+                          handlePriceRangeChange([min, max]);
+                        }}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Select Price" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            <SelectItem value="0-5000">0–5,000</SelectItem>
+                            <SelectItem value="0-10000">0–10,000</SelectItem>
+                            <SelectItem value="0-25000">0–25,000</SelectItem>
+                            <SelectItem value="0-50000">0–50,000</SelectItem>
+                            <SelectItem value="0-100000">0–1 Lakh</SelectItem>
+                            <SelectItem value="0-500000">0–5 Lakh</SelectItem>
+                            <SelectItem value="0-1000000">0–10 Lakh</SelectItem>
+                            <SelectItem value="0-10000000">0–1 Cr</SelectItem>
+                            <SelectItem value="0-1000000000">0–100 Cr</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
-
-                    {/* Area Section */}
-                    {shouldShowFilter("showArea") && (
-                      <div className="mb-4">
-                        <div className="font-semibold text-blue-700 text-sm mb-2">
-                          {activeTab === "plot" ? "Plot Area" : activeTab === "commercial" ? "Commercial Area" : "Area"} (sq.ft)
-                        </div>
-                        <div className="px-2">
-                          <Slider
-                            min={0}
-                            max={10000}
-                            step={100}
-                            value={[minArea]}
-                            onValueChange={handleAreaChange}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between mt-2 text-sm text-gray-600">
-                            <span>{minArea} sq.ft</span>
-                            <span>10,000+ sq.ft</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Rooms & Features Section - Only for residential properties */}
-                    {shouldShowFilter("showBedrooms") && (
-                      <div className="bg-blue-100 rounded-xl p-4 flex flex-col gap-4">
-                        <div className="font-semibold text-blue-700 text-sm mb-2">Rooms & Features</div>
-                        {/* Bedrooms Dropdown */}
+                    {/* Rooms & Features Section */}
+                    <div className="bg-blue-100 rounded-xl p-4 flex flex-col gap-4">
+                      <div className="font-semibold text-blue-700 text-sm mb-2">Rooms & Features</div>
+                      {/* Bedrooms Dropdown */}
+                      {shouldShowFilter("showBedrooms") && (
                         <div>
                           <label className="block text-xs font-semibold text-blue-700 mb-1">Bedrooms</label>
                           <Select value={minBedrooms ? String(minBedrooms) : "0"} onValueChange={v => handleBedroomChange(Number(v))}>
@@ -1367,7 +1373,9 @@ const applyFilters = (data: PropertyCardProps[]) => {
                             </SelectContent>
                           </Select>
                         </div>
-                        {/* Bathrooms Dropdown */}
+                      )}
+                      {/* Bathrooms Dropdown */}
+                      {shouldShowFilter("showBathrooms") && (
                         <div>
                           <label className="block text-xs font-semibold text-blue-700 mb-1">Bathrooms</label>
                           <Select value={minBathrooms ? String(minBathrooms) : "0"} onValueChange={v => handleBathroomChange(Number(v))}>
@@ -1384,7 +1392,9 @@ const applyFilters = (data: PropertyCardProps[]) => {
                             </SelectContent>
                           </Select>
                         </div>
-                        {/* Balconies Dropdown */}
+                      )}
+                      {/* Balconies Dropdown */}
+                      {shouldShowFilter("showBalcony") && (
                         <div>
                           <label className="block text-xs font-semibold text-blue-700 mb-1">Balconies</label>
                           <Select value={minBalcony ? String(minBalcony) : "0"} onValueChange={v => handleBalconyChange(Number(v))}>
@@ -1401,25 +1411,33 @@ const applyFilters = (data: PropertyCardProps[]) => {
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Available From Section */}
-                    {shouldShowFilter("showAvailableFrom") && (
-                      <div className="mb-4">
-                        <label className="block text-xs font-semibold text-blue-700 mb-1">Available From</label>
-                        <DatePicker
-                          date={availableFrom ? new Date(availableFrom) : undefined}
-                          setDate={(date) => setAvailableFrom(date?.toISOString())}
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-
-                    {/* Preferences Section */}
+                      )}
+                      {/* Area Dropdown */}
+                      {shouldShowFilter("showArea") && (
+                        <div>
+                          <label className="block text-xs font-semibold text-blue-700 mb-1">Area (sq.ft)</label>
+                          <Select value={minArea ? String(minArea) : "0"} onValueChange={v => handleAreaChange([Number(v)])}>
+                            <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                              <SelectValue placeholder="Any" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-blue-200">
+                              <SelectItem value="0">Any</SelectItem>
+                              <SelectItem value="500">500+</SelectItem>
+                              <SelectItem value="1000">1000+</SelectItem>
+                              <SelectItem value="1500">1500+</SelectItem>
+                              <SelectItem value="2000">2000+</SelectItem>
+                              <SelectItem value="3000">3000+</SelectItem>
+                              <SelectItem value="4000">4000+</SelectItem>
+                              <SelectItem value="5000">5000+</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                    {/* Preferences Dropdown */}
                     {shouldShowFilter("showTenantPreference") && (
-                      <div className="mb-4">
-                        <label className="block text-xs font-semibold text-blue-700 mb-1">Preferences</label>
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1 mt-4">Preferences</label>
                         <Select value={preferenceId} onValueChange={handlePreferenceChange}>
                           <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
                             <SelectValue placeholder="Any" />
@@ -1432,11 +1450,10 @@ const applyFilters = (data: PropertyCardProps[]) => {
                         </Select>
                       </div>
                     )}
-
-                    {/* Furnished Section */}
+                    {/* Furnished Dropdown */}
                     {shouldShowFilter("showFurnished") && (
-                      <div className="mb-4">
-                        <label className="block text-xs font-semibold text-blue-700 mb-1">Furnished</label>
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1 mt-4">Furnished</label>
                         <Select value={furnished} onValueChange={handleFurnishedChange}>
                           <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
                             <SelectValue placeholder="Any" />
@@ -1449,22 +1466,39 @@ const applyFilters = (data: PropertyCardProps[]) => {
                         </Select>
                       </div>
                     )}
-
-                    {/* Amenities Section */}
+                    {/* Amenities Dropdown */}
                     {shouldShowFilter("showAmenities") && (
-                      <div className="mb-4">
-                        <label className="block text-xs font-semibold text-blue-700 mb-1">Amenities</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {amenityOptions.map((amenity) => (
-                            <div key={amenity} className="flex items-center space-x-2">
-                              <Switch
-                                checked={selectedAmenities.includes(amenity)}
-                                onCheckedChange={() => handleAmenityToggle(amenity)}
-                              />
-                              <Label className="text-sm">{amenity}</Label>
-                            </div>
-                          ))}
-                        </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1 mt-4">Amenities</label>
+                        <Select value={selectedAmenities.join(',')} onValueChange={v => {
+                          const amenities = v ? v.split(',') : [];
+                          amenities.forEach(a => { if (!selectedAmenities.includes(a)) handleAmenityToggle(a); });
+                          selectedAmenities.forEach(a => { if (!amenities.includes(a)) handleAmenityToggle(a); });
+                        }}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            {amenityOptions.map((amenity) => (
+                              <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {/* Available From Dropdown */}
+                    {shouldShowFilter("showAvailableFrom") && (
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1 mt-4">Available From</label>
+                        <Select value={availableFrom ? availableFrom.toISOString().split('T')[0] : "any"} onValueChange={v => handleDateChange(v !== "any" ? new Date(v) : undefined)}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Any" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            <SelectItem value="any">Any</SelectItem>
+                            {/* Optionally, you can add preset dates here */}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
