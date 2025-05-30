@@ -2,7 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +64,7 @@ const EditProperty = () => {
     cityId: "", // Default value based on the curl example
     state: "",
     stateId: "", // Default value based on the curl example
+    locality: "",
     superCategory: "",
     superCategoryId: "", // Default value based on the curl example
     propertyType: "",
@@ -143,6 +150,7 @@ const EditProperty = () => {
             cityId: property.cityId?.toString() || "1",
             state: property.state || "",
             stateId: property.stateId?.toString() || "1",
+            locality: property.locality || "",
             superCategory: property.superCategory?.toLowerCase() || "rent",
             superCategoryId: property.superCategoryId?.toString() || "1",
             propertyType: property.propertyType || "",
@@ -242,6 +250,7 @@ const EditProperty = () => {
       formDataObj.append("Address", formData.address);
       formDataObj.append("CityId", formData.cityId);
       formDataObj.append("StateId", formData.stateId);
+      formDataObj.append("Locality", formData.locality);
       formDataObj.append("SuperCategoryId", formData.superCategoryId);
       formDataObj.append("PropertyTypeId", formData.propertyTypeId);
       formDataObj.append("UserTypeId", formData.userTypeId);
@@ -367,222 +376,218 @@ const EditProperty = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information Card */}
-            <Card className="overflow-hidden border border-blue-100 shadow-md">
-              <CardHeader className="bg-blue-50">
-                <CardTitle className="flex items-center text-blue-800">
-                  <Building className="h-5 w-5 mr-2" /> Basic Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="relative group">
-                    <Label htmlFor="title" className="text-sm font-medium">
-                      Property Title
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="title"
-                        name="title"
-                        value={formData.title}
-                        onChange={handleInputChange}
-                        className="pr-8 transition-all border-blue-200 focus:border-blue-500"
-                        onFocus={() => setActiveField("title")}
-                        onBlur={() => setActiveField(null)}
-                        required
-                      />
-                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Pencil className="h-4 w-4 text-blue-500" />
-                      </div>
+      <div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information Card */}
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50">
+              <CardTitle className="flex items-center text-blue-800">
+                <Building className="h-5 w-5 mr-2" /> Basic Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="relative group">
+                  <Label htmlFor="title" className="text-sm font-medium">
+                    Property Title
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="pr-8 transition-all border-blue-200 focus:border-blue-500"
+                      onFocus={() => setActiveField("title")}
+                      onBlur={() => setActiveField(null)}
+                      required
+                    />
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Pencil className="h-4 w-4 text-blue-500" />
                     </div>
+                  </div>
+                </div>
+
+                <div className="relative group">
+                  <Label htmlFor="description" className="text-sm font-medium">
+                    Description
+                  </Label>
+                  <div className="relative">
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      className="min-h-[120px] transition-all border-blue-200 focus:border-blue-500"
+                      onFocus={() => setActiveField("description")}
+                      onBlur={() => setActiveField(null)}
+                    />
+                    <div className="absolute right-2 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Pencil className="h-4 w-4 text-blue-500" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="relative group">
+                    <Label
+                      htmlFor="superCategory"
+                      className="text-sm font-medium"
+                    >
+                      Listing Type
+                    </Label>
+                    <Select
+                      value={formData.superCategoryId}
+                      onValueChange={(value) =>
+                        handleSelectChange("superCategoryId", value)
+                      }
+                    >
+                      <SelectTrigger
+                        id="superCategoryId"
+                        className="border-blue-200 focus:border-blue-500"
+                      >
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">Rent</SelectItem>
+                        <SelectItem value="3">Sell</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="relative group">
                     <Label
-                      htmlFor="description"
+                      htmlFor="propertyType"
                       className="text-sm font-medium"
                     >
-                      Description
+                      Property Type
                     </Label>
-                    <div className="relative">
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        className="min-h-[120px] transition-all border-blue-200 focus:border-blue-500"
-                        onFocus={() => setActiveField("description")}
-                        onBlur={() => setActiveField(null)}
-                      />
-                      <div className="absolute right-2 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Pencil className="h-4 w-4 text-blue-500" />
-                      </div>
-                    </div>
+                    <Select
+                      value={formData.propertyTypeId}
+                      onValueChange={(value) =>
+                        handleSelectChange("propertyTypeId", value)
+                      }
+                    >
+                      <SelectTrigger
+                        id="propertyTypeId"
+                        className="border-blue-200 focus:border-blue-500"
+                      >
+                        <SelectValue placeholder="Select property type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Flat/Apartment</SelectItem>
+                        <SelectItem value="2">Shop/Commercial</SelectItem>
+                        <SelectItem value="3">Row House</SelectItem>
+                        <SelectItem value="4">Plot</SelectItem>
+                        <SelectItem value="5">Bunglow</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative group">
-                      <Label
-                        htmlFor="superCategory"
-                        className="text-sm font-medium"
-                      >
-                        Listing Type
-                      </Label>
-                      <Select
-                        value={formData.superCategoryId}
-                        onValueChange={(value) =>
-                          handleSelectChange("superCategoryId", value)
-                        }
-                      >
-                        <SelectTrigger
-                          id="superCategoryId"
-                          className="border-blue-200 focus:border-blue-500"
-                        >
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="2">Rent</SelectItem>
-                          <SelectItem value="3">Sell</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="relative group">
+                  <Label htmlFor="price" className="text-sm font-medium">
+                    Price (₹)
+                  </Label>
+                  <Input
+                    id="price"
+                    name="price"
+                    type="number"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    className="border-blue-200 focus:border-blue-500"
+                    onFocus={() => setActiveField("price")}
+                    onBlur={() => setActiveField(null)}
+                    required
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                    <div className="relative group">
-                      <Label
-                        htmlFor="propertyType"
-                        className="text-sm font-medium"
-                      >
-                        Property Type
-                      </Label>
-                      <Select
-                        value={formData.propertyTypeId}
-                        onValueChange={(value) =>
-                          handleSelectChange("propertyTypeId", value)
-                        }
-                      >
-                        <SelectTrigger
-                          id="propertyTypeId"
-                          className="border-blue-200 focus:border-blue-500"
-                        >
-                          <SelectValue placeholder="Select property type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Flat/Apartment</SelectItem>
-                          <SelectItem value="2">Shop/Commercial</SelectItem>
-                          <SelectItem value="3">Row House</SelectItem>
-                          <SelectItem value="4">Plot</SelectItem>
-                          <SelectItem value="5">Bunglow</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+          {/* Property Details Card */}
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50">
+              <CardTitle className="flex items-center text-blue-800">
+                <MapPin className="h-5 w-5 mr-2" /> Property Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="relative group">
+                    <Label htmlFor="bedroom" className="text-sm font-medium">
+                      <Bed className="h-4 w-4 inline mr-1" /> Bedrooms
+                    </Label>
+                    <Input
+                      id="bedroom"
+                      name="bedroom"
+                      type="number"
+                      value={formData.bedroom}
+                      onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
+                      min="0"
+                      required
+                    />
                   </div>
 
                   <div className="relative group">
-                    <Label htmlFor="price" className="text-sm font-medium">
-                      Price (₹)
+                    <Label htmlFor="bathroom" className="text-sm font-medium">
+                      <Bath className="h-4 w-4 inline mr-1" /> Bathrooms
                     </Label>
                     <Input
-                      id="price"
-                      name="price"
+                      id="bathroom"
+                      name="bathroom"
                       type="number"
-                      value={formData.price}
+                      value={formData.bathroom}
                       onChange={handleInputChange}
                       className="border-blue-200 focus:border-blue-500"
-                      onFocus={() => setActiveField("price")}
-                      onBlur={() => setActiveField(null)}
+                      min="0"
                       required
                     />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Property Details Card */}
-            <Card className="overflow-hidden border border-blue-100 shadow-md">
-              <CardHeader className="bg-blue-50">
-                <CardTitle className="flex items-center text-blue-800">
-                  <MapPin className="h-5 w-5 mr-2" /> Property Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative group">
-                      <Label htmlFor="bedroom" className="text-sm font-medium">
-                        <Bed className="h-4 w-4 inline mr-1" /> Bedrooms
-                      </Label>
-                      <Input
-                        id="bedroom"
-                        name="bedroom"
-                        type="number"
-                        value={formData.bedroom}
-                        onChange={handleInputChange}
-                        className="border-blue-200 focus:border-blue-500"
-                        min="0"
-                        required
-                      />
-                    </div>
-
-                    <div className="relative group">
-                      <Label htmlFor="bathroom" className="text-sm font-medium">
-                        <Bath className="h-4 w-4 inline mr-1" /> Bathrooms
-                      </Label>
-                      <Input
-                        id="bathroom"
-                        name="bathroom"
-                        type="number"
-                        value={formData.bathroom}
-                        onChange={handleInputChange}
-                        className="border-blue-200 focus:border-blue-500"
-                        min="0"
-                        required
-                      />
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="relative group">
+                    <Label htmlFor="balcony" className="text-sm font-medium">
+                      Balconies
+                    </Label>
+                    <Input
+                      id="balcony"
+                      name="balcony"
+                      type="number"
+                      value={formData.balcony}
+                      onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
+                      min="0"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative group">
-                      <Label htmlFor="balcony" className="text-sm font-medium">
-                        Balconies
-                      </Label>
-                      <Input
-                        id="balcony"
-                        name="balcony"
-                        type="number"
-                        value={formData.balcony}
-                        onChange={handleInputChange}
-                        className="border-blue-200 focus:border-blue-500"
-                        min="0"
-                      />
-                    </div>
-
-                    <div className="relative group">
-                      <Label htmlFor="area" className="text-sm font-medium">
-                        <AreaChart className="h-4 w-4 inline mr-1" /> Area
-                        (sq.ft)
-                      </Label>
-                      <Input
-                        id="area"
-                        name="area"
-                        type="number"
-                        value={formData.area}
-                        onChange={handleInputChange}
-                        className="border-blue-200 focus:border-blue-500"
-                        min="0"
-                        required
-                      />
-                    </div>
+                  <div className="relative group">
+                    <Label htmlFor="area" className="text-sm font-medium">
+                      <AreaChart className="h-4 w-4 inline mr-1" /> Area (sq.ft)
+                    </Label>
+                    <Input
+                      id="area"
+                      name="area"
+                      type="number"
+                      value={formData.area}
+                      onChange={handleInputChange}
+                      className="border-blue-200 focus:border-blue-500"
+                      min="0"
+                      required
+                    />
                   </div>
+                </div>
 
-                  <Separator className="my-4" />
+                <Separator className="my-4" />
 
-                  <h3 className="font-medium text-blue-800 flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2" /> Amenities
-                  </h3>
-                  <CardContent className="pt-6">
+                <h3 className="font-medium text-blue-800 flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2" /> Amenities
+                </h3>
+                <CardContent className="pt-6">
+                  <div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                       {checkBoxAmenities.map(({ id, amenity }) => (
                         <div
@@ -609,6 +614,9 @@ const EditProperty = () => {
                           </Label>
                         </div>
                       ))}
+                    </div>
+                    <div className="my-6" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                       {radioAmenities.map(({ id, amenity }) => (
                         <div
                           className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
@@ -632,294 +640,197 @@ const EditProperty = () => {
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Address Card */}
-            <Card className="overflow-hidden border border-blue-100 shadow-md">
-              <CardHeader className="bg-blue-50">
-                <CardTitle className="flex items-center text-blue-800">
-                  <MapPin className="h-5 w-5 mr-2" /> Location
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="relative group">
-                    <Label htmlFor="address" className="text-sm font-medium">
-                      Address
+          {/* Location Card */}
+          <Card className="overflow-hidden border border-blue-100 shadow-md">
+            <CardHeader className="bg-blue-50">
+              <CardTitle className="flex items-center text-blue-800">
+                <MapPin className="h-5 w-5 mr-2" /> Location
+              </CardTitle>
+              <CardDescription>
+                Edit locality, address of your property
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* State */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="state"
+                      className="text-gray-700 font-medium"
+                    >
+                      State <span className="text-red-500">*</span>
                     </Label>
                     <Input
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      className="border-blue-200 focus:border-blue-500"
+                      id="state"
+                      value={formData.state}
+                      className="bg-gray-100 border-2 focus:ring-0 cursor-not-allowed"
+                      readOnly
+                      disabled
                       required
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="relative group">
-                      <Label htmlFor="cityId" className="text-sm font-medium">
-                        City
-                      </Label>
-                      <Select
-                        value={formData.cityId}
-                        onValueChange={(value) =>
-                          handleSelectChange("cityId", value)
-                        }
-                      >
-                        <SelectTrigger
-                          id="cityId"
-                          className="border-blue-200 focus:border-blue-500"
-                        >
-                          <SelectValue placeholder="Select city" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Indore</SelectItem>
-                          <SelectItem value="2">Bhopal</SelectItem>
-                          <SelectItem value="3">Pune</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="relative group">
-                      <Label htmlFor="stateId" className="text-sm font-medium">
-                        State
-                      </Label>
-                      <Select
-                        value={formData.stateId}
-                        onValueChange={(value) =>
-                          handleSelectChange("stateId", value)
-                        }
-                      >
-                        <SelectTrigger
-                          id="stateId"
-                          className="border-blue-200 focus:border-blue-500"
-                        >
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Madhya Pradesh</SelectItem>
-                          <SelectItem value="2">Maharashtra</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {/* City */}
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-gray-700 font-medium">
+                      City <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      className="bg-gray-100 border-2 focus:ring-0 cursor-not-allowed"
+                      readOnly
+                      disabled
+                      required
+                    />
+                  </div>
+                  {/* Locality */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="locality"
+                      className="text-gray-700 font-medium"
+                    >
+                      Locality <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="locality"
+                      name="locality"
+                      placeholder="Enter locality or area (e.g. MG Road, Sector 10)"
+                      value={formData.locality}
+                      onChange={handleInputChange}
+                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      required
+                    />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Image Upload Card */}
-            <Card className="overflow-hidden border border-blue-100 shadow-md">
-              <CardHeader className="bg-blue-50">
-                <CardTitle className="flex items-center text-blue-800">
-                  Image Upload
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageSelect}
-                    accept="image/*"
-                    multiple
-                    className="hidden"
+                {/* Address */}
+                <div className="relative group">
+                  <Label htmlFor="address" className="text-sm font-medium">
+                    Address
+                  </Label>
+                  <Textarea
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="border-blue-200 focus:border-blue-500"
+                    required
                   />
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-dashed border-2 py-8 border-blue-300 text-blue-600 hover:bg-blue-50"
-                  >
-                    Click to select images
-                  </Button>
-
-                  {newImages.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-2">New Images:</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {newImages.map((file, index) => (
-                          <div
-                            key={index}
-                            className="relative group rounded overflow-hidden border"
-                          >
-                            <img
-                              src={URL.createObjectURL(file)}
-                              alt={`Upload Preview ${index}`}
-                              className="w-full h-24 object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <Button
-                                type="button"
-                                variant="default"
-                                onClick={() => handleSetMainImage(index)}
-                                size="sm"
-                                className={
-                                  mainImageIndex === index
-                                    ? "bg-green-600"
-                                    : "bg-blue-600"
-                                }
-                              >
-                                {mainImageIndex === index ? "Main" : "Set Main"}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={() => removeImage(index)}
-                                size="sm"
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                            {mainImageIndex === index && (
-                              <div className="absolute top-1 left-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded">
-                                Main
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            <div className="flex justify-end space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/dashboard")}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" /> Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {/* Preview and Image Management Section */}
-        <div className="space-y-6">
+          {/* Image Upload Card */}
           <Card className="overflow-hidden border border-blue-100 shadow-md">
-            <CardHeader className="bg-blue-50 p-4">
-              <CardTitle className="text-blue-800 text-base">
-                Property Preview
+            <CardHeader className="bg-blue-50">
+              <CardTitle className="flex items-center text-blue-800">
+                Image Upload
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="relative">
-                <img
-                  src={mainImageUrl}
-                  alt="Property Preview"
-                  className="w-full h-48 object-cover"
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  multiple
+                  className="hidden"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                  <div className="text-white">
-                    <h3 className="font-bold truncate">
-                      {formData.title || "Property Title"}
-                    </h3>
-                    <p className="flex items-center text-sm">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {formData.city || "Location"}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="p-4">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span className="flex items-center">
-                    <Bed className="h-4 w-4 mr-1" />
-                    {formData.bedroom || 0} Bed
-                  </span>
-                  <span className="flex items-center">
-                    <Bath className="h-4 w-4 mr-1" />
-                    {formData.bathroom || 0} Bath
-                  </span>
-                  <span className="flex items-center">
-                    <AreaChart className="h-4 w-4 mr-1" />
-                    {formData.area || 0} sqft
-                  </span>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-dashed border-2 py-8 border-blue-300 text-blue-600 hover:bg-blue-50"
+                >
+                  Click to select images
+                </Button>
 
-                <div className="font-bold text-blue-600 text-lg">
-                  ₹ {Number(formData.price || 0).toLocaleString()}
-                </div>
-
-                <Separator className="my-3" />
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">
-                    ID: {formData.propertyId.substring(0, 8)}
-                  </span>
-                  <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full capitalize">
-                    {formData.superCategoryId === "1"
-                      ? "Buy"
-                      : formData.superCategoryId === "2"
-                      ? "Sell"
-                      : "Rent"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden border border-blue-100 shadow-md">
-            <CardHeader className="bg-blue-50 p-4">
-              <CardTitle className="text-blue-800 text-base">
-                Current Images
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-2">
-                {formData.images.length > 0 ? (
-                  formData.images
-                    .slice(0, 4)
-                    .map((image: any, index: number) => (
-                      <div
-                        key={image.imageId || index}
-                        className="relative rounded overflow-hidden h-24"
-                      >
-                        <img
-                          src={image.imageUrl}
-                          alt={`Property Image ${index + 1}`}
-                          className="h-full w-full object-cover"
-                        />
-                        {image.isMainImage && (
-                          <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-blue-600 text-white text-xs rounded">
-                            Main
+                {newImages.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2">New Images:</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {newImages.map((file, index) => (
+                        <div
+                          key={index}
+                          className="relative group rounded overflow-hidden border"
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Upload Preview ${index}`}
+                            className="w-full h-24 object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <Button
+                              type="button"
+                              variant="default"
+                              onClick={() => handleSetMainImage(index)}
+                              size="sm"
+                              className={
+                                mainImageIndex === index
+                                  ? "bg-green-600"
+                                  : "bg-blue-600"
+                              }
+                            >
+                              {mainImageIndex === index ? "Main" : "Set Main"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={() => removeImage(index)}
+                              size="sm"
+                            >
+                              Remove
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    ))
-                ) : (
-                  <div className="col-span-2 py-8 flex flex-col items-center justify-center bg-blue-50 rounded text-center">
-                    <p className="text-blue-700">No images available</p>
+                          {mainImageIndex === index && (
+                            <div className="absolute top-1 left-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded">
+                              Main
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
-        </div>
+
+          <div className="flex justify-center space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" /> Save Changes
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
