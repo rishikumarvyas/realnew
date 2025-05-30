@@ -92,12 +92,6 @@ const PostProperty = () => {
   const checkBoxAmenities: Amenity[] = getAmenity().checkBoxAmenities;
   const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
 
-  // Available cities
-  const availableCities = [
-    { id: 140, name: "Indore" },
-    { id: 135, name: "Bhopal" },
-    { id: 184, name: "Pune" },
-  ];
   const allStates = JSON.parse(localStorage.getItem("allStates"));
   // Form validation states
   const [priceValidation, setPriceValidation] = useState(true);
