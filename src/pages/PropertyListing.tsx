@@ -848,9 +848,6 @@ useEffect(() => {
     // Reset commercial type when switching away from commercial tab
     if (value !== "commercial") {
       setCommercialType("buy");
-      setShowCommercialDropdown(false);
-    } else {
-      setShowCommercialDropdown(true);
     }
     
     // Hide advanced filters if plot or commercial is selected
@@ -876,7 +873,6 @@ useEffect(() => {
   // Add handler for commercial type change
   const handleCommercialTypeChange = (value: "buy" | "rent") => {
     setCommercialType(value);
-    setShowCommercialDropdown(false);
     searchParams.set("commercialType", value);
     setSearchParams(searchParams);
   };
@@ -1040,9 +1036,6 @@ useEffect(() => {
   // Add state for sidebar visibility
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
-  // Add state for commercial dropdown visibility
-  const [showCommercialDropdown, setShowCommercialDropdown] = useState(false);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
@@ -1096,13 +1089,6 @@ useEffect(() => {
                           >
                             <span className="text-lg md:text-xl">{tab.icon}</span>
                             <span className="whitespace-nowrap">{tab.label}</span>
-                            {tab.key === 'commercial' && (
-                              <ChevronDown 
-                                className={`w-4 h-4 transition-transform duration-200 ${
-                                  showCommercialDropdown && activeTab === 'commercial' ? 'rotate-180' : ''
-                                }`}
-                              />
-                            )}
                             {activeTab === tab.key && (
                               <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
                             )}
@@ -1113,45 +1099,6 @@ useEffect(() => {
                   </div>
                 </div>
               </div>
-
-              {/* Commercial Dropdown */}
-              {showCommercialDropdown && activeTab === 'commercial' && (
-                <div className="absolute top-full left-0 right-0 mt-3 z-50 flex justify-center">
-                  <div className="bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🏢</span>
-                        <h3 className="text-sm font-semibold text-gray-700">Commercial Type</h3>
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      {[
-                        { key: 'buy' as const, label: 'Buy Commercial', icon: '💰', desc: 'Purchase commercial property' },
-                        { key: 'rent' as const, label: 'Rent Commercial', icon: '📋', desc: 'Lease commercial space' }
-                      ].map((option) => (
-                        <button
-                          key={option.key}
-                          onClick={() => handleCommercialTypeChange(option.key)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 hover:scale-[1.02] ${
-                            commercialType === option.key
-                              ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-500 shadow-sm'
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="text-xl flex-shrink-0">{option.icon}</span>
-                          <div className="min-w-0">
-                            <div className="font-medium text-sm">{option.label}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">{option.desc}</div>
-                          </div>
-                          {commercialType === option.key && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-auto"></div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Current Selection Display */}
@@ -1182,12 +1129,6 @@ useEffect(() => {
               </p>
             </div>
           </div>
-          {showCommercialDropdown && (
-            <div 
-              className="fixed inset-0 z-40" 
-              onClick={() => setShowCommercialDropdown(false)}
-            ></div>
-          )}
         </div>
 
         {/* Mobile filter toggle button - only visible on mobile */}
@@ -1259,29 +1200,62 @@ useEffect(() => {
                       </Button>
                     </div>
 
+                    {/* Commercial Type Selection */}
+                    {activeTab === "commercial" && (
+                      <div className="mb-6">
+                        <label className="block text-xs font-semibold text-blue-700 mb-2">Commercial Type</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant={commercialType === "buy" ? "default" : "outline"}
+                            className={`w-full flex items-center justify-center gap-2 py-6 ${
+                              commercialType === "buy" 
+                                ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                                : "border-blue-200 hover:bg-blue-50"
+                            }`}
+                            onClick={() => handleCommercialTypeChange("buy")}
+                          >
+                            <span className="text-lg">💰</span>
+                            <span>Buy</span>
+                          </Button>
+                          <Button
+                            variant={commercialType === "rent" ? "default" : "outline"}
+                            className={`w-full flex items-center justify-center gap-2 py-6 ${
+                              commercialType === "rent" 
+                                ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                                : "border-blue-200 hover:bg-blue-50"
+                            }`}
+                            onClick={() => handleCommercialTypeChange("rent")}
+                          >
+                            <span className="text-lg">📋</span>
+                            <span>Rent</span>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
                       <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
                           <div className="font-semibold text-blue-700 text-sm">Price Range</div>
                           <div className="text-sm text-blue-600">
-                            {activeTab === "rent" 
+                            {activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent")
                               ? `₹${priceRange[0].toLocaleString()}/month - ${priceRange[1] >= 1000000 ? '₹10 Lakh/month' : `₹${priceRange[1].toLocaleString()}/month`}`
                               : `₹${priceRange[0].toLocaleString()} - ${priceRange[1] >= 50000000 ? '₹5 Cr+' : `₹${priceRange[1].toLocaleString()}`}`
                             }
                           </div>
                         </div>
                         <Slider
-                          defaultValue={activeTab === "rent" ? [0, 1000000] : [0, 50000000]}
-                          max={activeTab === "rent" ? 1000000 : 50000000}
-                          step={activeTab === "rent" ? 1000 : 100000}
+                          defaultValue={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? [0, 1000000] : [0, 50000000]}
+                          max={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000000 : 50000000}
+                          step={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000 : 100000}
                           value={priceRange}
                           onValueChange={handlePriceRangeChange}
                           className="w-full"
                         />
                         <div className="flex justify-between text-xs text-blue-500 mt-1">
                           <span>₹0</span>
-                          <span>{activeTab === "rent" ? "₹10 Lakh/month" : "₹5 Cr+"}</span>
+                          <span>{activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? "₹10 Lakh/month" : "₹5 Cr+"}</span>
                         </div>
                       </div>
                     )}
