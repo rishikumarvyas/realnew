@@ -45,6 +45,7 @@ interface PropertyCardProps {
 interface DashboardProperty extends PropertyCardProps {
   status: string;
   propertyId: string;
+  isLikedByUser?: boolean;
 }
 
 // 1. Updated convertToPropertyCard function with better image handling
@@ -147,6 +148,7 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
     area: property.area || 0,
     image: mainImage,
     status: property.status || "active",
+    isLikedByUser: property.isLikedByUser,
   };
 };
 
@@ -211,8 +213,8 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<typeof mockMessages>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
-  const [likeCount, setLikeCount] = useState<number>(0); // New state for like count
-  const { user, logout, updateUser } = useAuth(); // Make sure to destructure updateUser here
+  const [likeCount, setLikeCount] = useState<number>(0);
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -222,6 +224,13 @@ const Dashboard = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
   const [accountIsActive, setAccountIsActive] = useState<boolean>(true);
+
+  // Add state for liked properties
+  const [likedProperties, setLikedProperties] = useState<any[]>([]);
+
+  // Add state for all properties and liked properties from all
+  const [allProperties, setAllProperties] = useState<any[]>([]);
+  const [likedPropertiesFromAll, setLikedPropertiesFromAll] = useState<any[]>([]);
 
   const userId = user?.userId || "2d366c8f-08dd-4916-8033-b3c7454b5ba4"; // Use the provided userId as fallback
 
@@ -281,9 +290,6 @@ const Dashboard = () => {
           // Set account active status if available
           if (data.isActive !== undefined) {
             setAccountIsActive(data.isActive);
-            if (updateUser) {
-              updateUser({ isActive: data.isActive });
-            }
           }
 
           if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
@@ -293,6 +299,10 @@ const Dashboard = () => {
             );
             console.log("Formatted properties:", formattedProperties);
             setProperties(formattedProperties);
+
+            // Filter liked properties from userDetails
+            const likedProps = data.userDetails.filter((p: any) => p.isLiked === true);
+            setLikedPropertiesFromAll(likedProps);
           } else {
             throw new Error("No property data received from API");
           }
@@ -302,6 +312,7 @@ const Dashboard = () => {
           const formattedProperties = mockProperties.map(convertToPropertyCard);
           setProperties(formattedProperties);
           setLikeCount(1); // Default like count for mock data
+          setLikedPropertiesFromAll([]); // Reset liked properties on error
         }
 
         if (newPropertyId) {
@@ -322,6 +333,7 @@ const Dashboard = () => {
         const formattedProperties = mockProperties.map(convertToPropertyCard);
         setProperties(formattedProperties);
         setLikeCount(0); // Reset like count on error
+        setLikedPropertiesFromAll([]); // Reset liked properties on error
       } finally {
         setLoading(false);
         setMessages(mockMessages);
@@ -329,7 +341,7 @@ const Dashboard = () => {
     };
 
     fetchUserProperties();
-  }, [userId, toast, newPropertyId, location.search, updateUser, user?.userId]);
+  }, [userId, toast, newPropertyId, location.search, user?.userId]);
 
   // Updated to use axiosInstance for account activation
   const handleActivateAccount = async () => {
@@ -349,9 +361,6 @@ const Dashboard = () => {
       
       // Update local state
       setAccountIsActive(true);
-      if (updateUser) {
-        updateUser({ isActive: true });
-      }
       
       toast({
         title: "Account Activated",
@@ -382,9 +391,6 @@ const Dashboard = () => {
       
       // Update local state
       setAccountIsActive(false);
-      if (updateUser) {
-        updateUser({ isActive: false });
-      }
       
       toast({
         title: "Account Deactivated",
@@ -570,6 +576,12 @@ const Dashboard = () => {
             <span className="block truncate">Listed Properties</span>
           </TabsTrigger>
           <TabsTrigger
+            value="liked"
+            className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
+          >
+            <span className="block truncate">Liked Properties</span>
+          </TabsTrigger>
+          <TabsTrigger
             value="messages"
             className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
           >
@@ -724,6 +736,79 @@ const Dashboard = () => {
               </table>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="liked">
+          <div>
+            <h2 className="text-xl font-bold mb-4">Liked Properties</h2>
+            {likedPropertiesFromAll.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <ThumbsUp className="mx-auto h-12 w-12 text-rose-400" />
+                <h3 className="mt-2 text-lg font-medium">No Liked Properties</h3>
+                <p className="mt-1 text-gray-500">You haven't liked any properties yet.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Price</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Type</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status</th>
+                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {likedPropertiesFromAll.map((property: any) => (
+                      <tr key={property.propertyId}> 
+                        <td className="py-4 px-4">
+                          <div className="flex items-center">
+                            <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
+                              <img
+                                src={property.mainImageDetail?.imageUrl}
+                                alt={property.title}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="ml-3">
+                              <div className="font-medium text-gray-900 line-clamp-1">{property.title}</div>
+                              <div className="text-gray-500 text-sm line-clamp-1">{property.address || 'No location specified'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 hidden sm:table-cell">
+                          <div className="text-gray-900">₹{property.price > 0 ? property.price.toLocaleString() : 'Not specified'}</div>
+                          <div className="text-gray-500 text-sm">{property.superCategory?.toLowerCase() === 'rent' ? '/month' : ''}</div>
+                        </td>
+                        <td className="py-4 px-4 hidden md:table-cell">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">
+                            {property.propertyType || 'Not specified'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 hidden lg:table-cell">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${property.superCategory?.toLowerCase() === 'buy' ? 'bg-green-100 text-green-800' : property.superCategory?.toLowerCase() === 'rent' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                            {property.superCategory || 'Not specified'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex justify-end">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => navigate(`/properties/${property.propertyId}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="messages">

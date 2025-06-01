@@ -4,4 +4,5 @@ interface User {
   name?: string;
   token?: string;
   userTypeId?: string;
+  isActive?: boolean;
 }

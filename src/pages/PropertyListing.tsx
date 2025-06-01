@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
+import { PropertyCard } from "@/components/PropertyCard";
+import type { PropertyCardProps } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -58,6 +59,7 @@ interface ApiProperty {
   likes?: number; 
   isLike?: boolean; 
   propertyType?: string;
+  likeCount?: number;
 }
 
 // Filter options interface
@@ -108,6 +110,58 @@ const propertyTypeMapping = {
   "all": { superCategoryId: 0, label: "All Properties" }
 };
 
+// Add price range configuration
+const priceRangeConfig = {
+  rent: {
+    min: 0,
+    max: 1000000, // 10 lakh
+    step: 1000, // ₹1,000 step
+    format: (value: number) => `₹${value.toLocaleString()}/month`,
+    displayMax: "₹10 Lakh/month"
+  },
+  buy: {
+    min: 0,
+    max: 50000000, // 5 crore
+    step: 100000, // ₹1 Lakh step
+    format: (value: number) => `₹${value.toLocaleString()}`,
+    displayMax: "₹5 Cr+"
+  },
+  plot: {
+    min: 0,
+    max: 50000000, // 5 crore
+    step: 100000, // ₹1 Lakh step
+    format: (value: number) => `₹${value.toLocaleString()}`,
+    displayMax: "₹5 Cr+"
+  },
+  commercial: {
+    min: 0,
+    max: 50000000, // 5 crore
+    step: 100000, // ₹1 Lakh step
+    format: (value: number) => `₹${value.toLocaleString()}`,
+    displayMax: "₹5 Cr+"
+  }
+};
+
+// Add plot features configuration
+const plotFeatures = [
+  { id: "corner", label: "Corner Plot" },
+  { id: "mainRoad", label: "Main Road Facing" },
+  { id: "waterSupply", label: "Water Supply" },
+  { id: "electricity", label: "Electricity" },
+  { id: "drainage", label: "Drainage" },
+  { id: "approved", label: "Approved Layout" }
+];
+
+// Add commercial features configuration
+const commercialFeatures = [
+  { id: "parking", label: "Parking Space" },
+  { id: "security", label: "Security" },
+  { id: "powerBackup", label: "Power Backup" },
+  { id: "fireSafety", label: "Fire Safety" },
+  { id: "loading", label: "Loading/Unloading" },
+  { id: "elevator", label: "Elevator" }
+];
+
 export const PropertyListing = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -120,16 +174,103 @@ export const PropertyListing = () => {
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
   
   // Active tab for property type
-  const [activeTab, setActiveTab] = useState<string>("all");
-  
+  const [activeTab, setActiveTab] = useState("all");
+
+  // Add state for commercial type
+  const [commercialType, setCommercialType] = useState<"buy" | "rent">("buy");
+
+  // Define filter visibility types
+  type FilterVisibility = {
+    showPrice: boolean;
+    showArea: boolean;
+    showBedrooms: boolean;
+    showBathrooms: boolean;
+    showBalcony: boolean;
+    showAvailableFrom: boolean | ((type: string) => boolean);
+    showTenantPreference: boolean;
+    showFurnished: boolean;
+    showAmenities: boolean;
+  };
+
+  // Filter visibility configuration
+  const filterVisibilityConfig: Record<string, FilterVisibility> = {
+    plot: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: false,
+      showBathrooms: false,
+      showBalcony: false,
+      showAvailableFrom: false,
+      showTenantPreference: false,
+      showFurnished: false,
+      showAmenities: false
+    },
+    commercial: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: false,
+      showBathrooms: false,
+      showBalcony: false,
+      showAvailableFrom: (type: string) => type === "rent",
+      showTenantPreference: false,
+      showFurnished: false,
+      showAmenities: true
+    },
+    rent: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: true,
+      showBathrooms: true,
+      showBalcony: true,
+      showAvailableFrom: true,
+      showTenantPreference: true,
+      showFurnished: true,
+      showAmenities: true
+    },
+    buy: {
+      showPrice: true,
+      showArea: true,
+      showBedrooms: true,
+      showBathrooms: true,
+      showBalcony: true,
+      showAvailableFrom: false,
+      showTenantPreference: false,
+      showFurnished: true,
+      showAmenities: true
+    }
+  };
+
+  // Helper function to check if filter should be visible
+  const shouldShowFilter = (filterName: keyof FilterVisibility): boolean => {
+    if (activeTab === "plot") {
+      const config = filterVisibilityConfig.plot[filterName];
+      return typeof config === "function" ? config(activeTab) : config;
+    }
+    if (activeTab === "commercial") {
+      const config = filterVisibilityConfig.commercial[filterName];
+      return typeof config === "function" ? config(commercialType) : config;
+    }
+    if (activeTab === "rent") {
+      const config = filterVisibilityConfig.rent[filterName];
+      return typeof config === "function" ? config(activeTab) : config;
+    }
+    if (activeTab === "buy") {
+      const config = filterVisibilityConfig.buy[filterName];
+      return typeof config === "function" ? config(activeTab) : config;
+    }
+    // For "all" tab, show all filters
+    return true;
+  };
+
   // Basic search and filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 20000000]);
+  const [priceRange, setPriceRange] = useState([0, 50000000]); // Updated to match slider max
   const [minBedrooms, setMinBedrooms] = useState(0);
   const [minBathrooms, setMinBathrooms] = useState(0);
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
+  const [maxArea, setMaxArea] = useState(5000); // Added for area range slider
   
   // Search suggestions state
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -429,7 +570,7 @@ const fetchProperties = async () => {
         preferenceId: prop.preferenceId,
         amenities: prop.amenities,
         furnished: prop.furnished,
-        likes: prop.likes ?? 0,
+        likeCount: prop.likeCount || 0,
         isLike: prop.isLike ?? false,
         propertyType: prop.propertyType,
         status: prop.superCategory,
@@ -511,213 +652,203 @@ const fetchProperties = async () => {
   }
 };
 
-// Update the applyFilters function to use current URL state
+// Apply filters to the property list
 const applyFilters = (data: PropertyCardProps[]) => {
-  // Get current type from URL
-  const currentTypeParam = searchParams.get("type") || "all";
-  
   let filtered = data;
-  if (currentTypeParam !== "all") {
-    if (currentTypeParam === "plot") {
-      filtered = data.filter(property => 
-        property.type === "plot" || 
-        (property.propertyType?.toLowerCase() || "").includes("plot")
-      );
-    } else if (currentTypeParam === "commercial") {
-      filtered = data.filter(property => 
-        property.type === "commercial" || 
-        (property.propertyType?.toLowerCase() || "").includes("commercial") ||
-        (property.propertyType?.toLowerCase() || "").includes("shop")
-      );
-    } else {
-      filtered = data.filter(property => property.type === currentTypeParam);
-    }
+
+  // Apply search filter
+  if (searchQuery) {
+    filtered = filtered.filter(property => 
+      property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      property.location.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   }
-  
-  // Apply other filters using URL parameters directly
-  const currentSearchQuery = searchParams.get("search") || "";
-  const currentPriceRange = [
-    parseInt(searchParams.get("minPrice") || "0"),
-    parseInt(searchParams.get("maxPrice") || "20000000")
-  ];
-  const currentMinBedrooms = parseInt(searchParams.get("bedrooms") || "0");
-  const currentMinBathrooms = parseInt(searchParams.get("bathrooms") || "0");
-  const currentMinBalcony = parseInt(searchParams.get("balcony") || "0");
-  const currentMinArea = parseInt(searchParams.get("minArea") || "0");
-  
-  filtered = filtered.filter((property) => {
-    if (
-      currentSearchQuery &&
-      !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
-      !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    
-    if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
-      return false;
-    }
-    
-    // Only apply bedroom/bathroom filters for residential properties
-    if (property.type !== "plot" && property.type !== "commercial") {
-      if (property.bedrooms < currentMinBedrooms) return false;
-      if (property.bathrooms < currentMinBathrooms) return false;
-      if (property.balcony < currentMinBalcony) return false;
-    }
-    
-    if (property.area < currentMinArea) {
-      return false;
-    }
-    
-    return true;
-  });
-  
+
+  // Apply price range filter
+  filtered = filtered.filter(property => 
+    property.price >= priceRange[0] && property.price <= priceRange[1]
+  );
+
+  // Apply area range filter
+  filtered = filtered.filter(property => 
+    property.area >= minArea && property.area <= maxArea
+  );
+
+  // Apply bedroom filter
+  if (minBedrooms > 0) {
+    filtered = filtered.filter(property => property.bedrooms >= minBedrooms);
+  }
+
+  // Apply bathroom filter
+  if (minBathrooms > 0) {
+    filtered = filtered.filter(property => property.bathrooms >= minBathrooms);
+  }
+
+  // Apply balcony filter
+  if (minBalcony > 0) {
+    filtered = filtered.filter(property => property.balcony >= minBalcony);
+  }
+
+  // Apply availability filter
+  if (availableFrom) {
+    filtered = filtered.filter(property => {
+      if (!property.availableFrom) return false;
+      const propertyDate = new Date(property.availableFrom);
+      return propertyDate >= availableFrom;
+    });
+  }
+
+  // Apply tenant preference filter
+  if (preferenceId !== "0") {
+    filtered = filtered.filter(property => property.preferenceId === parseInt(preferenceId));
+  }
+
+  // Apply furnished filter
+  if (furnished !== "any") {
+    filtered = filtered.filter(property => property.furnished === furnished);
+  }
+
+  // Apply amenities filter
+  if (selectedAmenities.length > 0) {
+    filtered = filtered.filter(property => 
+      selectedAmenities.every(amenity => property.amenities?.includes(amenity))
+    );
+  }
+
   setFilteredProperties(filtered);
 };
-  // Property card interface
-  interface PropertyCardProps {
-    id: string;
-    title: string;
-    price: number;
-    location: string;
-    type: "buy" | "sell" | "rent" | "plot" | "commercial";
-    bedrooms: number;
-    bathrooms: number;
-    balcony?: number;
-    area: number;
-    image: string;
-    availableFrom?: string;
-    preferenceId?: number;
-    amenities?: string[];
-    furnished?: string;
-    likes?: number;
-    isLike?: boolean;
-    propertyType?: string;
-    status?: string;
-    formattedPrice?: string;
-  }
 
-  // Enhanced mock data for fallback or development - Updated mock data
-  const useMockData = () => {
-    const mockProperties: PropertyCardProps[] = [
-      {
-        id: "prop1",
-        title: "Modern 3BHK with Sea View",
-        price: 7500000,
-        location: "Bandra West, Mumbai",
-        type: "buy",
-        bedrooms: 3,
-        bathrooms: 3,
-        balcony: 1,
-        area: 1450,
-        image: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-        amenities: ["Parking", "Security", "Power Backup"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop2",
-        title: "Luxury 4BHK Penthouse",
-        price: 12500000,
-        location: "Worli, Mumbai",
-        type: "buy",
-        bedrooms: 4,
-        bathrooms: 4,
-        balcony: 2,
-        area: 2100,
-        image: "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
-        amenities: ["Swimming Pool", "Gym", "Club House", "Parking"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop3",
-        title: "Studio Apartment with Balcony",
-        price: 35000,
-        location: "Koramangala, Bangalore",
-        type: "rent",
-        bedrooms: 1,
-        bathrooms: 1,
-        balcony: 1,
-        area: 650,
-        image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80",
-        availableFrom: "2025-05-15T00:00:00",
-        preferenceId: 2, // Bachelor
-        amenities: ["WiFi", "Power Backup"],
-        furnished: "Semi"
-      },
-      // Updated mock plot and commercial properties
-      {
-        id: "prop9",
-        title: "Residential Plot in Prime Location",
-        price: 3500000,
-        location: "Electronic City, Bangalore",
-        type: "plot",
-        bedrooms: 0,
-        bathrooms: 0,
-        balcony: 0,
-        area: 2400,
-        image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup"],
-        propertyType: "Plot"
-      },
-      {
-        id: "prop10",
-        title: "Commercial Space in Business District",
-        price: 85000,
-        location: "Connaught Place, Delhi",
-        type: "commercial",
-        bedrooms: 0,
-        bathrooms: 2,
-        balcony: 0,
-        area: 1800,
-        image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
-        amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully",
-        propertyType: "Commercial"
-      },
-      {
-        id: "prop11",
-        title: "Retail Shop in Prime Location",
-        price: 120000,
-        location: "Saket, Delhi",
-        type: "commercial",
-        bedrooms: 0,
-        bathrooms: 1,
-        balcony: 0,
-        area: 850,
-        image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
-        amenities: ["Security", "Power Backup"],
-        furnished: "Not",
-        propertyType: "Commercial"
-      }
-    ];
-    
-    setProperties(mockProperties);
-    applyFilters(mockProperties);
-  };
-
-  
-  // Update filters when any filter state changes
-  useEffect(() => {
-    if (properties.length > 0) {
-      applyFilters(properties);
+// Enhanced mock data for fallback or development
+const useMockData = () => {
+  const mockProperties: PropertyCardProps[] = [
+    {
+      id: "prop1",
+      title: "Modern 3BHK with Sea View",
+      price: 7500000,
+      location: "Bandra West, Mumbai",
+      type: "buy",
+      bedrooms: 3,
+      bathrooms: 3,
+      balcony: 1,
+      area: 1450,
+      image: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
+      amenities: ["Parking", "Security", "Power Backup"],
+      furnished: "Fully",
+      likeCount: 0,
+    },
+    {
+      id: "prop2",
+      title: "Luxury 4BHK Penthouse",
+      price: 12500000,
+      location: "Worli, Mumbai",
+      type: "buy",
+      bedrooms: 4,
+      bathrooms: 4,
+      balcony: 2,
+      area: 2100,
+      image: "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
+      amenities: ["Swimming Pool", "Gym", "Club House", "Parking"],
+      furnished: "Fully",
+      likeCount: 0,
+    },
+    {
+      id: "prop3",
+      title: "Studio Apartment with Balcony",
+      price: 35000,
+      location: "Koramangala, Bangalore",
+      type: "rent",
+      bedrooms: 1,
+      bathrooms: 1,
+      balcony: 1,
+      area: 650,
+      image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80",
+      availableFrom: "2025-05-15T00:00:00",
+      preferenceId: 2, // Bachelor
+      amenities: ["WiFi", "Power Backup"],
+      furnished: "Semi",
+      likeCount: 0,
+    },
+    {
+      id: "prop9",
+      title: "Residential Plot in Prime Location",
+      price: 3500000,
+      location: "Electronic City, Bangalore",
+      type: "plot",
+      bedrooms: 0,
+      bathrooms: 0,
+      balcony: 0,
+      area: 2400,
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
+      amenities: ["Power Backup"],
+      propertyType: "Plot",
+      likeCount: 0,
+    },
+    {
+      id: "prop10",
+      title: "Commercial Space in Business District",
+      price: 85000,
+      location: "Connaught Place, Delhi",
+      type: "commercial",
+      bedrooms: 0,
+      bathrooms: 2,
+      balcony: 0,
+      area: 1800,
+      image: "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
+      amenities: ["WiFi", "Power Backup", "Security", "Parking"],
+      furnished: "Fully",
+      propertyType: "Commercial",
+      likeCount: 0,
+    },
+    {
+      id: "prop11",
+      title: "Retail Shop in Prime Location",
+      price: 120000,
+      location: "Saket, Delhi",
+      type: "commercial",
+      bedrooms: 0,
+      bathrooms: 1,
+      balcony: 0,
+      area: 850,
+      image: "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
+      amenities: ["Security", "Power Backup"],
+      furnished: "Not",
+      propertyType: "Commercial",
+      likeCount: 0,
     }
-  }, [
-    activeTab, 
-    searchQuery, 
-    priceRange, 
-    minBedrooms, 
-    minBathrooms, 
-    minBalcony, 
-    minArea, 
-    availableFrom, 
-    preferenceId,
-    furnished,
-    selectedAmenities
-  ]);
+  ];
+  
+  setProperties(mockProperties);
+  applyFilters(mockProperties);
+};
+
+// Update filters when any filter state changes
+useEffect(() => {
+  if (properties.length > 0) {
+    applyFilters(properties);
+  }
+}, [
+  activeTab, 
+  searchQuery, 
+  priceRange, 
+  minBedrooms, 
+  minBathrooms, 
+  minBalcony, 
+  minArea,
+  maxArea,
+  availableFrom, 
+  preferenceId,
+  furnished,
+  selectedAmenities
+]);
 
   // Handle tab change and update URL
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    
+    // Reset commercial type when switching away from commercial tab
+    if (value !== "commercial") {
+      setCommercialType("buy");
+    }
     
     // Hide advanced filters if plot or commercial is selected
     if (value === "plot" || value === "commercial") {
@@ -726,10 +857,23 @@ const applyFilters = (data: PropertyCardProps[]) => {
     
     if (value !== "all") {
       searchParams.set("type", value);
+      if (value === "commercial") {
+        searchParams.set("commercialType", commercialType);
+      } else {
+        searchParams.delete("commercialType");
+      }
     } else {
       searchParams.delete("type");
+      searchParams.delete("commercialType");
     }
     
+    setSearchParams(searchParams);
+  };
+
+  // Add handler for commercial type change
+  const handleCommercialTypeChange = (value: "buy" | "rent") => {
+    setCommercialType(value);
+    searchParams.set("commercialType", value);
     setSearchParams(searchParams);
   };
 
@@ -750,7 +894,7 @@ const applyFilters = (data: PropertyCardProps[]) => {
 
   // Reset all filters to default values
   const resetFilters = () => {
-    setPriceRange([0, 20000000]);
+    setPriceRange([0, 50000000]);
     setMinBedrooms(0);
     setMinBathrooms(0);
     setMinBalcony(0);
@@ -770,11 +914,20 @@ const applyFilters = (data: PropertyCardProps[]) => {
     });
   };
 
-  // Update URL when price range changes
+  // Handle price range change
   const handlePriceRangeChange = (value: number[]) => {
     setPriceRange(value);
     searchParams.set("minPrice", value[0].toString());
     searchParams.set("maxPrice", value[1].toString());
+    setSearchParams(searchParams);
+  };
+
+  // Handle area range change
+  const handleAreaChange = (value: number[]) => {
+    setMinArea(value[0]);
+    setMaxArea(value[1]);
+    searchParams.set("minArea", value[0].toString());
+    searchParams.set("maxArea", value[1].toString());
     setSearchParams(searchParams);
   };
 
@@ -811,16 +964,6 @@ const applyFilters = (data: PropertyCardProps[]) => {
     setSearchParams(searchParams);
   };
 
-  // Update URL when min area changes
-  const handleAreaChange = (value: number[]) => {
-    setMinArea(value[0]);
-    if (value[0] > 0) {
-      searchParams.set("minArea", value[0].toString());
-    } else {
-      searchParams.delete("minArea");
-    }
-    setSearchParams(searchParams);
-  };
   // Update URL when availability date changes
   const handleDateChange = (date: Date | undefined) => {
     setAvailableFrom(date);
@@ -877,11 +1020,21 @@ const applyFilters = (data: PropertyCardProps[]) => {
 
   // Format price display based on property type
   const formatPrice = (price: number, type: string) => {
-    if (type === "rent") {
-      return `₹${price.toLocaleString()}/month`;
-    }
-    return `₹${price.toLocaleString()}`;
+    const config = priceRangeConfig[type as keyof typeof priceRangeConfig] || priceRangeConfig.buy;
+    return config.format(price);
   };
+
+  // Update price range when property type changes
+  useEffect(() => {
+    const config = priceRangeConfig[activeTab as keyof typeof priceRangeConfig] || priceRangeConfig.buy;
+    setPriceRange([config.min, config.max]);
+    searchParams.set("minPrice", config.min.toString());
+    searchParams.set("maxPrice", config.max.toString());
+    setSearchParams(searchParams);
+  }, [activeTab]);
+
+  // Add state for sidebar visibility
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -903,71 +1056,81 @@ const applyFilters = (data: PropertyCardProps[]) => {
           <div className="max-w-3xl mx-auto bg-transparent-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
-              
-              <form onSubmit={handleSearch} className="relative mx-auto max-w-2xl">
-                <div className="relative flex shadow-xl rounded-full overflow-hidden">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <Input
-                                  type="text"
-                                  className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                                  placeholder="Search Society, Locality, City, State"
-                                  value={searchTerm}
-                                  onChange={(e) => setSearchTerm(e.target.value)}
-                                  onFocus={() => setShowSuggestions(true)}
-                                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)} // delay to allow click
-                                />
-                                <Button
-                                  type="submit"
-                                  className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-r-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
-                                >
-                                  Search
-                                </Button>
-                              </div>
-                  
-                              {showSuggestions && suggestions.length > 0 && (
-                                <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
-                                  {suggestions.map((suggestion, index) => (
-                                    <li
-                                      key={index}
-                                      onMouseDown={() => handleSuggestionClick(suggestion)}
-                                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                                    >
-                                      {suggestion}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-              </form>
+              <p className="text-lg text-white/90 mb-8">Use our advanced filters to find the perfect property that matches your requirements</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab filter */}
-        <div className="mb-8">
-          <div className="w-full bg-blue-700 bg-opacity-40 rounded-lg p-2 pl-8">
-            <div className="grid grid-cols-5 gap-1 w-full">
-              {["all", "buy", "rent", "plot", "commercial"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => handleTabChange(tab)}
-                  className={`py-3 px-1 rounded-md text-sm md:text-base font-medium transition-all duration-200 ${
-                    activeTab === tab 
-                      ? "bg-white text-blue-600 shadow-md" 
-                      : "text-white hover:bg-blue-500"
-                  }`}
-                >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  {tab === "all" ? " Properties" : ""}
-                </button>
-              ))}
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
+        {/* Modern Tab Bar */}
+        <div className="w-full px-4 py-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="relative">
+              <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-1 shadow-2xl backdrop-blur-sm">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
+                  <div className="overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-2 min-w-max md:min-w-0 md:justify-center">
+                      {[
+                        { key: 'all', label: 'All Properties', icon: '🏘️' },
+                        { key: 'buy', label: 'Buy', icon: '🏠' },
+                        { key: 'rent', label: 'Rent', icon: '🔑' },
+                        { key: 'plot', label: 'Plot', icon: '🏞️' },
+                        { key: 'commercial', label: 'Commercial', icon: '🏢' }
+                      ].map((tab) => (
+                        <div key={tab.key} className="relative">
+                          <button
+                            onClick={() => handleTabChange(tab.key)}
+                            className={`group relative flex items-center gap-2 px-4 py-3 md:px-6 md:py-4 rounded-xl text-sm md:text-base font-semibold transition-all duration-300 ease-out transform hover:scale-105 min-w-max ${
+                              activeTab === tab.key
+                                ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/25 border border-blue-100'
+                                : 'text-white hover:bg-white/20 hover:backdrop-blur-md hover:shadow-lg'
+                            }`}
+                          >
+                            <span className="text-lg md:text-xl">{tab.icon}</span>
+                            <span className="whitespace-nowrap">{tab.label}</span>
+                            {activeTab === tab.key && (
+                              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Selection Display */}
+            <div className="mt-6 text-center">
+              <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-lg border border-gray-100">
+                <span className="text-sm text-gray-600">Currently selected:</span>
+                <span className="font-semibold text-blue-600">
+                  {activeTab === 'commercial' 
+                    ? `Commercial - ${commercialType.charAt(0).toUpperCase() + commercialType.slice(1)}`
+                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
+                        (['All Properties','Buy','Rent','Plot','Commercial'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
+                      )
+                  }
+                </span>
+                <span className="text-lg">
+                  {activeTab === 'commercial' 
+                    ? (commercialType === 'buy' ? '💰' : '📋')
+                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
+                        (['🏘️','🏠','🔑','🏞️','🏢'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
+                      )
+                  }
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500 md:hidden">
+                ← Swipe horizontally to see all tabs →
+              </p>
             </div>
           </div>
         </div>
-        
+
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">
           <Button 
@@ -987,271 +1150,288 @@ const applyFilters = (data: PropertyCardProps[]) => {
           </Button>
         </div>
         
-        <div className="grid md:grid-cols-[300px_1fr] gap-8">
-          {/* Sidebar filters - hidden on mobile unless toggled */}
-          <div className={`space-y-5 ${mobileFiltersVisible ? 'block' : 'hidden md:block'}`}>
-            <Card className="shadow-md">
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <IndianRupeeIcon className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium">Price Range</h3>
-                      </div>
-                      <span className="text-xs font-medium text-blue-600">
-                        ₹{priceRange[0].toLocaleString()} - ₹{priceRange[1].toLocaleString()}
-                      </span>
-                    </div>
-                    <Slider
-                      defaultValue={[0, 20000000]}
-                      max={20000000}
-                      step={100000}
-                      value={priceRange}
-                      onValueChange={handlePriceRangeChange}
-                      className="mb-2"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>₹0</span>
-                      <span>₹2 Cr+</span>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Bed className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium">Bedrooms</h3>
-                    </div>
-                    <div className="flex space-x-2">
-                      {[0, 1, 2, 3, 4].map((num) => (
-                        <Button
-                          key={num}
-                          variant={minBedrooms === num ? "default" : "outline"}
-                          size="sm"
-                          className={`flex-1 ${minBedrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                          onClick={() => handleBedroomChange(num)}
-                        >
-                          {num === 0 ? "Any" : num === 4 ? "4+" : num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Bath className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium">Bathrooms</h3>
-                    </div>
-                    <div className="flex space-x-2">
-                      {[0, 1, 2, 3].map((num) => (
-                        <Button
-                          key={num}
-                          variant={minBathrooms === num ? "default" : "outline"}
-                          size="sm"
-                          className={`flex-1 ${minBathrooms === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                          onClick={() => handleBathroomChange(num)}
-                        >
-                          {num === 0 ? "Any" : num === 3 ? "3+" : num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+        {/* Main content area with sidebar and property listings using flex */}
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Collapsible Sidebar filters */}
+          <div
+            className={`transition-all duration-300 mb-8 md:mb-0 shrink-0 overflow-hidden flex flex-col
+              ${sidebarVisible ? 'w-full md:w-[320px]' : 'w-12 md:w-12'}
+              bg-gradient-to-br from-blue-50 via-indigo-50 to-white border-r border-blue-200 relative rounded-2xl shadow-xl
+              ${!mobileFiltersVisible ? 'md:block hidden' : ''}`}
+            style={{ minWidth: sidebarVisible ? undefined : '3rem', maxWidth: sidebarVisible ? undefined : '3rem' }}
+          >
+            {/* Sidebar toggle button - only visible on desktop */}
+            <div className="hidden md:flex items-center justify-end h-10 w-full"
+              style={{ minHeight: '2.5rem' }}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                className="mb-2"
+              >
+                {sidebarVisible ? (
+                  <><Minus className="h-4 w-4 mr-2" /> Hide Filters</>
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
 
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <LayoutDashboard className="h-5 w-5 text-blue-600" />
-                      <h3 className="font-medium">Balcony</h3>
-                    </div>
-                    <div className="flex space-x-2">
-                      {[0, 1, 2, 3].map((num) => (
-                        <Button
-                          key={num}
-                          variant={minBalcony === num ? "default" : "outline"}
-                          size="sm"
-                          className={`flex-1 ${minBalcony === num ? "bg-blue-600 hover:bg-blue-700" : ""}`}
-                          onClick={() => handleBalconyChange(num)}
-                        >
-                          {num === 0 ? "Any" : num === 3 ? "3+" : num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
+            {/* Sidebar content */}
+            <div className={`flex-1 transition-opacity duration-300 ${(sidebarVisible || mobileFiltersVisible) ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 overflow-hidden'}`}> 
+              {(sidebarVisible || mobileFiltersVisible) && (
+                <div className="p-0">
+                  {/* Filter Card */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 flex flex-col gap-4">
+                    {/* Sidebar Header */}
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Ruler className="h-5 w-5 text-blue-600" />
-                        <h3 className="font-medium">Area (sq.ft)</h3>
+                        <FilterX className="h-5 w-5 text-blue-600" />
+                        <span className="text-lg font-bold text-blue-700">Filters</span>
                       </div>
-                      <span className="text-xs font-medium text-blue-600">
-                        {minArea}+ sq.ft
-                      </span>
-                    </div>
-                    <Slider
-                      defaultValue={[0]}
-                      max={5000}
-                      step={100}
-                      value={[minArea]}
-                      onValueChange={handleAreaChange}
-                      className="mb-2"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>0 sq.ft</span>
-                      <span>5000+ sq.ft</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {shouldShowAdvancedFilters() && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
+                      <Button
+                        variant="ghost"
                         size="sm"
-                        className="w-full text-blue-600 border-blue-600 hover:bg-blue-50"
-                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        onClick={resetFilters}
+                        className="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-2"
                       >
-                        {showAdvancedFilters ? (
-                          <><Minus className="h-4 w-4 mr-2" /> Hide Advanced Filters</>
-                        ) : (
-                          <><Plus className="h-4 w-4 mr-2" /> Show Advanced Filters</>
-                        )}
+                        Clear All
                       </Button>
+                    </div>
+
+                    {/* Commercial Type Selection */}
+                    {activeTab === "commercial" && (
+                      <div className="mb-6">
+                        <label className="block text-xs font-semibold text-blue-700 mb-2">Commercial Type</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            variant={commercialType === "buy" ? "default" : "outline"}
+                            className={`w-full flex items-center justify-center gap-2 py-6 ${
+                              commercialType === "buy" 
+                                ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                                : "border-blue-200 hover:bg-blue-50"
+                            }`}
+                            onClick={() => handleCommercialTypeChange("buy")}
+                          >
+                            <span className="text-lg">💰</span>
+                            <span>Buy</span>
+                          </Button>
+                          <Button
+                            variant={commercialType === "rent" ? "default" : "outline"}
+                            className={`w-full flex items-center justify-center gap-2 py-6 ${
+                              commercialType === "rent" 
+                                ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                                : "border-blue-200 hover:bg-blue-50"
+                            }`}
+                            onClick={() => handleCommercialTypeChange("rent")}
+                          >
+                            <span className="text-lg">📋</span>
+                            <span>Rent</span>
+                          </Button>
+                        </div>
+                      </div>
                     )}
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full flex items-center gap-2" 
-                      onClick={resetFilters}
-                    >
-                      <FilterX className="h-4 w-4" />
-                      Reset All Filters
-                    </Button>
+
+                    {/* Price Range Section */}
+                    {shouldShowFilter("showPrice") && (
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="font-semibold text-blue-700 text-sm">Price Range</div>
+                          <div className="text-sm text-blue-600">
+                            {activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent")
+                              ? `₹${priceRange[0].toLocaleString()}/month - ${priceRange[1] >= 1000000 ? '₹10 Lakh/month' : `₹${priceRange[1].toLocaleString()}/month`}`
+                              : `₹${priceRange[0].toLocaleString()} - ${priceRange[1] >= 50000000 ? '₹5 Cr+' : `₹${priceRange[1].toLocaleString()}`}`
+                            }
+                          </div>
+                        </div>
+                        <Slider
+                          defaultValue={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? [0, 1000000] : [0, 50000000]}
+                          max={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000000 : 50000000}
+                          step={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000 : 100000}
+                          value={priceRange}
+                          onValueChange={handlePriceRangeChange}
+                          className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-blue-500 mt-1">
+                          <span>₹0</span>
+                          <span>{activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? "₹10 Lakh/month" : "₹5 Cr+"}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rooms & Features Section */}
+                    <div className="bg-blue-100 rounded-xl p-4 flex flex-col gap-4">
+                      <div className="font-semibold text-blue-700 text-sm mb-2">
+                        {activeTab === "plot" ? "Features" : 
+                         activeTab === "commercial" ? "Features" : 
+                         "Rooms & Features"}
+                      </div>
+                      
+                      {/* Residential Features */}
+                      {(activeTab === "buy" || activeTab === "rent") && (
+                        <>
+                          {/* Bedrooms Dropdown */}
+                          {shouldShowFilter("showBedrooms") && (
+                            <div>
+                              <label className="block text-xs font-semibold text-blue-700 mb-1">Bedrooms</label>
+                              <Select value={minBedrooms ? String(minBedrooms) : "0"} onValueChange={v => handleBedroomChange(Number(v))}>
+                                <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                                  <SelectValue placeholder="Any" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-blue-200">
+                                  <SelectItem value="0">Any</SelectItem>
+                                  <SelectItem value="1">1</SelectItem>
+                                  <SelectItem value="2">2</SelectItem>
+                                  <SelectItem value="3">3</SelectItem>
+                                  <SelectItem value="4">4</SelectItem>
+                                  <SelectItem value="5">5+</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          {/* Bathrooms Dropdown */}
+                          {shouldShowFilter("showBathrooms") && (
+                            <div>
+                              <label className="block text-xs font-semibold text-blue-700 mb-1">Bathrooms</label>
+                              <Select value={minBathrooms ? String(minBathrooms) : "0"} onValueChange={v => handleBathroomChange(Number(v))}>
+                                <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                                  <SelectValue placeholder="Any" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-blue-200">
+                                  <SelectItem value="0">Any</SelectItem>
+                                  <SelectItem value="1">1</SelectItem>
+                                  <SelectItem value="2">2</SelectItem>
+                                  <SelectItem value="3">3</SelectItem>
+                                  <SelectItem value="4">4</SelectItem>
+                                  <SelectItem value="5">5+</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          {/* Balconies Dropdown */}
+                          {shouldShowFilter("showBalcony") && (
+                            <div>
+                              <label className="block text-xs font-semibold text-blue-700 mb-1">Balconies</label>
+                              <Select value={minBalcony ? String(minBalcony) : "0"} onValueChange={v => handleBalconyChange(Number(v))}>
+                                <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                                  <SelectValue placeholder="Any" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-blue-200">
+                                  <SelectItem value="0">Any</SelectItem>
+                                  <SelectItem value="1">1</SelectItem>
+                                  <SelectItem value="2">2</SelectItem>
+                                  <SelectItem value="3">3</SelectItem>
+                                  <SelectItem value="4">4</SelectItem>
+                                  <SelectItem value="5">5+</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* Area Range Section */}
+                      {shouldShowFilter("showArea") && (
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-semibold text-blue-700">Area (sq.ft)</label>
+                            <div className="text-sm text-blue-600">
+                              {minArea} - {maxArea >= 5000 ? '5000+' : maxArea} sq.ft
+                            </div>
+                          </div>
+                          <Slider
+                            defaultValue={[0, 5000]}
+                            max={5000}
+                            step={100}
+                            value={[minArea, maxArea]}
+                            onValueChange={handleAreaChange}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-blue-500 mt-1">
+                            <span>0 sq.ft</span>
+                            <span>5000+ sq.ft</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Preferences Dropdown */}
+                    {shouldShowFilter("showTenantPreference") && (
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1 mt-4">Preferences</label>
+                        <Select value={preferenceId} onValueChange={handlePreferenceChange}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Any" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            {preferenceOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Furnished Dropdown */}
+                    {shouldShowFilter("showFurnished") && (
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1">Furnished</label>
+                        <Select value={furnished} onValueChange={handleFurnishedChange}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Any" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            {furnishedOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Amenities Dropdown */}
+                    {shouldShowFilter("showAmenities") && (
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1">Amenities</label>
+                        <Select value={selectedAmenities.join(',')} onValueChange={v => {
+                          const amenities = v ? v.split(',') : [];
+                          amenities.forEach(a => { if (!selectedAmenities.includes(a)) handleAmenityToggle(a); });
+                          selectedAmenities.forEach(a => { if (!amenities.includes(a)) handleAmenityToggle(a); });
+                        }}>
+                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-blue-200">
+                            {amenityOptions.map((amenity) => (
+                              <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Available From Date Picker */}
+                    {shouldShowFilter("showAvailableFrom") && (
+                      <div>
+                        <label className="block text-xs font-semibold text-blue-700 mb-1 mt-4">Available From</label>
+                        <div className="relative">
+                          <DatePicker
+                            date={availableFrom}
+                            setDate={handleDateChange}
+                            className="w-full rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Advanced filters */}
-            {showAdvancedFilters && shouldShowAdvancedFilters() && (
-              <Card className="shadow-md">
-                <CardContent className="p-6">
-                  <h3 className="font-medium text-lg mb-4 text-blue-800">Advanced Filters</h3>
-                  <Accordion type="single" collapsible className="w-full">
-                    {/* Only show availability filter for rent property type */}
-                    {(activeTab === "rent" || (activeTab === "all")) && (
-                      <AccordionItem value="availability" className="border-b border-blue-100">
-                        <AccordionTrigger className="py-3 hover:no-underline">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                            <span>Availability</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="pt-2 pb-4">
-                            <p className="text-sm text-gray-600 mb-2">Available from</p>
-                            <DatePicker 
-                              date={availableFrom} 
-                              setDate={handleDateChange} 
-                              className="w-full"
-                            />
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Only show tenant preference for rent property type */}
-                    {(activeTab === "rent" || (activeTab === "all")) && (
-                      <AccordionItem value="preference" className="border-b border-blue-100">
-                        <AccordionTrigger className="py-3 hover:no-underline">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-blue-600" />
-                            <span>Tenant Preference</span>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="pt-2 pb-4">
-                            <Select
-                              value={preferenceId}
-                              onValueChange={handlePreferenceChange}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select preference" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {preferenceOptions.map((option) => (
-                                  <SelectItem key={option.id} value={option.id}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    )}
-
-                    {/* Show furnished status for all property types except plot and commercial */}
-                    <AccordionItem value="furnished" className="border-b border-blue-100">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <Home className="h-5 w-5 text-blue-600" />
-                          <span>Furnished Status</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-2 pb-4">
-                          <Select
-                            value={furnished}
-                            onValueChange={handleFurnishedChange}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Furnished status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {furnishedOptions.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Show amenities for all property types except plot and commercial */}
-                    <AccordionItem value="amenities" className="border-b-0">
-                      <AccordionTrigger className="py-3 hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <CheckSquare className="h-5 w-5 text-blue-600" />
-                          <span>Amenities</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="pt-2 pb-4 grid grid-cols-2 gap-3">
-                          {amenityOptions.map((amenity) => (
-                            <div key={amenity} className="flex items-center space-x-2">
-                              <Switch
-                                id={`amenity-${amenity}`}
-                                checked={selectedAmenities.includes(amenity)}
-                                onCheckedChange={() => handleAmenityToggle(amenity)}
-                              />
-                              <Label htmlFor={`amenity-${amenity}`} className="text-sm">
-                                {amenity}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </CardContent>
-              </Card>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Property listings */}
-          <div>
+          {/* Property listings - takes full remaining width */}
+          <div className="flex-1 min-w-0 w-full">
             {/* Applied filters display */}
             {(searchQuery || minBedrooms > 0 || minBathrooms > 0 || minBalcony > 0 || minArea > 0 || 
               availableFrom || preferenceId !== "0" || furnished !== "any" || selectedAmenities.length > 0) && (
@@ -1461,13 +1641,13 @@ const applyFilters = (data: PropertyCardProps[]) => {
               </Card>
             )}
 
-            {/* Results grid */}
-            <div className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+            {/* Results grid - modern card design, 3 per row on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8 mb-10 w-full">
               {loading ? (
                 // Loading skeletons
                 Array(6).fill(0).map((_, index) => (
-                  <Card key={index} className="overflow-hidden shadow-md">
-                    <div className="h-48 bg-gray-200 animate-pulse" />
+                  <Card key={index} className="overflow-hidden shadow-lg rounded-2xl border-0 bg-white animate-pulse">
+                    <div className="h-48 bg-gray-200 animate-pulse rounded-t-2xl" />
                     <CardContent className="p-4">
                       <div className="h-4 bg-gray-200 rounded-full animate-pulse mb-4" />
                       <div className="h-6 bg-gray-200 rounded-full animate-pulse w-3/4 mb-4" />
@@ -1483,13 +1663,54 @@ const applyFilters = (data: PropertyCardProps[]) => {
                   </Card>
                 ))
               ) : (
-                filteredProperties.map((property) => (
-                  <PropertyCard
-                    key={property.id} 
-                    {...property} 
-                    formattedPrice={formatPrice(property.price, property.type)}
-                  />
-                ))
+                <>
+                  {/* Commercial Buy Properties */}
+                  {activeTab === "commercial" && commercialType === "buy" && (
+                    <>
+                      <h3 className="col-span-full text-lg font-semibold mb-4">Commercial Properties for Buy</h3>
+                      {filteredProperties
+                        .filter(prop => prop.type === "commercial" && !prop.status?.toLowerCase().includes("rent"))
+                        .map((property) => (
+                          <div key={property.id} className="w-full">
+                            <PropertyCard
+                              {...property} 
+                              likeCount={property.likeCount}
+                              formattedPrice={formatPrice(property.price, property.type)}
+                            />
+                          </div>
+                        ))}
+                    </>
+                  )}
+
+                  {/* Commercial Rent Properties */}
+                  {activeTab === "commercial" && commercialType === "rent" && (
+                    <>
+                      <h3 className="col-span-full text-lg font-semibold mb-4">Commercial Properties for Rent</h3>
+                      {filteredProperties
+                        .filter(prop => prop.type === "commercial" && prop.status?.toLowerCase().includes("rent"))
+                        .map((property) => (
+                          <div key={property.id} className="w-full">
+                            <PropertyCard
+                              {...property} 
+                              likeCount={property.likeCount}
+                              formattedPrice={formatPrice(property.price, property.type)}
+                            />
+                          </div>
+                        ))}
+                    </>
+                  )}
+
+                  {/* Other Property Types */}
+                  {activeTab !== "commercial" && filteredProperties.map((property) => (
+                    <div key={property.id} className="w-full">
+                      <PropertyCard
+                        {...property} 
+                        likeCount={property.likeCount}
+                        formattedPrice={formatPrice(property.price, property.type)}
+                      />
+                    </div>
+                  ))}
+                </>
               )}
             </div>
 
