@@ -1,0 +1,296 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  MapPin, 
+  Home, 
+  Bed, 
+  Bath, 
+  Calendar,
+  User,
+  Check,
+  X,
+  Eye,
+  Filter
+} from 'lucide-react';
+import PropertyReviewCard from '@/components/PropertyReviewCard';
+
+interface Property {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  location: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  images: string[];
+  submittedBy: string;
+  submittedDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  category: string;
+}
+
+// Mock data for properties
+const mockProperties: Property[] = [
+  {
+    id: 1,
+    title: "Luxury Downtown Apartment",
+    description: "Beautiful 2-bedroom apartment in the heart of downtown with stunning city views.",
+    price: 2500,
+    location: "Downtown, NYC",
+    bedrooms: 2,
+    bathrooms: 2,
+    area: 1200,
+    images: ["/placeholder.svg"],
+    submittedBy: "John Doe",
+    submittedDate: "2024-01-15",
+    status: "pending" as const,
+    category: "apartment"
+  },
+  {
+    id: 2,
+    title: "Cozy Suburban House",
+    description: "Perfect family home with large backyard and modern amenities.",
+    price: 3500,
+    location: "Suburbs, CA",
+    bedrooms: 4,
+    bathrooms: 3,
+    area: 2400,
+    images: ["/placeholder.svg"],
+    submittedBy: "Jane Smith",
+    submittedDate: "2024-01-14",
+    status: "pending" as const,
+    category: "house"
+  },
+  {
+    id: 3,
+    title: "Modern Studio Loft",
+    description: "Contemporary studio with exposed brick and high ceilings.",
+    price: 1800,
+    location: "Arts District, LA",
+    bedrooms: 1,
+    bathrooms: 1,
+    area: 800,
+    images: ["/placeholder.svg"],
+    submittedBy: "Mike Johnson",
+    submittedDate: "2024-01-13",
+    status: "approved" as const,
+    category: "studio"
+  },
+  {
+    id: 4,
+    title: "Waterfront Condo",
+    description: "Stunning waterfront property with panoramic ocean views.",
+    price: 4200,
+    location: "Miami Beach, FL",
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 1800,
+    images: ["/placeholder.svg"],
+    submittedBy: "Sarah Wilson",
+    submittedDate: "2024-01-12",
+    status: "rejected" as const,
+    category: "condo"
+  }
+];
+
+const AdminPage = () => {
+  const [properties, setProperties] = useState<Property[]>(mockProperties);
+  const [activeTab, setActiveTab] = useState("pending");
+  const { toast } = useToast();
+
+  const handlePropertyAction = (propertyId: number, action: 'approve' | 'reject') => {
+    setProperties(prev => 
+      prev.map(property => 
+        property.id === propertyId 
+          ? { ...property, status: action === 'approve' ? 'approved' as const : 'rejected' as const }
+          : property
+      )
+    );
+
+    toast({
+      title: `Property ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+      description: `The property has been ${action === 'approve' ? 'approved' : 'rejected'} successfully.`,
+      variant: action === 'approve' ? 'default' : 'destructive',
+    });
+  };
+
+  const getFilteredProperties = (status: string) => {
+    if (status === "all") return properties;
+    return properties.filter(property => property.status === status);
+  };
+
+  const getStatusCounts = () => {
+    return {
+      pending: properties.filter(p => p.status === 'pending').length,
+      approved: properties.filter(p => p.status === 'approved').length,
+      rejected: properties.filter(p => p.status === 'rejected').length,
+      total: properties.length
+    };
+  };
+
+  const statusCounts = getStatusCounts();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">Property Review Dashboard</h1>
+              <p className="text-slate-600 mt-1">Review and manage submitted properties</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Badge variant="outline" className="px-3 py-1">
+                <User className="w-4 h-4 mr-2" />
+                Admin Panel
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100">Total Properties</p>
+                  <p className="text-3xl font-bold">{statusCounts.total}</p>
+                </div>
+                <Home className="w-8 h-8 text-blue-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-yellow-100">Pending Review</p>
+                  <p className="text-3xl font-bold">{statusCounts.pending}</p>
+                </div>
+                <Calendar className="w-8 h-8 text-yellow-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100">Approved</p>
+                  <p className="text-3xl font-bold">{statusCounts.approved}</p>
+                </div>
+                <Check className="w-8 h-8 text-green-200" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-500 to-red-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-100">Rejected</p>
+                  <p className="text-3xl font-bold">{statusCounts.rejected}</p>
+                </div>
+                <X className="w-8 h-8 text-red-200" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Properties Tabs */}
+        <Card className="bg-white shadow-lg">
+          <CardHeader className="border-b border-slate-200">
+            <CardTitle className="flex items-center">
+              <Filter className="w-5 h-5 mr-2" />
+              Property Reviews
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 bg-slate-50 p-1 m-6 rounded-lg">
+                <TabsTrigger value="pending" className="data-[state=active]:bg-white">
+                  Pending ({statusCounts.pending})
+                </TabsTrigger>
+                <TabsTrigger value="approved" className="data-[state=active]:bg-white">
+                  Approved ({statusCounts.approved})
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className="data-[state=active]:bg-white">
+                  Rejected ({statusCounts.rejected})
+                </TabsTrigger>
+                <TabsTrigger value="all" className="data-[state=active]:bg-white">
+                  All ({statusCounts.total})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="pending" className="p-6 pt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {getFilteredProperties("pending").map(property => (
+                    <PropertyReviewCard
+                      key={property.id}
+                      property={property}
+                      onAction={handlePropertyAction}
+                    />
+                  ))}
+                </div>
+                {getFilteredProperties("pending").length === 0 && (
+                  <div className="text-center py-12">
+                    <Check className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                    <p className="text-slate-500 text-lg">No pending properties to review!</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="approved" className="p-6 pt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {getFilteredProperties("approved").map(property => (
+                    <PropertyReviewCard
+                      key={property.id}
+                      property={property}
+                      onAction={handlePropertyAction}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="rejected" className="p-6 pt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {getFilteredProperties("rejected").map(property => (
+                    <PropertyReviewCard
+                      key={property.id}
+                      property={property}
+                      onAction={handlePropertyAction}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="all" className="p-6 pt-0">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {getFilteredProperties("all").map(property => (
+                    <PropertyReviewCard
+                      key={property.id}
+                      property={property}
+                      onAction={handlePropertyAction}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AdminPage;
