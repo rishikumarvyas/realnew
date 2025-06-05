@@ -20,19 +20,12 @@ import PropertyReviewCard from '@/components/PropertyReviewCard';
 import axiosInstance from '@/axiosCalls/axiosInstance';
 
 interface Property {
-  id: number;
+  propertyId: string;
+  superCategory: string;
+  propertyType: string;
+  statusId: string;
   title: string;
-  description: string;
-  price: number;
-  location: string;
-  bedrooms: number;
-  bathrooms: number;
-  area: number;
-  images: string[];
-  submittedBy: string;
-  submittedDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  category: string;
+  // Add other fields as needed from your API
 }
 
 const AdminPage = () => {
@@ -41,7 +34,7 @@ const AdminPage = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(-1);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -64,7 +57,8 @@ const AdminPage = () => {
           pageSize,
         };
         const response = await axiosInstance.post('/api/Account/GetProperty', body);
-        setProperties(response.data?.data || []);
+        console.log('AdminPage API Response:', response.data);
+        setProperties(response.data?.propertyInfo || []);
       } catch (error) {
         toast({ title: 'Error', description: 'Failed to fetch properties', variant: 'destructive' });
       } finally {
@@ -74,32 +68,20 @@ const AdminPage = () => {
     fetchProperties();
   }, [pageNumber, pageSize]);
 
-  const handlePropertyAction = (propertyId: number, action: 'approve' | 'reject') => {
-    setProperties(prev => 
-      prev.map(property => 
-        property.id === propertyId 
-          ? { ...property, status: action === 'approve' ? 'approved' as const : 'rejected' as const }
-          : property
-      )
-    );
-
-    toast({
-      title: `Property ${action === 'approve' ? 'Approved' : 'Rejected'}`,
-      description: `The property has been ${action === 'approve' ? 'approved' : 'rejected'} successfully.`,
-      variant: action === 'approve' ? 'default' : 'destructive',
-    });
-  };
-
+  // Dummy status mapping for tabs (since API statusId is string '1')
   const getFilteredProperties = (status: string) => {
     if (status === "all") return properties;
-    return properties.filter(property => property.status === status);
+    if (status === "pending") return properties.filter(p => p.statusId === '1');
+    if (status === "approved") return properties.filter(p => p.statusId === '2');
+    if (status === "rejected") return properties.filter(p => p.statusId === '3');
+    return properties;
   };
 
   const getStatusCounts = () => {
     return {
-      pending: properties.filter(p => p.status === 'pending').length,
-      approved: properties.filter(p => p.status === 'approved').length,
-      rejected: properties.filter(p => p.status === 'rejected').length,
+      pending: properties.filter(p => p.statusId === '1').length,
+      approved: properties.filter(p => p.statusId === '2').length,
+      rejected: properties.filter(p => p.statusId === '3').length,
       total: properties.length
     };
   };
@@ -207,9 +189,9 @@ const AdminPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {getFilteredProperties("pending").map(property => (
                     <PropertyReviewCard
-                      key={property.id}
+                      key={property.propertyId}
                       property={property}
-                      onAction={handlePropertyAction}
+                      // onAction={handlePropertyAction} // implement as needed
                     />
                   ))}
                 </div>
@@ -225,9 +207,9 @@ const AdminPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {getFilteredProperties("approved").map(property => (
                     <PropertyReviewCard
-                      key={property.id}
+                      key={property.propertyId}
                       property={property}
-                      onAction={handlePropertyAction}
+                      // onAction={handlePropertyAction}
                     />
                   ))}
                 </div>
@@ -237,9 +219,9 @@ const AdminPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {getFilteredProperties("rejected").map(property => (
                     <PropertyReviewCard
-                      key={property.id}
+                      key={property.propertyId}
                       property={property}
-                      onAction={handlePropertyAction}
+                      // onAction={handlePropertyAction}
                     />
                   ))}
                 </div>
@@ -249,9 +231,9 @@ const AdminPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {getFilteredProperties("all").map(property => (
                     <PropertyReviewCard
-                      key={property.id}
+                      key={property.propertyId}
                       property={property}
-                      onAction={handlePropertyAction}
+                      // onAction={handlePropertyAction}
                     />
                   ))}
                 </div>
