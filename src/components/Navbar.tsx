@@ -245,26 +245,43 @@ export function Navbar() {
           >
             Contact
           </Link>
-          {isAuthenticated && user?.role === 'Admin' && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                navigate('/admin');
-                setIsOpen(false);
-              }}
-              className="w-full justify-center flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full my-2"
-            >
-              <Shield className="h-4 w-4 mr-1" />
-              Admin
-            </Button>
-          )}
-          {/* Notification icon always visible for authenticated users */}
           {isAuthenticated && (
-            <NotificationIcon />
+            <>
+              <Button
+                variant="outline"
+                onClick={handlePostPropertyClick}
+                className="w-full justify-center flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full my-2"
+              >
+                <PlusCircle className="h-4 w-4 mr-1" />
+                Post Property
+              </Button>
+              <Link
+                to="/dashboard"
+                className="w-full flex items-center gap-1 justify-center px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-l-4 border-transparent hover:border-blue-500 rounded-full"
+                onClick={() => setIsOpen(false)}
+              >
+                <Home className="h-4 w-4 mr-1" />
+                Dashboard
+              </Link>
+              {user?.role === 'Admin' && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigate('/admin');
+                    setIsOpen(false);
+                  }}
+                  className="w-full justify-center flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full my-2"
+                >
+                  <Shield className="h-4 w-4 mr-1" />
+                  Admin
+                </Button>
+              )}
+              <div className="w-full flex justify-center my-2">
+                <NotificationIcon />
+              </div>
+            </>
           )}
-          {isAuthenticated ? (
-            <div className="border-t border-gray-200"></div>
-          ) : (
+          {!isAuthenticated ? (
             <div className="border-t border-gray-200 pt-4 pb-3 px-4 flex flex-col space-y-3">
               <Button
                 variant="outline"
@@ -280,14 +297,17 @@ export function Navbar() {
                 Sign Up
               </Button>
             </div>
+          ) : (
+            <div className="border-t border-gray-200 pt-4 pb-3 px-4 flex flex-col space-y-3">
+              <Button
+                onClick={handleLogout}
+                className="w-full justify-center bg-red-500 text-white"
+              >
+                Logout
+              </Button>
+            </div>
           )}
         </div>
-        {/* Notification icon in mobile menu */}
-        {isAuthenticated && (
-          <div className="px-4 py-3 flex items-center">
-            <NotificationIcon />
-          </div>
-        )}
       </div>
     </nav>
   );

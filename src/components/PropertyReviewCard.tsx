@@ -1,150 +1,289 @@
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
   MapPin, 
   Bed, 
   Bath, 
-  Maximize,
-  Calendar,
-  User,
-  Check,
-  X,
   Eye,
-  DollarSign
+  Clock,
+  Building,
+  Square,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Heart,
+  Share2
 } from 'lucide-react';
+import axiosInstance from '@/axiosCalls/axiosInstance';
 
 interface Property {
   propertyId: string;
-  superCategory?: string;
-  propertyType?: string;
-  statusId?: string;
+  superCategory: string;
+  propertyType: string;
+  statusId: string;
   title: string;
-  description?: string;
   price?: number;
   location?: string;
   bedrooms?: number;
   bathrooms?: number;
   area?: number;
   images?: string[];
-  submittedBy?: string;
-  submittedDate?: string;
-  // Add other fields as needed from your API
+  description?: string;
+  createdDate?: string;
 }
 
 interface PropertyReviewCardProps {
   property: Property;
-  onAction?: (propertyId: string, action: 'approve' | 'reject') => void;
+  onAction?: (propertyId: string, action: string) => void;
 }
 
 const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({ property, onAction }) => {
-  // Status mapping for new API
-  const statusMap: Record<string, { label: string; color: string }> = {
-    '1': { label: 'pending', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-    '2': { label: 'approved', color: 'bg-green-100 text-green-800 border-green-200' },
-    '3': { label: 'rejected', color: 'bg-red-100 text-red-800 border-red-200' },
-  };
-  const status = property.statusId ? statusMap[property.statusId]?.label || 'unknown' : 'unknown';
-  const statusColor = property.statusId ? statusMap[property.statusId]?.color || 'bg-gray-100 text-gray-800 border-gray-200' : 'bg-gray-100 text-gray-800 border-gray-200';
+  const [loading, setLoading] = useState(false);
+  const [actionType, setActionType] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <Check className="w-3 h-3" />;
-      case 'rejected':
-        return <X className="w-3 h-3" />;
-      default:
-        return <Calendar className="w-3 h-3" />;
+  const handleApprove = async () => {
+    setLoading(true);
+    setActionType('approve');
+    
+    try {
+      console.log('Approving property:', property.propertyId);
+      
+      const response = await axiosInstance.post('/api/Admin/Approve', {
+        propertyId: property.propertyId
+      });
+      
+      console.log('Approve API response:', response.data);
+      
+      if (response.status === 200 || response.data) {
+        toast({
+          title: 'Success!',
+          description: `Property ${property.propertyId} approved successfully`,
+        });
+        
+        onAction?.(property.propertyId, 'approve');
+      }
+    } catch (error) {
+      console.error('Approve failed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve property. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+      setActionType(null);
     }
   };
 
+  const handleReject = async () => {
+    setLoading(true);
+    setActionType('reject');
+    
+    try {
+      console.log('Rejecting property:', property.propertyId);
+      
+      const response = await axiosInstance.post('/api/Admin/Reject', {
+        propertyId: property.propertyId
+      });
+      
+      console.log('Reject API response:', response.data);
+      
+      if (response.status === 200 || response.data) {
+        toast({
+          title: 'Property Rejected',
+          description: `Property ${property.propertyId} has been rejected successfully`,
+        });
+        
+        onAction?.(property.propertyId, 'reject');
+      }
+    } catch (error) {
+      console.error('Reject failed:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject property. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+      setActionType(null);
+    }
+  };
+
+  const getStatusBadge = () => {
+    const statusMap = {
+      '1': { 
+        label: 'Pending Review', 
+        icon: Clock, 
+        color: 'bg-gradient-to-r from-amber-400 to-orange-500 text-white',
+        pulse: true
+      },
+      '2': { 
+        label: 'Approved', 
+        icon: CheckCircle, 
+        color: 'bg-gradient-to-r from-emerald-400 to-green-500 text-white',
+        pulse: false
+      },
+      '3': { 
+        label: 'Rejected', 
+        icon: XCircle, 
+        color: 'bg-gradient-to-r from-red-400 to-rose-500 text-white',
+        pulse: false
+      }
+    };
+    
+    const status = statusMap[property.statusId as keyof typeof statusMap] || statusMap['1'];
+    const IconComponent = status.icon;
+    
+    return (
+      <Badge className={`${status.color} border-0 ${status.pulse ? 'animate-pulse' : ''}`}>
+        <IconComponent className="w-3 h-3 mr-1" />
+        {status.label}
+      </Badge>
+    );
+  };
+
+  const formatPrice = (price?: number) => {
+    if (!price) return 'Price on request';
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
   return (
-    <Card className="overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-300 group">
-      {/* Property Image */}
-      <div className="relative h-48 bg-gradient-to-r from-slate-100 to-slate-200 overflow-hidden">
-        <img 
-          src={property.images?.[0] || '/placeholder.svg'} 
-          alt={property.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
-        <div className="absolute top-4 right-4">
-          <Badge className={`${statusColor} capitalize font-medium`}>
-            {getStatusIcon(status)}
-            <span className="ml-1">{status}</span>
-          </Badge>
+    <Card className="group relative overflow-hidden hover:shadow-2xl transition-all duration-500 border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white hover:scale-[1.02] transform">
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      
+      {/* Property Image Placeholder */}
+      <div className="relative h-48 bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        <div className="absolute top-4 left-4 flex gap-2">
+          {getStatusBadge()}
         </div>
-        <div className="absolute top-4 left-4">
-          <Badge variant="secondary" className="bg-white/90 text-slate-700 capitalize">
-            {property.propertyType || 'N/A'}
-          </Badge>
+        <div className="absolute top-4 right-4 flex gap-2">
+          <Button size="icon" variant="ghost" className="w-8 h-8 bg-white/90 hover:bg-white backdrop-blur-sm">
+            <Heart className="w-4 h-4" />
+          </Button>
+          <Button size="icon" variant="ghost" className="w-8 h-8 bg-white/90 hover:bg-white backdrop-blur-sm">
+            <Share2 className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="absolute bottom-4 left-4 right-4">
+          <div className="text-white font-semibold text-lg drop-shadow-lg">
+            {formatPrice(property.price)}
+          </div>
         </div>
       </div>
 
-      <CardContent className="p-6">
-        {/* Property Title & Price */}
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-xl font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-            {property.title}
-          </h3>
-          <div className="flex items-center text-green-600 font-bold text-lg">
-            <DollarSign className="w-4 h-4" />
-            {property.price ? property.price.toLocaleString() : 'N/A'}
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-lg font-bold text-slate-800 group-hover:text-slate-900 line-clamp-2 mb-2">
+              {property.title || 'Luxury Property'}
+            </CardTitle>
+            <div className="flex items-center gap-2 text-sm text-slate-600 mb-3">
+              <MapPin className="w-4 h-4 text-slate-400" />
+              <span className="truncate">{property.location || 'Prime Location'}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                <Building className="w-3 h-3 mr-1" />
+                {property.propertyType || 'Apartment'}
+              </Badge>
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                {property.superCategory || 'Residential'}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0">
+        {/* Property Features */}
+        <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-slate-50/80 rounded-xl">
+          <div className="text-center">
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg mx-auto mb-1">
+              <Bed className="w-4 h-4 text-blue-600" />
+            </div>
+            <p className="text-xs text-slate-600">{property.bedrooms || '3'} Beds</p>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg mx-auto mb-1">
+              <Bath className="w-4 h-4 text-green-600" />
+            </div>
+            <p className="text-xs text-slate-600">{property.bathrooms || '2'} Baths</p>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center w-8 h-8 bg-orange-100 rounded-lg mx-auto mb-1">
+              <Square className="w-4 h-4 text-orange-600" />
+            </div>
+            <p className="text-xs text-slate-600">{property.area || '1200'} sq ft</p>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-slate-600 text-sm mb-4 line-clamp-2">
-          {property.description || 'No description available.'}
-        </p>
+        {property.description && (
+          <p className="text-sm text-slate-600 mb-4 line-clamp-2">
+            {property.description}
+          </p>
+        )}
 
-        {/* Location */}
-        <div className="flex items-center text-slate-500 mb-4">
-          <MapPin className="w-4 h-4 mr-2" />
-          <span className="text-sm">{property.location || 'N/A'}</span>
-        </div>
-
-        {/* Property Details */}
-        <div className="flex items-center space-x-4 mb-4 text-slate-600">
-          <div className="flex items-center">
-            <Bed className="w-4 h-4 mr-1" />
-            <span className="text-sm">{property.bedrooms ?? 'N/A'} bed</span>
-          </div>
-          <div className="flex items-center">
-            <Bath className="w-4 h-4 mr-1" />
-            <span className="text-sm">{property.bathrooms ?? 'N/A'} bath</span>
-          </div>
-          <div className="flex items-center">
-            <Maximize className="w-4 h-4 mr-1" />
-            <span className="text-sm">{property.area ?? 'N/A'} sq ft</span>
-          </div>
-        </div>
-
-        {/* Submission Info */}
-        <div className="border-t border-slate-100 pt-4 mb-4">
-          <div className="flex items-center justify-between text-sm text-slate-500">
-            <div className="flex items-center">
-              <User className="w-4 h-4 mr-2" />
-              <span>Submitted by <strong>{property.submittedBy || 'N/A'}</strong></span>
-            </div>
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 mr-2" />
-              <span>{property.submittedDate ? new Date(property.submittedDate).toLocaleDateString() : 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons (optional, implement as needed) */}
-        {/* <div className="flex space-x-2">
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-4 border-t border-slate-100">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-slate-200 hover:bg-slate-50"
+            className="flex-1 h-10 text-slate-600 hover:text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
           >
             <Eye className="w-4 h-4 mr-2" />
             View Details
           </Button>
-        </div> */}
+          
+          {property.statusId === '1' && (
+            <>
+              <Button
+                onClick={handleApprove}
+                disabled={loading}
+                size="sm"
+                className="flex-1 h-10 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {loading && actionType === 'approve' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                )}
+                Approve
+              </Button>
+              
+              <Button
+                onClick={handleReject}
+                disabled={loading}
+                size="sm"
+                className="flex-1 h-10 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                {loading && actionType === 'reject' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4 mr-2" />
+                )}
+                Reject
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Property ID */}
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <p className="text-xs text-slate-400">
+            Property ID: {property.propertyId}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
