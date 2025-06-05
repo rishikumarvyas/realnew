@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import {
   Filter
 } from 'lucide-react';
 import PropertyReviewCard from '@/components/PropertyReviewCard';
+import axiosInstance from '@/axiosCalls/axiosInstance';
 
 interface Property {
   id: number;
@@ -34,74 +35,44 @@ interface Property {
   category: string;
 }
 
-// Mock data for properties
-const mockProperties: Property[] = [
-  {
-    id: 1,
-    title: "Luxury Downtown Apartment",
-    description: "Beautiful 2-bedroom apartment in the heart of downtown with stunning city views.",
-    price: 2500,
-    location: "Downtown, NYC",
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 1200,
-    images: ["/placeholder.svg"],
-    submittedBy: "John Doe",
-    submittedDate: "2024-01-15",
-    status: "pending" as const,
-    category: "apartment"
-  },
-  {
-    id: 2,
-    title: "Cozy Suburban House",
-    description: "Perfect family home with large backyard and modern amenities.",
-    price: 3500,
-    location: "Suburbs, CA",
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 2400,
-    images: ["/placeholder.svg"],
-    submittedBy: "Jane Smith",
-    submittedDate: "2024-01-14",
-    status: "pending" as const,
-    category: "house"
-  },
-  {
-    id: 3,
-    title: "Modern Studio Loft",
-    description: "Contemporary studio with exposed brick and high ceilings.",
-    price: 1800,
-    location: "Arts District, LA",
-    bedrooms: 1,
-    bathrooms: 1,
-    area: 800,
-    images: ["/placeholder.svg"],
-    submittedBy: "Mike Johnson",
-    submittedDate: "2024-01-13",
-    status: "approved" as const,
-    category: "studio"
-  },
-  {
-    id: 4,
-    title: "Waterfront Condo",
-    description: "Stunning waterfront property with panoramic ocean views.",
-    price: 4200,
-    location: "Miami Beach, FL",
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 1800,
-    images: ["/placeholder.svg"],
-    submittedBy: "Sarah Wilson",
-    submittedDate: "2024-01-12",
-    status: "rejected" as const,
-    category: "condo"
-  }
-];
-
 const AdminPage = () => {
-  const [properties, setProperties] = useState<Property[]>(mockProperties);
+  const [properties, setProperties] = useState<Property[]>([]);
   const [activeTab, setActiveTab] = useState("pending");
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      setLoading(true);
+      try {
+        const body = {
+          superCategoryId: 0,
+          propertyTypeIds: [],
+          statusId: 1,
+          accountId: "",
+          searchTerm: "",
+          minPrice: 0,
+          maxPrice: 0,
+          bedroom: 0,
+          balcony: 0,
+          bathroom: 0,
+          minArea: 0,
+          maxArea: 0,
+          pageNumber,
+          pageSize,
+        };
+        const response = await axiosInstance.post('/api/Account/GetProperty', body);
+        setProperties(response.data?.data || []);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to fetch properties', variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProperties();
+  }, [pageNumber, pageSize]);
 
   const handlePropertyAction = (propertyId: number, action: 'approve' | 'reject') => {
     setProperties(prev => 
