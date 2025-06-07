@@ -11,7 +11,6 @@ interface Notification {
   isRead: boolean;
   createdDt: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
 }
 
 interface NotificationResponse {
@@ -25,18 +24,13 @@ interface NotificationResponse {
 
 // Interface for the mark as read request body
 interface MarkAsReadRequest {
-  type: string;
-  userId: string;
   notificationId: string;
-  propertyId?: string;
 }
 
 // Interface for creating a new notification
 interface CreateNotificationRequest {
-  userId: string;
   message: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
 }
 
 const NotificationIcon: React.FC = () => {
@@ -54,7 +48,7 @@ const NotificationIcon: React.FC = () => {
     }
   }, [user]);
 
-  const createNotification = async (message: string, notificationType: 'user' | 'property' = 'user', propertyId?: string) => {
+  const createNotification = async (message: string, propertyId?: string) => {
     if (!user || !user.userId) {
       console.warn('No user available for creating notification');
       return false;
@@ -62,13 +56,11 @@ const NotificationIcon: React.FC = () => {
 
     try {
       const payload: CreateNotificationRequest = {
-        userId: user.userId,
-        message: message,
-        notificationType: notificationType
+        message: message
       };
 
       // Add propertyId for property notifications
-      if (notificationType === 'property' && propertyId) {
+      if (propertyId!= null) {
         payload.propertyId = propertyId;
       }
 
@@ -123,7 +115,7 @@ const NotificationIcon: React.FC = () => {
     setIsLoading(true);
     try {
       // Use the single GetNotifications endpoint
-      const response = await axiosInstance.get(`/api/Notification/GetNotifications?userId=${userId}`);
+      const response = await axiosInstance.get(`/api/Notification/GetNotifications`);
 
       if (response.status === 200 && response.data.notifications) {
         const allNotifications: Notification[] = response.data.notifications;
@@ -159,7 +151,6 @@ const NotificationIcon: React.FC = () => {
         message: 'Your property listing has been approved.',
         createdDt: new Date().toISOString(),
         isRead: false,
-        notificationType: 'property',
         propertyId: 'property1'
       },
       {
@@ -167,14 +158,12 @@ const NotificationIcon: React.FC = () => {
         message: 'New message received from a potential buyer.',
         createdDt: new Date(Date.now() - 3600 * 1000).toISOString(),
         isRead: false,
-        notificationType: 'user'
       },
       {
         notificationId: '3',
         message: 'Your property has received 5 new views.',
         createdDt: new Date(Date.now() - 86400 * 1000).toISOString(),
         isRead: true,
-        notificationType: 'property',
         propertyId: 'property1'
       },
       {
@@ -182,7 +171,6 @@ const NotificationIcon: React.FC = () => {
         message: 'Profile updated successfully.',
         createdDt: new Date(Date.now() - 172800 * 1000).toISOString(),
         isRead: true,
-        notificationType: 'user'
       },
     ];
 
@@ -194,10 +182,17 @@ const NotificationIcon: React.FC = () => {
   };
 
   const toggleDropdown = async () => {
-    if (!showDropdown) {
-      await fetchNotifications();
-    }
-    setShowDropdown(prev => !prev);
+    setShowDropdown(prev => {
+      const newValue = !prev;
+  
+      // If we're about to open the dropdown, fetch notifications
+      if (newValue) {
+        setIsLoading(true);
+        fetchNotifications();
+      }
+  
+      return newValue;
+    });
   };
 
   const updateNotificationState = (notificationId: string) => {
@@ -211,7 +206,7 @@ const NotificationIcon: React.FC = () => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const markAsRead = async (notificationId: string, notificationType?: 'user' | 'property', propertyId?: string) => {
+  const markAsRead = async (notificationId: string) => {
     if (!user || !user.userId) {
       updateNotificationState(notificationId);
       return;
@@ -220,16 +215,9 @@ const NotificationIcon: React.FC = () => {
     try {
       // Create payload based on the API schema
       const payload: MarkAsReadRequest = {
-        type: notificationType || 'user', // Set the type field
-        userId: user.userId,
         notificationId: notificationId,
       };
       
-      // Add propertyId only for property notifications
-      if (notificationType === 'property' && propertyId) {
-        payload.propertyId = propertyId;
-      }
-
       console.log('Sending payload:', payload); // Debug log
 
       const response = await axiosInstance.put('/api/Notification/MarkAsRead', payload);
@@ -275,14 +263,8 @@ const NotificationIcon: React.FC = () => {
         await Promise.all(
           unreadNotifications.map(notification => {
             const payload: MarkAsReadRequest = {
-              type: notification.notificationType || 'user',
-              userId: user.userId!,
               notificationId: notification.notificationId,
             };
-            
-            if (notification.notificationType === 'property' && notification.propertyId) {
-              payload.propertyId = notification.propertyId;
-            }
             
             return axiosInstance.put('/api/Notification/MarkAsRead', payload);
           })
@@ -333,7 +315,7 @@ const NotificationIcon: React.FC = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
-      markAsRead(notification.notificationId, notification.notificationType, notification.propertyId);
+      markAsRead(notification.notificationId);
     }
 
     toast({
@@ -417,18 +399,9 @@ const NotificationIcon: React.FC = () => {
                     </p>
                     <div className="flex justify-between items-center mt-2">
                       <p className="text-xs text-gray-500">{formatDate(notification.createdDt)}</p>
-                      <div className="flex items-center space-x-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          notification.notificationType === 'property'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {notification.notificationType === 'property' ? 'Property' : 'User'}
-                        </span>
                         {!notification.isRead && (
                           <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                         )}
-                      </div>
                     </div>
                   </div>
                 ))
