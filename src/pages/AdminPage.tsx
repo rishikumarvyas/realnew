@@ -18,7 +18,7 @@ import {
   User,
   RefreshCw
 } from 'lucide-react';
-import axiosInstance from '@/axiosCalls/axiosInstance';
+import axiosInstance from "../axiosCalls/axiosInstance";
 
 interface Property {
   propertyId: string;
@@ -36,7 +36,7 @@ interface Property {
   createdDate?: string;
 }
 
-const Index = () => {
+const AdminPage = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(true);
@@ -68,10 +68,20 @@ const Index = () => {
       
       console.log('📤 Fetching properties with body:', body);
       const response = await axiosInstance.post('/api/Account/GetProperty', body);
-      console.log('📥 AdminPage API Response:', response.data);
+      console.log('📥 API Response:', response.data);
       console.log('📊 Total properties fetched:', response.data?.propertyInfo?.length || 0);
-      setProperties(response.data?.propertyInfo || []);
-    } catch (error) {
+      
+      const fetchedProperties = response.data?.propertyInfo || [];
+      setProperties(fetchedProperties);
+      
+      if (fetchedProperties.length === 0) {
+        toast({
+          title: 'No Properties Found',
+          description: 'No properties were found in the system.',
+          variant: 'default',
+        });
+      }
+    } catch (error: any) {
       console.error('❌ Failed to fetch properties:', error);
       toast({
         title: 'Error',
@@ -91,6 +101,7 @@ const Index = () => {
   const handlePropertyAction = (propertyId: string, action: string) => {
     console.log('🔄 handlePropertyAction called:', { propertyId, action });
     
+    // Update local state immediately for better UX
     setProperties(prev => {
       const updatedProperties = prev.map(property => {
         if (property.propertyId === propertyId) {
@@ -104,6 +115,13 @@ const Index = () => {
       console.log('📊 Updated properties list:', updatedProperties.map(p => ({ id: p.propertyId, status: p.statusId })));
       return updatedProperties;
     });
+
+    // Refresh the properties list after a short delay to ensure UI is updated
+    console.log('🔄 Scheduling properties refresh...');
+    setTimeout(() => {
+      console.log('🔄 Refreshing properties list...');
+      fetchProperties();
+    }, 1000);
   };
 
   // Filter properties based on status
@@ -412,4 +430,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default AdminPage;
