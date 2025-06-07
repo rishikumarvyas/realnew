@@ -69,9 +69,9 @@ const PostProperty = () => {
   const [cityList, setCityList] = useState([]);
   const [locality, setLocality] = useState("");
   const [cityLoading, setCityLoading] = useState(false);
-  const [isReraApproved, setIsReraApproved] = useState<string>("false");
-  const [isOCApproved, setIsOCApproved] = useState<string>("false");
-  const [isNA, setIsNA] = useState<string>("false");
+  const [isReraApproved, setIsReraApproved] = useState<string>("");
+  const [isOCApproved, setIsOCApproved] = useState<string>("");
+  const [isNA, setIsNA] = useState<string>("");
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
     undefined
   );
