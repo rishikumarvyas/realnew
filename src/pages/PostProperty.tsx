@@ -30,6 +30,7 @@ import {
   Check,
   User,
   Camera,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import imageCompression from "browser-image-compression";
@@ -37,6 +38,9 @@ import axiosInstance from "../axiosCalls/axiosInstance";
 import { getAmenity } from "@/utils/UtilityFunctions";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -65,6 +69,12 @@ const PostProperty = () => {
   const [cityList, setCityList] = useState([]);
   const [locality, setLocality] = useState("");
   const [cityLoading, setCityLoading] = useState(false);
+  const [isReraApproved, setIsReraApproved] = useState<string>("");
+  const [isOCApproved, setIsOCApproved] = useState<string>("");
+  const [isNA, setIsNA] = useState<string>("");
+  const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     if (selectedStateId) {
@@ -89,9 +99,38 @@ const PostProperty = () => {
     }
   }, [selectedStateId]);
 
-  const checkBoxAmenities: Amenity[] = getAmenity().checkBoxAmenities;
-  const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
+  // Tenant preference options
+  const preferenceOptions = [
+    { id: "2", label: "Family" },
+    { id: "1", label: "Bachelors" },
+    { id: "3", label: "Girls" },
+    { id: "6", label: "Student" },
+    { id: "5", label: "Company" },
+    { id: "4", label: "Anyone" },
+  ];
+  const [preferenceStates, setPreferenceStates] = useState<
+    Record<string, boolean>
+  >(
+    preferenceOptions.reduce((acc, option) => {
+      acc[option.id] = false;
+      return acc;
+    }, {} as Record<string, boolean>)
+  );
 
+  // Helper for category logic
+  const isPlot = category === "Plot";
+  const isShop = category === "Shop";
+  const isFlatOrBunglowOrHouse =
+    category === "Flat" || category === "Bunglow" || category === "House";
+  const isSell = propertyType === "Sell";
+  const isRent = propertyType === "Rent";
+
+  const checkBoxAmenities: Amenity[] = isShop
+    ? getAmenity().checkBoxAmenities.filter((item) =>
+        new Set(["1", "6", "7", "8"]).has(item.id)
+      )
+    : getAmenity().checkBoxAmenities;
+  const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
   const allStates = JSON.parse(localStorage.getItem("allStates"));
   // Form validation states
   const [priceValidation, setPriceValidation] = useState(true);
@@ -108,7 +147,13 @@ const PostProperty = () => {
   const handleAmenityRadioButton = (event) => {
     setSelectedOption(event.target.value);
   };
-
+  // Fixed: Separate handler function for preferences
+  const handlePreferenceChange = (preferenceId: string) => {
+    setPreferenceStates((prev) => ({
+      ...prev,
+      [preferenceId]: !prev[preferenceId],
+    }));
+  };
   const handleImageUpload = async (e) => {
     const imageFile = e.target.files[0];
     const options = {
@@ -206,21 +251,21 @@ const PostProperty = () => {
   // Helper functions to map UI selections to API IDs
   const mapCategoryToId = (type) => {
     const categoryMap = {
-      buy: 1,
-      rent: 2,
+      Sell: 3,
+      Rent: 2,
     };
-    return categoryMap[type] || 1;
+    return categoryMap[type] || null;
   };
 
   const mapPropertyTypeToId = (type) => {
     const propertyTypeMap = {
-      "Row House": 3,
-      shop: 2,
+      House: 3,
+      Shop: 2,
       Plot: 4,
       Bunglow: 5,
       Flat: 1,
     };
-    return propertyTypeMap[type] || 1;
+    return propertyTypeMap[type] || null;
   };
 
   const mapOwnerTypeToId = (type) => {
@@ -308,6 +353,10 @@ const PostProperty = () => {
       // Create FormData for file uploads
       const formData = new FormData();
 
+      const selectedPreferences = Object.entries(preferenceStates)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([preferenceId, _]) => preferenceId);
+
       // Add account ID
       if (!user || !user.userId) {
         toast({
@@ -356,6 +405,23 @@ const PostProperty = () => {
       amenityIds.forEach((id) => {
         formData.append("AmenityIds", id.toString());
       });
+      formData.append("IsReraApproved", (isReraApproved === "true").toString());
+      formData.append("IsNA", (isNA === "true").toString());
+      formData.append("IsOCApproved", (isOCApproved === "true").toString());
+
+      // Add preference and available from date for rental properties
+      if (propertyType === "Rent") {
+        // Use the first preference or a default if none selected
+        if (selectedPreferences.length > 0) {
+          formData.append("PreferenceId", selectedPreferences[0]);
+        } else {
+          formData.append("PreferenceId", "4"); // Default to "Anyone"
+        }
+
+        if (availableFrom) {
+          formData.append("AvailableFrom", availableFrom.toISOString());
+        }
+      }
       // Upload images with fixed format to match API expectations
       images.forEach((image, index) => {
         formData.append(`Images[${index}].File`, image);
@@ -452,33 +518,12 @@ const PostProperty = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label
-                    htmlFor="propertyType"
-                    className="text-gray-700 font-medium"
-                  >
-                    Property Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select value={propertyType} onValueChange={setPropertyType}>
-                    <SelectTrigger
-                      id="propertyType"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="buy">Sell</SelectItem>
-                      <SelectItem value="rent">Rent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
                     htmlFor="category"
                     className="text-gray-700 font-medium"
                   >
                     Category <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={category} onValueChange={setCategory}>
+                  <Select value={category} onValueChange={setCategory} required>
                     <SelectTrigger
                       id="category"
                       className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
@@ -488,9 +533,40 @@ const PostProperty = () => {
                     <SelectContent>
                       <SelectItem value="Flat">Flat</SelectItem>
                       <SelectItem value="Bunglow">Bunglow</SelectItem>
-                      <SelectItem value="Row House">House</SelectItem>
+                      <SelectItem value="House">House</SelectItem>
                       <SelectItem value="Plot">Plot</SelectItem>
-                      <SelectItem value="shop">Shop</SelectItem>
+                      <SelectItem value="Shop">Shop</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="propertyType"
+                    className="text-gray-700 font-medium"
+                  >
+                    Property Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={propertyType}
+                    onValueChange={setPropertyType}
+                    required
+                  >
+                    <SelectTrigger
+                      id="propertyType"
+                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* If Plot, only show Sell */}
+                      {isPlot ? (
+                        <SelectItem value="Sell">Sell</SelectItem>
+                      ) : (
+                        <>
+                          <SelectItem value="Sell">Sell</SelectItem>
+                          <SelectItem value="Rent">Rent</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -559,7 +635,10 @@ const PostProperty = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="area" className="text-gray-700 font-medium">
+                  <Label
+                    htmlFor="area"
+                    className="text-gray-700 font-medium flex items-center"
+                  >
                     Area <span className="text-red-500">*</span> (sq.ft)
                   </Label>
                   <div className="relative">
@@ -585,80 +664,272 @@ const PostProperty = () => {
                   )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bedrooms"
-                    className="text-gray-700 font-medium"
-                  >
-                    Bedrooms
-                  </Label>
-                  <Select value={bedrooms} onValueChange={setBedrooms}>
-                    <SelectTrigger
-                      id="bedrooms"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+              {/* RERA, OC, NA Approval */}
+              {(() => {
+                // Plot: Only NA Approved
+                if (isPlot) {
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-6">
+                      <div>
+                        <Label className="text-gray-700 font-medium mb-2 block">
+                          NA Approved
+                        </Label>
+                        <RadioGroup
+                          value={isNA}
+                          onValueChange={setIsNA}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="true" id="na-yes" />
+                            <Label htmlFor="na-yes">Yes</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="false" id="na-no" />
+                            <Label htmlFor="na-no">No</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    </div>
+                  );
+                }
+                // Shop
+                if (isShop) {
+                  if (isSell) {
+                    // Show RERA & OC, hide NA
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-2 gap-6">
+                        <div>
+                          <Label className="text-gray-700 font-medium mb-2 block">
+                            RERA Approved
+                          </Label>
+                          <RadioGroup
+                            value={isReraApproved}
+                            onValueChange={setIsReraApproved}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="true" id="rera-yes" />
+                              <Label htmlFor="rera-yes">Yes</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="false" id="rera-no" />
+                              <Label htmlFor="rera-no">No</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        <div>
+                          <Label className="text-gray-700 font-medium mb-2 block">
+                            OC Approved
+                          </Label>
+                          <RadioGroup
+                            value={isOCApproved}
+                            onValueChange={setIsOCApproved}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="true" id="oc-yes" />
+                              <Label htmlFor="oc-yes">Yes</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="false" id="oc-no" />
+                              <Label htmlFor="oc-no">No</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </div>
+                    );
+                  }
+                  // Shop & Rent: show nothing
+                  return null;
+                }
+                // Flat/Bunglow/House
+                if (isFlatOrBunglowOrHouse) {
+                  if (isSell) {
+                    // Show RERA & OC, hide NA
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-2 gap-6">
+                        <div>
+                          <Label className="text-gray-700 font-medium mb-2 block">
+                            RERA Approved
+                          </Label>
+                          <RadioGroup
+                            value={isReraApproved}
+                            onValueChange={setIsReraApproved}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="true" id="rera-yes" />
+                              <Label htmlFor="rera-yes">Yes</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="false" id="rera-no" />
+                              <Label htmlFor="rera-no">No</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        <div>
+                          <Label className="text-gray-700 font-medium mb-2 block">
+                            OC Approved
+                          </Label>
+                          <RadioGroup
+                            value={isOCApproved}
+                            onValueChange={setIsOCApproved}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="true" id="oc-yes" />
+                              <Label htmlFor="oc-yes">Yes</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="false" id="oc-no" />
+                              <Label htmlFor="oc-no">No</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </div>
+                    );
+                  }
+                  // Flat/Bunglow/House & Rent: show nothing
+                  return null;
+                }
+                return null;
+              })()}
+              {/* Tenant Preferences & Available From */}
+              <div className="space-y-4">
+                {!isPlot &&
+                  !(
+                    (isShop && isSell) ||
+                    (isShop && isRent) ||
+                    (isFlatOrBunglowOrHouse && isSell) ||
+                    (isFlatOrBunglowOrHouse && !isRent)
+                  ) && (
+                    <div>
+                      <Label className="text-gray-700 font-medium mb-2 block">
+                        Tenant Preference
+                      </Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {preferenceOptions.map((option) => (
+                          <div
+                            key={option.id}
+                            className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                              preferenceStates[option.id]
+                                ? "bg-blue-100 border-2 border-blue-300"
+                                : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                            }`}
+                          >
+                            <Checkbox
+                              id={`preference-${option.id}`}
+                              checked={preferenceStates[option.id]}
+                              onCheckedChange={() =>
+                                handlePreferenceChange(option.id)
+                              }
+                              className="mr-2"
+                            />
+                            <Label
+                              htmlFor={`preference-${option.id}`}
+                              className="cursor-pointer text-sm"
+                            >
+                              {option.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                {/* Available From Date Picker */}
+                {!isPlot && isRent && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="availableFrom"
+                      className="text-gray-700 font-medium flex items-center"
                     >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 1, 2, 3, 4, 5, 6].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 0 ? "Studio" : num === 6 ? "6+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="bathrooms"
-                    className="text-gray-700 font-medium"
-                  >
-                    Bathrooms
-                  </Label>
-                  <Select value={bathrooms} onValueChange={setBathrooms}>
-                    <SelectTrigger
-                      id="bathrooms"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 5 ? "5+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="balcony"
-                    className="text-gray-700 font-medium"
-                  >
-                    Balcony
-                  </Label>
-                  <Select value={balcony} onValueChange={setBalcony}>
-                    <SelectTrigger
-                      id="balcony"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[0, 1, 2, 3, 4].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                      <Calendar className="h-4 w-4 mr-1 text-blue-600" />
+                      Available From
+                    </Label>
+                    <DatePicker
+                      date={availableFrom}
+                      setDate={setAvailableFrom}
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* Bedrooms, Bathrooms, Balcony */}
+              {!isPlot && !isShop && isFlatOrBunglowOrHouse && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="bedrooms"
+                      className="text-gray-700 font-medium"
+                    >
+                      Bedrooms
+                    </Label>
+                    <Select value={bedrooms} onValueChange={setBedrooms}>
+                      <SelectTrigger
+                        id="bedrooms"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4, 5, 6].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 0 ? "Studio" : num === 6 ? "6+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="bathrooms"
+                      className="text-gray-700 font-medium"
+                    >
+                      Bathrooms
+                    </Label>
+                    <Select value={bathrooms} onValueChange={setBathrooms}>
+                      <SelectTrigger
+                        id="bathrooms"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 5 ? "5+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="balcony"
+                      className="text-gray-700 font-medium"
+                    >
+                      Balcony
+                    </Label>
+                    <Select value={balcony} onValueChange={setBalcony}>
+                      <SelectTrigger
+                        id="balcony"
+                        className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                      >
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[0, 1, 2, 3, 4].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {num === 0 ? "No Balcony" : num === 4 ? "4+" : num}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
           {/* Location Details */}
@@ -779,73 +1050,76 @@ const PostProperty = () => {
             </CardContent>
           </Card>
           {/* Amenities */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-              <div className="flex items-center">
-                <Check className="h-5 w-5 text-blue-600 mr-2" />
-                <CardTitle>Amenities</CardTitle>
-              </div>
-              <CardDescription>
-                Select the amenities available at your property
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {checkBoxAmenities.map(({ id, amenity }) => (
-                    <div
-                      key={id}
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                        amenities.includes(id)
-                          ? "bg-blue-100 border-2 border-blue-300"
-                          : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                      }`}
-                      onClick={() => handleAmenityCheckBox(id)}
-                    >
-                      <input
-                        type="checkbox"
-                        id={id}
-                        checked={amenities.includes(id)}
-                        onChange={() => {}}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                      />
-                      <Label
-                        htmlFor={amenity}
-                        className="cursor-pointer text-sm"
-                      >
-                        {amenity}
-                      </Label>
-                    </div>
-                  ))}
+          {/* Show only if NOT Plot */}
+          {!isPlot && (
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+                <div className="flex items-center">
+                  <Check className="h-5 w-5 text-blue-600 mr-2" />
+                  <CardTitle>Amenities</CardTitle>
                 </div>
-                <div className="my-6" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {radioButtonAmenities.map(({ id, amenity }) => (
-                    <div
-                      className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                        selectedOption.includes(id)
-                          ? "bg-blue-100 border-2 border-blue-300"
-                          : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                      }`}
-                    >
-                      <label key={id}>
+                <CardDescription>
+                  Select the amenities available at your property
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {checkBoxAmenities.map(({ id, amenity }) => (
+                      <div
+                        key={id}
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                          amenities.includes(id)
+                            ? "bg-blue-100 border-2 border-blue-300"
+                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                        }`}
+                        onClick={() => handleAmenityCheckBox(id)}
+                      >
                         <input
-                          type="radio"
-                          name="furnishing"
-                          value={id}
-                          checked={selectedOption === id}
-                          onChange={handleAmenityRadioButton}
+                          type="checkbox"
+                          id={id}
+                          checked={amenities.includes(id)}
+                          onChange={() => {}}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
                         />
-                        {amenity}
-                        <br />
-                      </label>
-                    </div>
-                  ))}
+                        <Label
+                          htmlFor={amenity}
+                          className="cursor-pointer text-sm"
+                        >
+                          {amenity}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="my-6" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {radioButtonAmenities.map(({ id, amenity }) => (
+                      <div
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                          selectedOption.includes(id)
+                            ? "bg-blue-100 border-2 border-blue-300"
+                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                        }`}
+                      >
+                        <label key={id}>
+                          <input
+                            type="radio"
+                            name="furnishing"
+                            value={id}
+                            checked={selectedOption === id}
+                            onChange={handleAmenityRadioButton}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                          />
+                          {amenity}
+                          <br />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
           {/* Owner Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -876,7 +1150,6 @@ const PostProperty = () => {
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="broker">Broker</SelectItem>
                     <SelectItem value="builder">Builder</SelectItem>
-                    <SelectItem value="builder">Normal</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
