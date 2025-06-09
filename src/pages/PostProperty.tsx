@@ -122,7 +122,7 @@ const PostProperty = () => {
   const isShop = category === "Shop";
   const isFlatOrBunglowOrHouse =
     category === "Flat" || category === "Bunglow" || category === "House";
-  const isSell = propertyType === "Sell";
+  const isSell = propertyType === "Buy";
   const isRent = propertyType === "Rent";
 
   const checkBoxAmenities: Amenity[] = isShop
@@ -251,7 +251,7 @@ const PostProperty = () => {
   // Helper functions to map UI selections to API IDs
   const mapCategoryToId = (type) => {
     const categoryMap = {
-      Sell: 3,
+      Buy: 1,
       Rent: 2,
     };
     return categoryMap[type] || null;
@@ -405,9 +405,9 @@ const PostProperty = () => {
       amenityIds.forEach((id) => {
         formData.append("AmenityIds", id.toString());
       });
-      formData.append("IsReraApproved", (isReraApproved === "true").toString());
-      formData.append("IsNA", (isNA === "true").toString());
-      formData.append("IsOCApproved", (isOCApproved === "true").toString());
+      formData.append("IsReraApproved", isReraApproved.toString());
+      formData.append("IsNA", isNA.toString());
+      formData.append("IsOCApproved", isOCApproved.toString());
 
       // Add preference and available from date for rental properties
       if (propertyType === "Rent") {
@@ -560,10 +560,10 @@ const PostProperty = () => {
                     <SelectContent>
                       {/* If Plot, only show Sell */}
                       {isPlot ? (
-                        <SelectItem value="Sell">Sell</SelectItem>
+                        <SelectItem value="Buy">Sell</SelectItem>
                       ) : (
                         <>
-                          <SelectItem value="Sell">Sell</SelectItem>
+                          <SelectItem value="Buy">Sell</SelectItem>
                           <SelectItem value="Rent">Rent</SelectItem>
                         </>
                       )}
