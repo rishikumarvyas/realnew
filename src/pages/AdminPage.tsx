@@ -3,20 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import PropertyReviewCard from '@/components/PropertyReviewCard';
 import { 
   Home, 
-  Eye,
   Filter,
   Clock,
   CheckCircle,
   XCircle,
   Loader2,
-  AlertCircle,
   Star,
   User,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import axiosInstance from "../axiosCalls/axiosInstance";
 
@@ -34,55 +35,87 @@ interface Property {
   images?: string[];
   description?: string;
   createdDate?: string;
+  mainImageUrl?: string;
+  locality?: string;
+  address?: string;
+  city?: string;
+  bedroom?: number;
+  bathroom?: number;
+  likeCount?: number;
+  submittedBy?: string;
 }
 
 const AdminPage = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(true);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(-1);
+  const [dateFilter, setDateFilter] = useState("all");
   const { toast } = useToast();
 
-  // Fetch properties from API
-  const fetchProperties = async () => {
-    console.log('🔄 Fetching properties...');
-    setLoading(true);
+  // Fetch properties from API for specific status
+  const fetchPropertiesByStatus = async (statusId: number) => {
+    console.log('🔄 Fetching properties for statusId:', statusId);
+    
+    const baseBody = {
+      superCategoryId: 0,
+      propertyTypeIds: [],
+      accountId: "",
+      searchTerm: "",
+      statusId: statusId
+    };
+
     try {
-      const body = {
-        superCategoryId: 0,
-        propertyTypeIds: [],
-        statusId: 0, // Get all properties
-        accountId: "",
-        searchTerm: "",
-        minPrice: 0,
-        maxPrice: 0,
-        bedroom: 0,
-        balcony: 0,
-        bathroom: 0,
-        minArea: 0,
-        maxArea: 0,
-        pageNumber,
-        pageSize,
-      };
+      const response = await axiosInstance.post('/api/Account/GetProperty', baseBody);
+      const properties = response.data?.propertyInfo || [];
       
-      console.log('📤 Fetching properties with body:', body);
-      const response = await axiosInstance.post('/api/Account/GetProperty', body);
-      console.log('📥 API Response:', response.data);
-      console.log('📊 Total properties fetched:', response.data?.propertyInfo?.length || 0);
+      console.log(`📥 Received ${properties.length} properties for statusId ${statusId}`);
+      console.log('Properties:', properties.map(p => ({ id: p.propertyId, status: p.statusId, title: p.title })));
       
-      const fetchedProperties = response.data?.propertyInfo || [];
-      setProperties(fetchedProperties);
+      return properties.map(property => ({
+        ...property,
+        statusId: String(property.statusId)
+      }));
+    } catch (error) {
+      console.error(`❌ Error fetching properties for status ${statusId}:`, error);
+      return [];
+    }
+  };
+
+  // Fetch all properties
+  const fetchAllProperties = async () => {
+    console.log('🔄 Fetching all properties...');
+    setLoading(true);
+    
+    try {
+      // Fetch properties for all statuses in parallel
+      const [pendingProps, approvedProps, rejectedProps] = await Promise.all([
+        fetchPropertiesByStatus(1), // Pending
+        fetchPropertiesByStatus(2), // Approved  
+        fetchPropertiesByStatus(3)  // Rejected
+      ]);
+
+      // Combine all properties
+      const allProperties = [...pendingProps, ...approvedProps, ...rejectedProps];
       
-      if (fetchedProperties.length === 0) {
+      console.log('📊 Properties fetched successfully:', {
+        pending: pendingProps.length,
+        approved: approvedProps.length,
+        rejected: rejectedProps.length,
+        total: allProperties.length
+      });
+      
+      setProperties(allProperties);
+      
+      if (allProperties.length === 0) {
         toast({
           title: 'No Properties Found',
-          description: 'No properties were found in the system.',
+          description: 'There are no properties available at the moment.',
           variant: 'default',
         });
       }
-    } catch (error: any) {
-      console.error('❌ Failed to fetch properties:', error);
+
+    } catch (error) {
+      console.error('❌ Error fetching properties:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch properties. Please try again.',
@@ -94,54 +127,145 @@ const AdminPage = () => {
   };
 
   useEffect(() => {
-    fetchProperties();
-  }, [pageNumber, pageSize]);
+    fetchAllProperties();
+  }, []);
 
-  // Handle property action (approve/reject)
-  const handlePropertyAction = (propertyId: string, action: string) => {
-    console.log('🔄 handlePropertyAction called:', { propertyId, action });
+  // Handle property action - call API and refresh data
+  const handlePropertyAction = async (propertyId: string, action: string, newStatus: string) => {
+    console.log('🔄 handlePropertyAction called:', { propertyId, action, newStatus });
     
-    // Update local state immediately for better UX
-    setProperties(prev => {
-      const updatedProperties = prev.map(property => {
-        if (property.propertyId === propertyId) {
-          const newStatusId = action === 'approve' ? '2' : '3';
-          console.log(`✅ Property ${propertyId} status changed from ${property.statusId} to ${newStatusId}`);
-          return { ...property, statusId: newStatusId };
-        }
-        return property;
-      });
-      
-      console.log('📊 Updated properties list:', updatedProperties.map(p => ({ id: p.propertyId, status: p.statusId })));
-      return updatedProperties;
-    });
+    try {
+      const payload = { propertyId: propertyId.trim() };
+      let response;
 
-    // Refresh the properties list after a short delay to ensure UI is updated
-    console.log('🔄 Scheduling properties refresh...');
-    setTimeout(() => {
-      console.log('🔄 Refreshing properties list...');
-      fetchProperties();
-    }, 1000);
+      // Call appropriate API based on action
+      if (action === 'approve' || action === 'reconsider') {
+        console.log('🔄 Calling Approve API for:', propertyId);
+        response = await axiosInstance.post('/api/Admin/Approve', payload);
+      } else if (action === 'reject' || action === 'revoke') {
+        console.log('🔄 Calling Reject API for:', propertyId);
+        response = await axiosInstance.post('/api/Admin/Reject', payload);
+      }
+
+      // Check if API call was successful
+      if (response && response.status === 200) {
+        console.log('✅ API call successful, refreshing properties...');
+        
+        // Refresh all properties after successful action
+        await fetchAllProperties();
+        
+        // Switch to appropriate tab based on new status
+        switch (newStatus) {
+          case '2': // Approved
+            setActiveTab('approved');
+            break;
+          case '3': // Rejected  
+            setActiveTab('rejected');
+            break;
+          case '1': // Pending
+            setActiveTab('pending');
+            break;
+        }
+        
+        const actionMessages = {
+          approve: 'Property approved successfully!',
+          reject: 'Property rejected successfully!',
+          revoke: 'Property approval revoked successfully!',
+          reconsider: 'Property moved for reconsideration!'
+        };
+
+        toast({
+          title: '✅ Success!',
+          description: actionMessages[action as keyof typeof actionMessages] || 'Action completed successfully!',
+          className: 'bg-green-50 border-green-200 text-green-800',
+        });
+      } else {
+        throw new Error('API call failed');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in property action:', error);
+      toast({
+        title: '❌ Error',
+        description: `Failed to ${action} property. Please try again.`,
+        variant: 'destructive',
+      });
+    }
   };
 
-  // Filter properties based on status
-  const getFilteredProperties = (status: string) => {
-    console.log(`🔍 Filtering properties for status: ${status}`);
-    console.log('📋 All properties:', properties.map(p => ({ id: p.propertyId, status: p.statusId })));
+  // Filter properties by date
+  const filterPropertiesByDate = (properties: Property[]) => {
+    if (dateFilter === "all") return properties;
     
-    if (status === "all") return properties;
-    if (status === "pending") return properties.filter(p => p.statusId === '1');
-    if (status === "approved") return properties.filter(p => p.statusId === '2');
-    if (status === "rejected") return properties.filter(p => p.statusId === '3');
-    return properties;
+    const now = new Date();
+    const cutoffDate = new Date();
+    
+    switch (dateFilter) {
+      case "1month":
+        cutoffDate.setMonth(now.getMonth() - 1);
+        break;
+      case "2months":
+        cutoffDate.setMonth(now.getMonth() - 2);
+        break;
+      case "3months":
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      default:
+        return properties;
+    }
+    
+    return properties.filter(property => {
+      if (!property.createdDate) return false;
+      const propertyDate = new Date(property.createdDate);
+      return propertyDate >= cutoffDate;
+    });
+  };
+
+  // Filter properties based on status and date
+  const getFilteredProperties = (tab: string) => {
+    console.log('🔍 Filtering properties for tab:', tab);
+    
+    if (!properties || properties.length === 0) {
+      console.log('⚠️ No properties available to filter');
+      return [];
+    }
+
+    // For 'all' tab, return all properties
+    if (tab === 'all') {
+      return filterPropertiesByDate(properties);
+    }
+
+    const statusMap = {
+      'pending': '1',
+      'approved': '2', 
+      'rejected': '3'
+    };
+
+    const targetStatus = statusMap[tab as keyof typeof statusMap];
+    console.log('🎯 Looking for properties with statusId:', targetStatus, 'for tab:', tab);
+
+    // Filter properties by status first, then by date
+    const statusFiltered = properties.filter(property => {
+      const matches = property.statusId === targetStatus;
+      console.log(`Property ${property.propertyId}: status=${property.statusId}, target=${targetStatus}, matches=${matches}`);
+      return matches;
+    });
+
+    const finalFiltered = filterPropertiesByDate(statusFiltered);
+    
+    console.log(`📊 Filtered properties (${tab}):`, finalFiltered.length);
+    console.log('📋 Filtered properties details:', finalFiltered.map(p => ({ id: p.propertyId, status: p.statusId, title: p.title })));
+    
+    return finalFiltered;
   };
 
   const getStatusCounts = () => {
+    const dateFilteredProperties = filterPropertiesByDate(properties);
     return {
-      pending: properties.filter(p => p.statusId === '1').length,
-      approved: properties.filter(p => p.statusId === '2').length,
-      rejected: properties.filter(p => p.statusId === '3').length,
-      total: properties.length
+      pending: dateFilteredProperties.filter(p => p.statusId === '1').length,
+      approved: dateFilteredProperties.filter(p => p.statusId === '2').length,
+      rejected: dateFilteredProperties.filter(p => p.statusId === '3').length,
+      total: dateFilteredProperties.length
     };
   };
 
@@ -161,7 +285,7 @@ const AdminPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30">
-      {/* Ultra Modern Header */}
+      {/* Modern Header */}
       <div className="bg-white/95 backdrop-blur-lg border-b border-slate-200/60 shadow-lg sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -175,10 +299,24 @@ const AdminPage = () => {
               </p>
             </div>
             <div className="flex items-center space-x-3">
+              {/* Date Filter */}
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-[140px] bg-white border-slate-300">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="1month">Last Month</SelectItem>
+                  <SelectItem value="2months">Last 2 Months</SelectItem>
+                  <SelectItem value="3months">Last 3 Months</SelectItem>
+                </SelectContent>
+              </Select>
+              
               <Button
                 onClick={() => {
                   console.log('🔄 Refresh button clicked');
-                  fetchProperties();
+                  fetchAllProperties();
                 }}
                 variant="outline"
                 size="sm"
@@ -187,9 +325,10 @@ const AdminPage = () => {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh
               </Button>
+              
               <Badge className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 shadow-lg">
                 <User className="w-4 h-4 mr-2" />
-                Admin Control Center
+                Admin
               </Badge>
             </div>
           </div>
@@ -268,14 +407,20 @@ const AdminPage = () => {
           </Card>
         </div>
 
-        {/* Ultra Modern Properties Section */}
+        {/* Properties Section */}
         <Card className="bg-white/95 backdrop-blur-lg shadow-2xl border-0 overflow-hidden rounded-2xl">
           <CardHeader className="border-b border-slate-200/60 bg-gradient-to-r from-slate-50/80 via-blue-50/40 to-purple-50/40 backdrop-blur-sm">
-            <CardTitle className="flex items-center text-slate-800 text-xl font-bold">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
-                <Filter className="w-5 h-5 text-white" />
+            <CardTitle className="flex items-center justify-between text-slate-800 text-xl font-bold">
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                  <Filter className="w-5 h-5 text-white" />
+                </div>
+                Property Control Center
               </div>
-              Property Control Center
+              <div className="flex items-center text-sm text-slate-600">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                {dateFilter === "all" ? "All Time" : `Last ${dateFilter.replace('months', ' Months').replace('month', ' Month')}`}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -334,93 +479,47 @@ const AdminPage = () => {
 
               {/* Tab Content */}
               <div className="p-4 sm:p-6">
-                <TabsContent value="pending" className="mt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredProperties.length > 0 ? (
-                      filteredProperties.map((property) => (
-                        <PropertyReviewCard 
-                          key={property.propertyId} 
-                          property={property} 
-                          onAction={handlePropertyAction}
-                        />
-                      ))
-                    ) : (
-                      <div className="col-span-full text-center py-12">
-                        <Clock className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-slate-600 mb-2">No Pending Properties</h3>
-                        <p className="text-slate-500">All properties have been reviewed.</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="approved" className="mt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredProperties.length > 0 ? (
-                      filteredProperties.map((property) => (
-                        <PropertyReviewCard 
-                          key={property.propertyId} 
-                          property={property} 
-                          onAction={handlePropertyAction}
-                        />
-                      ))
-                    ) : (
-                      <div className="col-span-full text-center py-12">
-                        <CheckCircle className="w-16 h-16 text-emerald-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-slate-600 mb-2">No Approved Properties</h3>
-                        <p className="text-slate-500">No properties have been approved yet.</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="rejected" className="mt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredProperties.length > 0 ? (
-                      filteredProperties.map((property) => (
-                        <PropertyReviewCard 
-                          key={property.propertyId} 
-                          property={property} 
-                          onAction={handlePropertyAction}
-                        />
-                      ))
-                    ) : (
-                      <div className="col-span-full text-center py-12">
-                        <XCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-slate-600 mb-2">No Rejected Properties</h3>
-                        <p className="text-slate-500">No properties have been rejected yet.</p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="all" className="mt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredProperties.length > 0 ? (
-                      filteredProperties.map((property) => (
-                        <PropertyReviewCard 
-                          key={property.propertyId} 
-                          property={property} 
-                          onAction={handlePropertyAction}
-                        />
-                      ))
-                    ) : (
-                      <div className="col-span-full text-center py-12">
-                        <Home className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-slate-600 mb-2">No Properties Found</h3>
-                        <p className="text-slate-500">No properties are available at the moment.</p>
-                        <Button 
-                          onClick={fetchProperties}
-                          variant="outline" 
-                          className="mt-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:from-blue-100 hover:to-purple-100"
-                        >
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          Refresh Properties
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
+                {['pending', 'approved', 'rejected', 'all'].map((tabValue) => (
+                  <TabsContent key={tabValue} value={tabValue} className="mt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {filteredProperties.length > 0 ? (
+                        filteredProperties.map((property) => (
+                          <PropertyReviewCard 
+                            key={property.propertyId} 
+                            property={property} 
+                            onAction={handlePropertyAction}
+                          />
+                        ))
+                      ) : (
+                        <div className="col-span-full text-center py-12">
+                          {tabValue === 'pending' && <Clock className="w-16 h-16 text-slate-300 mx-auto mb-4" />}
+                          {tabValue === 'approved' && <CheckCircle className="w-16 h-16 text-emerald-300 mx-auto mb-4" />}
+                          {tabValue === 'rejected' && <XCircle className="w-16 h-16 text-red-300 mx-auto mb-4" />}
+                          {tabValue === 'all' && <Home className="w-16 h-16 text-slate-300 mx-auto mb-4" />}
+                          <h3 className="text-lg font-semibold text-slate-600 mb-2">
+                            No {tabValue === 'all' ? '' : tabValue.charAt(0).toUpperCase() + tabValue.slice(1)} Properties
+                          </h3>
+                          <p className="text-slate-500">
+                            {tabValue === 'pending' && 'All properties have been reviewed.'}
+                            {tabValue === 'approved' && 'No properties have been approved yet.'}
+                            {tabValue === 'rejected' && 'No properties have been rejected yet.'}
+                            {tabValue === 'all' && 'No properties are available at the moment.'}
+                          </p>
+                          {tabValue === 'all' && (
+                            <Button 
+                              onClick={fetchAllProperties}
+                              variant="outline" 
+                              className="mt-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:from-blue-100 hover:to-purple-100"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Refresh Properties
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                ))}
               </div>
             </Tabs>
           </CardContent>

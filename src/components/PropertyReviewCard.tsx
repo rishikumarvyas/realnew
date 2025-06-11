@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -9,19 +8,17 @@ import {
   Bath, 
   Eye,
   Clock,
-  Building,
-  Square,
   CheckCircle,
   XCircle,
   Loader2,
-  Heart,
-  Share2,
   Image,
-  Ruler
+  Ruler,
+  User,
+  Calendar,
+  RotateCcw
 } from 'lucide-react';
 import axiosInstance from "../axiosCalls/axiosInstance";
-import { Link } from 'react-router-dom';
-
+import { useNavigate } from 'react-router-dom';
 
 interface Property {
   propertyId: string;
@@ -44,101 +41,65 @@ interface Property {
   bedroom?: number;
   bathroom?: number;
   likeCount?: number;
+  submittedBy?: string;
 }
 
 interface PropertyReviewCardProps {
   property: Property;
-  onAction?: (propertyId: string, action: string) => void;
+  onAction?: (propertyId: string, action: string, newStatus: string) => void;
 }
 
 const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({ property, onAction }) => {
   const [loading, setLoading] = useState(false);
   const [actionType, setActionType] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Add debug logging for component mount
-  React.useEffect(() => {
-    console.log('PropertyReviewCard mounted with property:', property);
-  }, [property]);
+  const validatePropertyId = (propertyId: string): boolean => {
+    if (!propertyId || propertyId.trim() === '') {
+      console.error('PropertyId is empty or undefined');
+      toast({
+        title: 'Validation Error',
+        description: 'Property ID is missing. Cannot perform this action.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    return true;
+  };
 
   const handleApprove = async () => {
-    console.log('🔥 Approve button clicked!');
-    console.log('Current property:', property);
-    
-    if (loading) {
-      console.log('⏳ Already loading, skipping...');
-      return;
-    }
+    if (!validatePropertyId(property.propertyId) || loading) return;
     
     setLoading(true);
     setActionType('approve');
     
     try {
-      console.log('=== APPROVE PROPERTY ===');
-      console.log('Property ID:', property.propertyId);
+      const cleanPropertyId = String(property.propertyId).trim();
+      const payload = { propertyId: cleanPropertyId };
       
-      // Format the payload exactly as expected by the API
-      const payload = {
-        propertyId: property.propertyId
-      };
-      
-      console.log('Payload:', payload);
-      
-      console.log('Making API call to /api/Admin/Approve with payload:', payload);
-      
+      console.log('🔄 Approving property:', cleanPropertyId);
       const response = await axiosInstance.post('/api/Admin/Approve', payload);
       
-      console.log('Approve Response:', response);
+      console.log('📥 Approve response:', response.data);
       
+      // Check for success - status code 200
       if (response.status === 200) {
-        const responseData = response.data;
-        console.log('Response data:', responseData);
-        
-        if (responseData.statusCode === 0) {
-          toast({
-            title: 'Success!',
-            description: responseData.message || `Property ${property.propertyId} approved successfully`,
-          });
-          
-          if (onAction) {
-            console.log('Calling onAction with:', { propertyId: property.propertyId, action: 'approve' });
-            onAction(property.propertyId, 'approve');
-          } else {
-            console.warn('onAction callback is not provided');
-          }
-        } else {
-          console.log('API returned error statusCode:', responseData.statusCode);
-          toast({
-            title: 'API Error',
-            description: responseData.message || `API returned status code: ${responseData.statusCode}`,
-            variant: 'destructive',
-          });
-        }
-      } else {
-        console.error('Unexpected response status:', response.status);
         toast({
-          title: 'Error',
-          description: 'Failed to approve property. Please try again.',
-          variant: 'destructive',
+          title: '✅ Success!',
+          description: 'Property has been approved successfully',
+          className: 'bg-green-50 border-green-200 text-green-800',
         });
+        // Pass statusId '2' for approved and trigger refresh
+        onAction?.(cleanPropertyId, 'approve', '2');
+      } else {
+        throw new Error('Failed to approve property');
       }
     } catch (error: any) {
-      console.error('=== APPROVE ERROR ===');
-      console.error('Error details:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
-      
-      let errorMessage = 'Failed to approve property. Please try again.';
-      
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        errorMessage = 'Please log in again to continue.';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
+      console.error('❌ Approve error:', error);
       toast({
-        title: 'Error',
-        description: errorMessage,
+        title: '❌ Error',
+        description: 'Failed to approve property. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -148,83 +109,37 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({ property, onAct
   };
 
   const handleReject = async () => {
-    console.log('🔥 Reject button clicked!');
-    console.log('Current property:', property);
-    
-    if (loading) {
-      console.log('⏳ Already loading, skipping...');
-      return;
-    }
+    if (!validatePropertyId(property.propertyId) || loading) return;
     
     setLoading(true);
     setActionType('reject');
     
     try {
-      console.log('=== REJECT PROPERTY ===');
-      console.log('Property ID:', property.propertyId);
+      const cleanPropertyId = String(property.propertyId).trim();
+      const payload = { propertyId: cleanPropertyId };
       
-      // Format the payload exactly as expected by the API
-      const payload = {
-        propertyId: property.propertyId
-      };
-      
-      console.log('Payload:', payload);
-      
-      console.log('Making API call to /api/Admin/Reject with payload:', payload);
-      
+      console.log('🔄 Rejecting property:', cleanPropertyId);
       const response = await axiosInstance.post('/api/Admin/Reject', payload);
       
-      console.log('Reject Response:', response);
+      console.log('📥 Reject response:', response.data);
       
+      // Check for success - status code 200
       if (response.status === 200) {
-        const responseData = response.data;
-        console.log('Response data:', responseData);
-        
-        if (responseData.statusCode === 0) {
-          toast({
-            title: 'Property Rejected',
-            description: responseData.message || `Property ${property.propertyId} has been rejected successfully`,
-          });
-          
-          if (onAction) {
-            console.log('Calling onAction with:', { propertyId: property.propertyId, action: 'reject' });
-            onAction(property.propertyId, 'reject');
-          } else {
-            console.warn('onAction callback is not provided');
-          }
-        } else {
-          console.log('API returned error statusCode:', responseData.statusCode);
-          toast({
-            title: 'API Error',
-            description: responseData.message || `API returned status code: ${responseData.statusCode}`,
-            variant: 'destructive',
-          });
-        }
-      } else {
-        console.error('Unexpected response status:', response.status);
         toast({
-          title: 'Error',
-          description: 'Failed to reject property. Please try again.',
-          variant: 'destructive',
+          title: '✅ Success!',
+          description: 'Property has been rejected successfully',
+          className: 'bg-green-50 border-green-200 text-green-800',
         });
+        // Pass statusId '3' for rejected and trigger refresh
+        onAction?.(cleanPropertyId, 'reject', '3');
+      } else {
+        throw new Error('Failed to reject property');
       }
     } catch (error: any) {
-      console.error('=== REJECT ERROR ===');
-      console.error('Error details:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
-      
-      let errorMessage = 'Failed to reject property. Please try again.';
-      
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        errorMessage = 'Please log in again to continue.';
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
+      console.error('❌ Reject error:', error);
       toast({
-        title: 'Error',
-        description: errorMessage,
+        title: '❌ Error',
+        description: 'Failed to reject property. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -233,34 +148,112 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({ property, onAct
     }
   };
 
+  const handleRevoke = async () => {
+    if (!validatePropertyId(property.propertyId) || loading) return;
+    
+    setLoading(true);
+    setActionType('revoke');
+    
+    try {
+      const cleanPropertyId = String(property.propertyId).trim();
+      const payload = { propertyId: cleanPropertyId };
+      
+      console.log('🔄 Revoking property:', cleanPropertyId);
+      const response = await axiosInstance.post('/api/Admin/Reject', payload);
+      
+      if (response.status === 200) {
+        toast({
+          title: '✅ Success!',
+          description: 'Property approval has been revoked successfully',
+          className: 'bg-green-50 border-green-200 text-green-800',
+        });
+        // Pass statusId '3' for revoked (moves to rejected)
+        onAction?.(cleanPropertyId, 'revoke', '3');
+      } else {
+        throw new Error('Failed to revoke property');
+      }
+    } catch (error: any) {
+      console.error('❌ Revoke error:', error);
+      toast({
+        title: '❌ Error',
+        description: 'Failed to revoke property. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+      setActionType(null);
+    }
+  };
+
+  const handleReconsider = async () => {
+    if (!validatePropertyId(property.propertyId) || loading) return;
+    
+    setLoading(true);
+    setActionType('reconsider');
+    
+    try {
+      const cleanPropertyId = String(property.propertyId).trim();
+      const payload = { propertyId: cleanPropertyId };
+      
+      console.log('🔄 Reconsidering property:', cleanPropertyId);
+      const response = await axiosInstance.post('/api/Admin/Approve', payload);
+      
+      if (response.status === 200) {
+        toast({
+          title: '✅ Success!',
+          description: 'Property moved for reconsideration successfully',
+          className: 'bg-green-50 border-green-200 text-green-800',
+        });
+        // Pass statusId '2' for reconsider (moves to approved)
+        onAction?.(cleanPropertyId, 'reconsider', '2');
+      } else {
+        throw new Error('Failed to reconsider property');
+      }
+    } catch (error: any) {
+      console.error('❌ Reconsider error:', error);
+      toast({
+        title: '❌ Error',
+        description: 'Failed to reconsider property. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+      setActionType(null);
+    }
+  };
+
+  const handleViewProperty = () => {
+    if (!validatePropertyId(property.propertyId)) return;
+    navigate(`/properties/${property.propertyId}`);
+  };
+
   const getStatusBadge = () => {
     const statusMap = {
       '1': { 
-        label: 'Pending Review', 
+        label: 'Pending', 
         icon: Clock, 
-        color: 'bg-gradient-to-r from-amber-400 to-orange-500 text-white',
-        pulse: true
+        className: 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-200',
+        dotColor: 'bg-amber-500'
       },
       '2': { 
         label: 'Approved', 
         icon: CheckCircle, 
-        color: 'bg-gradient-to-r from-emerald-400 to-green-500 text-white',
-        pulse: false
+        className: 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-800 border border-emerald-200',
+        dotColor: 'bg-emerald-500'
       },
       '3': { 
         label: 'Rejected', 
         icon: XCircle, 
-        color: 'bg-gradient-to-r from-red-400 to-rose-500 text-white',
-        pulse: false
+        className: 'bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border border-red-200',
+        dotColor: 'bg-red-500'
       }
     };
     
     const status = statusMap[property.statusId as keyof typeof statusMap] || statusMap['1'];
-    const IconComponent = status.icon;
     
     return (
-      <Badge className={`${status.color} border-0 ${status.pulse ? 'animate-pulse' : ''}`}>
-        <IconComponent className="w-3 h-3 mr-1" />
+      <Badge className={`${status.className} font-medium px-3 py-1`}>
+        <div className={`w-2 h-2 rounded-full ${status.dotColor} mr-2`}></div>
         {status.label}
       </Badge>
     );
@@ -268,147 +261,228 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({ property, onAct
 
   const formatPrice = (price?: number) => {
     if (!price) return 'Price on request';
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(price);
+    return `₹${price.toLocaleString()}`;
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const renderActionButtons = () => {
+    const baseButtonClass = "flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+    const buttons = [];
+
+    // Add view property button first
+    buttons.push(
+      <button
+        key="view"
+        type="button"
+        onClick={handleViewProperty}
+        className={`${baseButtonClass} text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 hover:border-blue-300 focus:ring-blue-400`}
+      >
+        <Eye className="w-4 h-4 mr-2" />
+        <span className="truncate">View Property</span>
+      </button>
+    );
+
+    // Status-specific action buttons
+    switch (property.statusId) {
+      case '1': // Pending
+        buttons.push(
+          <button
+            key="approve"
+            type="button"
+            onClick={handleApprove}
+            disabled={loading}
+            className={`${baseButtonClass} text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 focus:ring-emerald-500 shadow-lg hover:shadow-emerald-500/25`}
+          >
+            {loading && actionType === 'approve' ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle className="w-4 h-4 mr-2" />
+            )}
+            <span className="truncate">Approve</span>
+          </button>
+        );
+        
+        buttons.push(
+          <button
+            key="reject"
+            type="button"
+            onClick={handleReject}
+            disabled={loading}
+            className={`${baseButtonClass} text-white bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 focus:ring-red-500 shadow-lg hover:shadow-red-500/25`}
+          >
+            {loading && actionType === 'reject' ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <XCircle className="w-4 h-4 mr-2" />
+            )}
+            <span className="truncate">Reject</span>
+          </button>
+        );
+        break;
+      
+      case '2': // Approved
+        buttons.push(
+          <button
+            key="revoke"
+            type="button"
+            onClick={handleRevoke}
+            disabled={loading}
+            className={`${baseButtonClass} text-red-700 bg-gradient-to-r from-red-50 to-rose-50 hover:from-red-100 hover:to-rose-100 border border-red-200 hover:border-red-300 focus:ring-red-400`}
+          >
+            {loading && actionType === 'revoke' ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <XCircle className="w-4 h-4 mr-2" />
+            )}
+            <span className="truncate">Revoke</span>
+          </button>
+        );
+        break;
+      
+      case '3': // Rejected
+        buttons.push(
+          <button
+            key="reconsider"
+            type="button"
+            onClick={handleReconsider}
+            disabled={loading}
+            className={`${baseButtonClass} text-emerald-700 bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border border-emerald-200 hover:border-emerald-300 focus:ring-emerald-400`}
+          >
+            {loading && actionType === 'reconsider' ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4 mr-2" />
+            )}
+            <span className="truncate">Reconsider</span>
+          </button>
+        );
+        break;
+    }
+
+    // Render buttons in rows of 2
+    const buttonRows = [];
+    for (let i = 0; i < buttons.length; i += 2) {
+      const rowButtons = buttons.slice(i, i + 2);
+      buttonRows.push(
+        <div key={i} className="flex gap-3">
+          {rowButtons}
+        </div>
+      );
+    }
+
+    return buttonRows;
   };
 
   return (
-    <Card className="group relative overflow-hidden hover:shadow-2xl transition-all duration-500 border-0 shadow-lg bg-white/90 backdrop-blur-sm hover:bg-white hover:scale-[1.02] transform">
-      <div className="relative aspect-[4/3] overflow-hidden">
+    <Card className="group relative overflow-hidden hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-white hover:scale-[1.01] transform">
+      {/* Image Section */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
         {property.mainImageUrl ? (
-          <img
-            src={property.mainImageUrl}
-            alt={property.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            onError={(e) => {
-              console.error('Image failed to load:', property.mainImageUrl);
-              e.currentTarget.src = 'https://placehold.co/600x400?text=No+Image';
-            }}
-          />
+          <>
+            <img
+              src={property.mainImageUrl}
+              alt={property.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                e.currentTarget.src = 'https://placehold.co/600x400/f1f5f9/64748b?text=No+Image+Available';
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </>
         ) : (
-          <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-            <Image className="w-12 h-12 text-slate-400" />
+          <div className="w-full h-full flex items-center justify-center">
+            <Image className="w-16 h-16 text-slate-400" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        {/* Status Badge - Top Right */}
+        <div className="absolute top-4 right-4">
+          {getStatusBadge()}
+        </div>
+        
+        {/* Property Type Badge - Top Left */}
+        <div className="absolute top-4 left-4">
+          <Badge className="bg-white/90 backdrop-blur-sm text-slate-700 border-0 font-medium">
+            {property.propertyType}
+          </Badge>
+        </div>
       </div>
 
-      <CardContent className="p-4">
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-lg text-slate-900 line-clamp-1">
-                {property.title}
-              </h3>
-              <p className="text-sm text-slate-500 line-clamp-1">
-                {property.locality || property.address}, {property.city}
-              </p>
-            </div>
-            <Badge variant="outline" className="shrink-0 bg-white/80 backdrop-blur-sm">
-              {property.propertyType}
-            </Badge>
+      <CardContent className="p-6">
+        {/* Header */}
+        <div className="mb-4">
+          <h3 className="font-bold text-xl text-slate-900 mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">
+            {property.title}
+          </h3>
+          <div className="flex items-center text-slate-600 mb-3">
+            <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+            <span className="text-sm line-clamp-1">
+              {property.locality && property.city 
+                ? `${property.locality}, ${property.city}`
+                : property.address || 'Location not specified'
+              }
+            </span>
           </div>
+          <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed">
+            {property.description || 'No description available for this property.'}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <div className="flex items-center gap-1">
-              <Bed className="w-4 h-4" />
-              <span>{property.bedroom} Beds</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Bath className="w-4 h-4" />
-              <span>{property.bathroom} Baths</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Ruler className="w-4 h-4" />
-              <span>{property.area} sq.ft</span>
-            </div>
+        {/* Property Details */}
+        <div className="flex items-center justify-between mb-4 py-3 px-4 bg-slate-50 rounded-xl">
+          <div className="flex items-center text-slate-600">
+            <Bed className="w-4 h-4 mr-1" />
+            <span className="text-sm font-medium">{property.bedroom || 0}</span>
           </div>
+          <div className="flex items-center text-slate-600">
+            <Bath className="w-4 h-4 mr-1" />
+            <span className="text-sm font-medium">{property.bathroom || 0}</span>
+          </div>
+          <div className="flex items-center text-slate-600">
+            <Ruler className="w-4 h-4 mr-1" />
+            <span className="text-sm font-medium">{property.area || 0} sq ft</span>
+          </div>
+        </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-semibold text-slate-900">
-                ₹{property.price?.toLocaleString() || 'Price on request'}
-              </span>
-              <span className="text-sm text-slate-500">/month</span>
-            </div>
-            <div className="flex items-center gap-1 text-slate-500">
-              <Heart className="w-4 h-4" />
-              <span className="text-sm">{property.likeCount || 0}</span>
-            </div>
+        {/* Price */}
+        <div className="mb-4">
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold text-slate-900">
+              {formatPrice(property.price)}
+            </span>
+            <span className="text-slate-500 text-sm ml-1">/mo</span>
+          </div>
+        </div>
+
+        {/* Submission Info */}
+        <div className="flex items-center justify-between text-xs text-slate-500 mb-4 py-2">
+          <div className="flex items-center">
+            <User className="w-3 h-3 mr-1" />
+            <span>By {property.submittedBy || 'Unknown'}</span>
+          </div>
+          <div className="flex items-center">
+            <Calendar className="w-3 h-3 mr-1" />
+            <span>{formatDate(property.createdDate)}</span>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-4 mt-4 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('View Details clicked for property:', property.propertyId);
-              window.location.href = `/properties/${property.propertyId}`;
-            }}
-            className="flex-1 h-10 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 cursor-pointer"
-          >
-            <div className="flex items-center justify-center">
-              <Eye className="w-4 h-4 mr-2" />
-              View Details
-            </div>
-          </button>
-          
-          {property.statusId === '1' && (
-            <>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('Approve button clicked for property:', property.propertyId);
-                  handleApprove();
-                }}
-                disabled={loading}
-                className="flex-1 h-10 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-green-600 rounded-md hover:from-emerald-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <div className="flex items-center justify-center">
-                  {loading && actionType === 'approve' ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                  )}
-                  Approve
-                </div>
-              </button>
-              
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('Reject button clicked for property:', property.propertyId);
-                  handleReject();
-                }}
-                disabled={loading}
-                className="flex-1 h-10 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-rose-600 rounded-md hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <div className="flex items-center justify-center">
-                  {loading && actionType === 'reject' ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <XCircle className="w-4 h-4 mr-2" />
-                  )}
-                  Reject
-                </div>
-              </button>
-            </>
-          )}
+        <div className="space-y-3">
+          {renderActionButtons()}
         </div>
 
-        <div className="mt-3 pt-3 border-t border-slate-100">
-          <p className="text-xs text-slate-400">
-            Property ID: {property.propertyId}
+        {/* Property ID */}
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <p className="text-xs text-slate-400 font-mono">
+            ID: {property.propertyId}
           </p>
         </div>
       </CardContent>
