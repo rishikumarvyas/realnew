@@ -16,6 +16,7 @@ import {
   LogOut,
   PlusCircle,
   Home,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -126,14 +127,16 @@ export function Navbar() {
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             {isAuthenticated ? (
               <>
-              <Link
-              to="/admin"
-              className={cn(
-                "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+              {user?.role === 'Admin' && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/admin')}
+                  className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full mr-2"
+                >
+                  <Shield className="h-4 w-4 mr-1" />
+                  Admin
+                </Button>
               )}
-            >
-              Admin
-            </Link>
               <div className="flex items-center space-x-4">
                 <Button
                   variant="outline"
@@ -143,7 +146,7 @@ export function Navbar() {
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Post Property
                 </Button>
-                <NotificationIcon userId={user?.userId ?? ""} />
+                <NotificationIcon />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -242,44 +245,43 @@ export function Navbar() {
           >
             Contact
           </Link>
-          {isAuthenticated ? (
+          {isAuthenticated && (
             <>
-            <Link
-            to="/admin"
-            className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
-            onClick={() => setIsOpen(false)}
-          >
-            Admin
-          </Link>
-              <div className="border-t border-gray-200"></div>
-              <button
-                className="block w-full text-left px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 border-l-4 border-transparent hover:border-blue-500"
+              <Button
+                variant="outline"
                 onClick={handlePostPropertyClick}
+                className="w-full justify-center flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full my-2"
               >
-                <PlusCircle className="inline h-4 w-4 mr-2" />
+                <PlusCircle className="h-4 w-4 mr-1" />
                 Post Property
-              </button>
+              </Button>
               <Link
                 to="/dashboard"
-                className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
+                className="w-full flex items-center gap-1 justify-center px-4 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-l-4 border-transparent hover:border-blue-500 rounded-full"
                 onClick={() => setIsOpen(false)}
               >
-                <Home className="inline h-4 w-4 mr-2" />
+                <Home className="h-4 w-4 mr-1" />
                 Dashboard
               </Link>
-
-              <div
-                className="block px-4 py-3 text-base font-medium text-red-500 hover:bg-red-50 cursor-pointer border-l-4 border-transparent hover:border-red-500"
-                onClick={() => {
-                  handleLogout();
-                  setIsOpen(false);
-                }}
-              >
-                <LogOut className="inline h-4 w-4 mr-2" />
-                Logout
+              {user?.role === 'Admin' && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigate('/admin');
+                    setIsOpen(false);
+                  }}
+                  className="w-full justify-center flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full my-2"
+                >
+                  <Shield className="h-4 w-4 mr-1" />
+                  Admin
+                </Button>
+              )}
+              <div className="w-full flex justify-center my-2">
+                <NotificationIcon />
               </div>
             </>
-          ) : (
+          )}
+          {!isAuthenticated ? (
             <div className="border-t border-gray-200 pt-4 pb-3 px-4 flex flex-col space-y-3">
               <Button
                 variant="outline"
@@ -293,6 +295,15 @@ export function Navbar() {
                 className="w-full justify-center bg-blue-600 text-white"
               >
                 Sign Up
+              </Button>
+            </div>
+          ) : (
+            <div className="border-t border-gray-200 pt-4 pb-3 px-4 flex flex-col space-y-3">
+              <Button
+                onClick={handleLogout}
+                className="w-full justify-center bg-red-500 text-white"
+              >
+                Logout
               </Button>
             </div>
           )}

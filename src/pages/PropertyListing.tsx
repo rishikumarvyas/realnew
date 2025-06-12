@@ -89,16 +89,33 @@ const preferenceOptions = [
 
 // Furnished status options
 const furnishedOptions = [
-  { id: "any", label: "Any" },
   { id: "fully", label: "Fully Furnished" },
   { id: "semi", label: "Semi Furnished" },
   { id: "not", label: "Unfurnished" }
 ];
 
-// Common amenities
+// Amenity options for commercial properties
+const commercialAmenityOptions = [
+  "Lift",
+  "Security",
+  "Power Backup",
+  "Parking",
+  "Fully Furnished",
+  "Semi Furnished",
+  "Unfurnished"
+];
+
+// Common amenities (updated to match user request)
 const amenityOptions = [
-  "Parking", "Swimming Pool", "Gym", "Power Backup", 
-  "Security", "Garden", "Club House", "WiFi", "Gas Pipeline"
+  "Lift",
+  "Swimming Pool",
+  "Club House",
+  "Garden",
+  "Gym",
+  "Security",
+  "Power Backup",
+  "Parking",
+  "Gas Pipeline"
 ];
 
 // Property type mapping - Updated to merge shop and commercial, remove land/office
@@ -114,10 +131,10 @@ const propertyTypeMapping = {
 const priceRangeConfig = {
   rent: {
     min: 0,
-    max: 1000000, // 10 lakh
+    max: 100000, // 1 lakh
     step: 1000, // ₹1,000 step
     format: (value: number) => `₹${value.toLocaleString()}/month`,
-    displayMax: "₹10 Lakh/month"
+    displayMax: "₹1 Lakh/month"
   },
   buy: {
     min: 0,
@@ -1036,6 +1053,14 @@ useEffect(() => {
   // Add state for sidebar visibility
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
+  // In the component, use the correct amenityOptions based on activeTab
+  const getCurrentAmenityOptions = () => {
+    if (activeTab === "commercial") {
+      return commercialAmenityOptions;
+    }
+    return amenityOptions;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
@@ -1067,7 +1092,7 @@ useEffect(() => {
         <div className="w-full px-4 py-8">
           <div className="max-w-6xl mx-auto">
             <div className="relative">
-              <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-1 shadow-2xl backdrop-blur-sm">
+              <div className="bg-gradient-to-r from-blue-200 via-blue-300 to-blue-400 rounded-2xl p-1 shadow-2xl backdrop-blur-sm">
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
                   <div className="overflow-x-auto scrollbar-hide">
                     <div className="flex gap-2 min-w-max md:min-w-0 md:justify-center">
@@ -1240,14 +1265,14 @@ useEffect(() => {
                           <div className="font-semibold text-blue-700 text-sm">Price Range</div>
                           <div className="text-sm text-blue-600">
                             {activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent")
-                              ? `₹${priceRange[0].toLocaleString()}/month - ${priceRange[1] >= 1000000 ? '₹10 Lakh/month' : `₹${priceRange[1].toLocaleString()}/month`}`
+                              ? `₹${priceRange[0].toLocaleString()}/month - ${priceRange[1] >= 100000 ? '₹1 Lakh/month' : `₹${priceRange[1].toLocaleString()}/month`}`
                               : `₹${priceRange[0].toLocaleString()} - ${priceRange[1] >= 50000000 ? '₹5 Cr+' : `₹${priceRange[1].toLocaleString()}`}`
                             }
                           </div>
                         </div>
                         <Slider
-                          defaultValue={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? [0, 1000000] : [0, 50000000]}
-                          max={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000000 : 50000000}
+                          defaultValue={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? [0, 100000] : [0, 50000000]}
+                          max={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 100000 : 50000000}
                           step={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000 : 100000}
                           value={priceRange}
                           onValueChange={handlePriceRangeChange}
@@ -1255,7 +1280,7 @@ useEffect(() => {
                         />
                         <div className="flex justify-between text-xs text-blue-500 mt-1">
                           <span>₹0</span>
-                          <span>{activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? "₹10 Lakh/month" : "₹5 Cr+"}</span>
+                          <span>{activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? "₹1 Lakh/month" : "₹5 Cr+"}</span>
                         </div>
                       </div>
                     )}
@@ -1403,7 +1428,7 @@ useEffect(() => {
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="bg-white border-blue-200">
-                            {amenityOptions.map((amenity) => (
+                            {getCurrentAmenityOptions().map((amenity) => (
                               <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
                             ))}
                           </SelectContent>

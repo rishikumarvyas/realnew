@@ -75,6 +75,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             phone: decodedToken?.Phone,
             name: decodedToken?.UserName,
             token,
+            userType: decodedToken?.userType || decodedToken?.userTypeId,
+            role: decodedToken?.Role,
+            userTypeId: decodedToken?.userTypeId
           };
           if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
             setUser(userData);
@@ -172,7 +175,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken?.Phone,
           name: decodedToken?.UserName,
           token,
-          userTypeId,
+          userType: decodedToken?.userType || decodedToken?.userTypeId || data?.userType || data?.userTypeId,
+          role: decodedToken?.Role,
+          userTypeId: decodedToken?.userTypeId || data?.userTypeId
         };
 
         // Store user data for immediate use
@@ -237,6 +242,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken?.Phone,
           token,
           name: decodedToken?.UserName,
+          userType: decodedToken?.userType || decodedToken?.userTypeId || data?.userType || data?.userTypeId,
+          role: decodedToken?.Role,
+          userTypeId: decodedToken?.userTypeId || data?.userTypeId
         };
 
         setUser(userData);

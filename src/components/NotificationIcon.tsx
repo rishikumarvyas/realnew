@@ -31,6 +31,14 @@ interface MarkAsReadRequest {
   propertyId?: string;
 }
 
+// Interface for creating a new notification
+interface CreateNotificationRequest {
+  userId: string;
+  message: string;
+  propertyId?: string;
+  notificationType?: 'user' | 'property';
+}
+
 const NotificationIcon: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -45,6 +53,59 @@ const NotificationIcon: React.FC = () => {
       console.log('User object available:', user);
     }
   }, [user]);
+
+  const createNotification = async (message: string, notificationType: 'user' | 'property' = 'user', propertyId?: string) => {
+    if (!user || !user.userId) {
+      console.warn('No user available for creating notification');
+      return false;
+    }
+
+    try {
+      const payload: CreateNotificationRequest = {
+        userId: user.userId,
+        message: message,
+        notificationType: notificationType
+      };
+
+      // Add propertyId for property notifications
+      if (notificationType === 'property' && propertyId) {
+        payload.propertyId = propertyId;
+      }
+
+      console.log('Creating notification with payload:', payload);
+
+      const response = await axiosInstance.post('/api/Notification/CreateNotification', payload);
+
+      if (response.status === 200 || response.status === 201) {
+        console.log('Notification created successfully');
+        
+        // Refresh notifications to show the new one
+        await fetchNotifications();
+        
+        toast({
+          title: "Success",
+          description: "Notification created successfully",
+        });
+        
+        return true;
+      }
+    } catch (error: any) {
+      console.error("Error creating notification:", error);
+      
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+      }
+      
+      toast({
+        title: "Error",
+        description: "Failed to create notification",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
+  };
 
   const fetchNotifications = async () => {
     if (!user) {
@@ -61,45 +122,19 @@ const NotificationIcon: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Fetch both user and property notifications simultaneously
-      const [userResponse, propertyResponse] = await Promise.allSettled([
-        axiosInstance.get(`/api/Notification/GetUserNotifications?userId=${userId}`),
-        axiosInstance.get(`/api/Notification/GetPropertyNotifications?userId=${userId}`)
-      ]);
+      // Use the single GetNotifications endpoint
+      const response = await axiosInstance.get(`/api/Notification/GetNotifications?userId=${userId}`);
 
-      let allNotifications: Notification[] = [];
+      if (response.status === 200 && response.data.notifications) {
+        const allNotifications: Notification[] = response.data.notifications;
+        
+        // Sort notifications by date (newest first)
+        allNotifications.sort((a, b) => new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime());
 
-      // Process user notifications
-      if (userResponse.status === 'fulfilled' && 
-          userResponse.value.status === 200 && 
-          userResponse.value.data.notifications) {
-        const userNotifications = userResponse.value.data.notifications.map((n: Notification) => ({
-          ...n,
-          notificationType: 'user' as const
-        }));
-        allNotifications = [...allNotifications, ...userNotifications];
-      }
-
-      // Process property notifications
-      if (propertyResponse.status === 'fulfilled' && 
-          propertyResponse.value.status === 200 && 
-          propertyResponse.value.data.notifications) {
-        const propertyNotifications = propertyResponse.value.data.notifications.map((n: Notification) => ({
-          ...n,
-          notificationType: 'property' as const
-        }));
-        allNotifications = [...allNotifications, ...propertyNotifications];
-      }
-
-      // Sort notifications by date (newest first)
-      allNotifications.sort((a, b) => new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime());
-
-      setNotifications(allNotifications);
-      setUnreadCount(allNotifications.filter(n => !n.isRead).length);
-
-      // If both API calls failed, use mock data
-      if (userResponse.status === 'rejected' && propertyResponse.status === 'rejected') {
-        console.error('Both notification API calls failed');
+        setNotifications(allNotifications);
+        setUnreadCount(allNotifications.filter(n => !n.isRead).length);
+      } else {
+        console.warn('No notifications found in response');
         useMockData();
       }
 
@@ -331,16 +366,26 @@ const NotificationIcon: React.FC = () => {
           <div className="p-3 border-b bg-gradient-to-r from-blue-50 to-blue-100">
             <div className="flex justify-between items-center">
               <h3 className="font-medium text-blue-800">All Notifications</h3>
-              {unreadCount > 0 && (
+              <div className="flex space-x-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-blue-600 hover:text-blue-800"
-                  onClick={markAllAsRead}
+                  className="text-xs text-green-600 hover:text-green-800"
+                  onClick={() => createNotification("Test notification created", "user")}
                 >
-                  Mark all read
+                  + Test
                 </Button>
-              )}
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={markAllAsRead}
+                  >
+                    Mark all read
+                  </Button>
+                )}
+              </div>
             </div>
             {notifications.length > 0 && (
               <p className="text-xs text-blue-600 mt-1">

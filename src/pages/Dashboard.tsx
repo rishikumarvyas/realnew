@@ -232,6 +232,10 @@ const Dashboard = () => {
   const [allProperties, setAllProperties] = useState<any[]>([]);
   const [likedPropertiesFromAll, setLikedPropertiesFromAll] = useState<any[]>([]);
 
+  // Add new state for liked properties by me
+  const [likedPropertiesByMe, setLikedPropertiesByMe] = useState<any[]>([]);
+  const [loadingLikedByMe, setLoadingLikedByMe] = useState(false);
+
   const userId = user?.userId || "2d366c8f-08dd-4916-8033-b3c7454b5ba4"; // Use the provided userId as fallback
 
   const getNewPropertyIdFromQuery = () => {
@@ -552,6 +556,25 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Liked Properties by Me Card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Liked Properties by Me
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <ThumbsUp className="w-5 h-5 text-blue-400 mr-2" />
+              {loadingLikedByMe ? (
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+              ) : (
+                <span className="text-3xl font-bold">{likedPropertiesByMe.length}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
@@ -567,7 +590,33 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={async (val) => {
+        setActiveTab(val);
+        if (val === "likedByMe" && likedPropertiesByMe.length === 0) {
+          setLoadingLikedByMe(true);
+          try {
+            console.log("Calling /api/Account/GetLikedPropertiesByUser...");
+            const response = await axiosInstance.get("/api/Account/GetLikedPropertiesByUser");
+            console.log("API response:", response.data);
+
+            if (response.data.statusCode === 200 && Array.isArray(response.data.propertyInfo)) {
+              console.log("Liked properties array:", response.data.propertyInfo);
+              setLikedPropertiesByMe(response.data.propertyInfo);
+              if (response.data.propertyInfo.length === 0) {
+                console.log("No liked properties found for this user.");
+              }
+            } else {
+              console.log("API did not return propertyInfo array or statusCode is not 200.");
+              setLikedPropertiesByMe([]);
+            }
+          } catch (e) {
+            console.error("Error fetching liked properties by me:", e);
+            setLikedPropertiesByMe([]);
+          } finally {
+            setLoadingLikedByMe(false);
+          }
+        }
+      }}>
         <TabsList className="mb-4 sm:mb-6 w-full flex overflow-x-auto no-scrollbar">
           <TabsTrigger
             value="properties"
@@ -597,6 +646,12 @@ const Dashboard = () => {
             className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
           >
             <span className="block truncate">Account</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="likedByMe"
+            className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
+          >
+            <span className="block truncate">Liked Properties by Me</span>
           </TabsTrigger>
         </TabsList>
 
@@ -954,6 +1009,92 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="likedByMe">
+          <div>
+            <h2 className="text-xl font-bold mb-4">Liked Properties by Me</h2>
+            {loadingLikedByMe ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : likedPropertiesByMe.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg border">
+                <ThumbsUp className="mx-auto h-12 w-12 text-blue-400" />
+                <h3 className="mt-2 text-lg font-medium">No Liked Properties</h3>
+                <p className="mt-1 text-gray-500">You haven't liked any properties yet.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Price</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Type</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status</th>
+                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {likedPropertiesByMe.map((property: any) => (
+                      <tr key={property.propertyId}>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center">
+                            <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
+                              <img
+                                src={
+                                  property.mainImageDetail?.imageUrl ||
+                                  property.mainImageUrl ||
+                                  property.imageUrl ||
+                                  property.image ||
+                                  (Array.isArray(property.imageDetails) && property.imageDetails.length > 0
+                                    ? property.imageDetails[0].imageUrl || property.imageDetails[0].url
+                                    : undefined) ||
+                                  'https://via.placeholder.com/48'
+                                }
+                                alt={property.title}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="ml-3">
+                              <div className="font-medium text-gray-900 line-clamp-1">{property.title}</div>
+                              <div className="text-gray-500 text-sm line-clamp-1">{property.address || 'No location specified'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 hidden sm:table-cell">
+                          <div className="text-gray-900">₹{property.price > 0 ? property.price.toLocaleString() : 'Not specified'}</div>
+                          <div className="text-gray-500 text-sm">{property.superCategory?.toLowerCase() === 'rent' ? '/month' : ''}</div>
+                        </td>
+                        <td className="py-4 px-4 hidden md:table-cell">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">
+                            {property.propertyType || 'Not specified'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 hidden lg:table-cell">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${property.superCategory?.toLowerCase() === 'buy' ? 'bg-green-100 text-green-800' : property.superCategory?.toLowerCase() === 'rent' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+                            {property.superCategory || 'Not specified'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex justify-end">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => navigate(`/properties/${property.propertyId}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
