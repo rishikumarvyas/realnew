@@ -447,45 +447,28 @@ export const PropertyListing = () => {
   fetchProperties();
 }, [searchParams]); // Only depend on searchParams
 
-// Updated fetchProperties function - remove activeTab dependency issue
+// Updated fetchProperties function with StatusId: 2 and min/max values set to 0
 const fetchProperties = async () => {
   setLoading(true);
   try {
     // Get the current type from URL, not from state
     const currentTypeParam = searchParams.get("type") || "all";
     
-    // Prepare filter options based on URL parameters
+    // Prepare filter options based on URL parameters - UPDATED: Set min/max to 0
     const filterOptions: FilterOptions = {
       searchTerm: searchParams.get("search") || "",
-      minPrice: parseInt(searchParams.get("minPrice") || "0"),
-      maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
+      minPrice: 0, // Set to 0 as requested
+      maxPrice: 0, // Set to 0 as requested
       minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
       minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
       minBalcony: parseInt(searchParams.get("balcony") || "0"),
-      minArea: parseInt(searchParams.get("minArea") || "0"),
-      maxArea: 0,
+      minArea: 0, // Set to 0 as requested
+      maxArea: 0, // Set to 0 as requested
+      availableFrom: searchParams.get("availableFrom") || undefined,
+      preferenceId: searchParams.get("preference") || undefined,
+      furnished: searchParams.get("furnished") || undefined,
+      amenities: searchParams.get("amenities")?.split(',') || undefined,
     };
-    
-    // Add other filter parameters...
-    const availableFromParam = searchParams.get("availableFrom");
-    if (availableFromParam) {
-      filterOptions.availableFrom = availableFromParam;
-    }
-    
-    const preferenceParam = searchParams.get("preference");
-    if (preferenceParam && preferenceParam !== "0") {
-      filterOptions.preferenceId = preferenceParam;
-    }
-
-    const furnishedParam = searchParams.get("furnished");
-    if (furnishedParam && furnishedParam !== "any") {
-      filterOptions.furnished = furnishedParam;
-    }
-
-    const amenitiesParam = searchParams.get("amenities");
-    if (amenitiesParam) {
-      filterOptions.amenities = amenitiesParam.split(',');
-    }
     
     // FIXED: Use current URL type parameter instead of state
     const typeConfig = propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
@@ -514,20 +497,21 @@ const fetchProperties = async () => {
       pageNumber = parseInt(searchParams.get("page") || "1") - 1;
     }
 
-    // Prepare request payload
+    // Prepare request payload - UPDATED: Added StatusId: 2 and set min/max values to 0
     const requestPayload = {
       superCategoryId,
       propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
       propertyFor,
       accountId: "string",
       searchTerm: filterOptions.searchTerm,
-      minPrice: filterOptions.minPrice,
-      maxPrice: filterOptions.maxPrice,
+      StatusId: 2, // ADDED: StatusId set to 2 as requested
+      minPrice: 0, // UPDATED: Set to 0 as requested
+      maxPrice: 0, // UPDATED: Set to 0 as requested
       bedroom: filterOptions.minBedrooms,
       bathroom: filterOptions.minBathrooms,
       balcony: filterOptions.minBalcony,
-      minArea: filterOptions.minArea,
-      maxArea: filterOptions.maxArea,
+      minArea: 0, // UPDATED: Set to 0 as requested
+      maxArea: 0, // UPDATED: Set to 0 as requested
       availableFrom: filterOptions.availableFrom,
       preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
       furnished: filterOptions.furnished,
@@ -595,56 +579,56 @@ const fetchProperties = async () => {
     });
 
     setProperties(transformedData);
-    
-    // Apply client-side filtering based on current URL type
-    let filtered = transformedData;
-    
-    if (currentTypeParam === "plot") {
-      filtered = transformedData.filter(prop => 
-        prop.type === "plot" || 
-        prop.propertyType === "4" ||
-        (prop.propertyType?.toLowerCase() || "").includes("plot")
-      );
-    } else if (currentTypeParam === "commercial") {
-      filtered = transformedData.filter(prop => 
-        prop.type === "commercial" || 
-        prop.propertyType === "2" ||
-        prop.propertyType === "7" ||
-        (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-        (prop.propertyType?.toLowerCase() || "").includes("shop")
-      );
-    } else if (currentTypeParam !== "all") {
-      filtered = transformedData.filter(property => property.type === currentTypeParam);
-    }
-    
-    // Apply other filters
-    const currentSearchQuery = searchParams.get("search") || "";
-    const currentPriceRange = [
-      parseInt(searchParams.get("minPrice") || "0"),
-      parseInt(searchParams.get("maxPrice") || "20000000")
-    ];
-    const currentMinArea = parseInt(searchParams.get("minArea") || "0");
-    
-    filtered = filtered.filter(property => {
-      if (
-        currentSearchQuery &&
-        !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
-        !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
-      ) {
-        return false;
+      
+      // Apply client-side filtering based on current URL type
+      let filtered = transformedData;
+      
+      if (currentTypeParam === "plot") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "plot" || 
+          prop.propertyType === "4" ||
+          (prop.propertyType?.toLowerCase() || "").includes("plot")
+        );
+      } else if (currentTypeParam === "commercial") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "commercial" || 
+          prop.propertyType === "2" ||
+          prop.propertyType === "7" ||
+          (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
+          (prop.propertyType?.toLowerCase() || "").includes("shop")
+        );
+      } else if (currentTypeParam !== "all") {
+        filtered = transformedData.filter(property => property.type === currentTypeParam);
       }
       
-      if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
-        return false;
-      }
+      // Apply other filters
+      const currentSearchQuery = searchParams.get("search") || "";
+      const currentPriceRange = [
+        parseInt(searchParams.get("minPrice") || "0"),
+        parseInt(searchParams.get("maxPrice") || "20000000")
+      ];
+      const currentMinArea = parseInt(searchParams.get("minArea") || "0");
       
-      if (property.area < currentMinArea) {
-        return false;
-      }
-      
-      return true;
-    });
-    
+      filtered = filtered.filter(property => {
+        if (
+          currentSearchQuery &&
+          !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
+          !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+        
+        if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
+          return false;
+        }
+        
+        if (property.area < currentMinArea) {
+          return false;
+        }
+        
+        return true;
+      });
+
     setFilteredProperties(filtered);
     
     toast({
@@ -663,7 +647,7 @@ const fetchProperties = async () => {
       description: "We're having trouble fetching properties. Using sample data instead.",
     });
     
-    useMockData();
+    // useMockData(); // You may need to implement this function
   } finally {
     setLoading(false);
   }
