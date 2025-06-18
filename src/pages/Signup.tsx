@@ -124,15 +124,15 @@ const Signup = ({ onClose }: SignupProps) => {
 
       if (success) {
         toast({
-          title: "OTP Sent",
-          description: "A verification code has been sent to your phone.",
+          title: "Terms Accepted & OTP Sent",
+          description: "Terms accepted successfully. A verification code has been sent to your phone.",
         });
         setStep("otp");
       } else {
         toast({
           title: "Failed to Send OTP",
           description:
-            "There was an error sending the verification code. Please try again.",
+            "Terms were accepted but there was an error sending the verification code. Please try again.",
           variant: "destructive",
         });
         setStep("form"); // Go back to form if OTP fails
@@ -153,6 +153,8 @@ const Signup = ({ onClose }: SignupProps) => {
   const handleTermsClose = () => {
     setShowTerms(false);
     setFormData(null);
+    // Reset loading state if user closes terms
+    setLoading(false);
   };
 
   const handleOtpSubmit = async (otp: string) => {
@@ -320,11 +322,16 @@ const Signup = ({ onClose }: SignupProps) => {
       </div>
 
       {/* Terms & Conditions Modal */}
-      {showTerms && (
+      {showTerms && formData && (
         <TermsConditions
           onAccept={handleTermsAccept}
           onClose={handleTermsClose}
           isVisible={showTerms}
+          userData={{
+            phone: formData.phone,
+            name: formData.name,
+            userTypeId: formData.userType.toString()
+          }}
         />
       )}
     </>
