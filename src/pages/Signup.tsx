@@ -1,4 +1,4 @@
-// Modified Signup.tsx with Terms & Conditions step before OTP
+// Modified Signup.tsx with Terms & Conditions API call
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { OtpStep } from "@/components/login/OtpStep";
 import { FormStep } from "@/components/login/FormStep";
-import TermsConditions from "@/components/login/TermsConditions"; // Import your Terms component
+import axiosInstance from "../axiosCalls/axiosInstance";
 
 // Map user types to their respective IDs
 const USER_TYPES = [
@@ -34,12 +34,10 @@ const Signup = ({ onClose }: SignupProps) => {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [userType, setUserType] = useState<number>(0);
-  const [step, setStep] = useState("form"); // form -> terms -> otp
+  const [step, setStep] = useState("form"); // form -> otp
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [showTerms, setShowTerms] = useState(false);
-  const [formData, setFormData] = useState<any>(null); // Store form data temporarily
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, signup, openLoginModal } = useAuth();
@@ -63,6 +61,36 @@ const Signup = ({ onClose }: SignupProps) => {
       }
       openLoginModal();
     }, 300);
+  };
+
+  const sendTermsAcceptance = async (userData: {
+    phone: string;
+    name: string;
+    userTypeId: string;
+  }) => {
+    try {
+      const payload = {
+        phone: `+91${userData.phone}`,
+        templateId: 0, // As per image
+        message: "Terms and Conditions accepted during signup.",
+        action: "terms_accepted",
+        name: userData.name,
+        userTypeId: userData.userTypeId,
+        isTermsConditionsAccepted: true,
+      };
+
+      console.log("Sending terms acceptance payload:", payload);
+      await axiosInstance.post("/api/Message/Send", payload);
+      console.log("Terms acceptance sent successfully.");
+    } catch (error) {
+      console.error("Failed to send terms acceptance:", error);
+      // We can show a toast here, but let's not block the signup flow
+      toast({
+        title: "Terms Acceptance Failed",
+        description: "Could not record your terms acceptance, but you can continue.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFormSubmit = async (formSubmitData: any) => {
@@ -89,13 +117,35 @@ const Signup = ({ onClose }: SignupProps) => {
         return;
       }
 
-      // Store form data and show terms & conditions
-      setFormData({
-        name: fullName,
+      // Send terms acceptance in the background (fire and forget)
+      sendTermsAcceptance({
         phone: phoneNumber,
-        userType: selectedUserType,
+        name: fullName,
+        userTypeId: selectedUserType.toString(),
       });
-      setShowTerms(true);
+
+      // Set form data and request OTP directly
+      setName(fullName);
+      setPhone(phoneNumber);
+      setUserType(selectedUserType);
+
+      // Request OTP
+      const success = await requestOtp("+91" + phoneNumber);
+
+      if (success) {
+        toast({
+          title: "OTP Sent",
+          description: "A verification code has been sent to your phone.",
+        });
+        setStep("otp");
+      } else {
+        toast({
+          title: "Failed to Send OTP",
+          description:
+            "There was an error sending the verification code. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -106,55 +156,6 @@ const Signup = ({ onClose }: SignupProps) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTermsAccept = async () => {
-    if (!formData) return;
-
-    setLoading(true);
-    setShowTerms(false);
-
-    try {
-      setName(formData.name);
-      setPhone(formData.phone);
-      setUserType(formData.userType);
-
-      // Request OTP after terms acceptance
-      const success = await requestOtp("+91" + formData.phone);
-
-      if (success) {
-        toast({
-          title: "Terms Accepted & OTP Sent",
-          description: "Terms accepted successfully. A verification code has been sent to your phone.",
-        });
-        setStep("otp");
-      } else {
-        toast({
-          title: "Failed to Send OTP",
-          description:
-            "Terms were accepted but there was an error sending the verification code. Please try again.",
-          variant: "destructive",
-        });
-        setStep("form"); // Go back to form if OTP fails
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-      console.error("OTP request error:", error);
-      setStep("form");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTermsClose = () => {
-    setShowTerms(false);
-    setFormData(null);
-    // Reset loading state if user closes terms
-    setLoading(false);
   };
 
   const handleOtpSubmit = async (otp: string) => {
@@ -226,7 +227,6 @@ const Signup = ({ onClose }: SignupProps) => {
 
   const handleBackToForm = () => {
     setStep("form");
-    setFormData(null);
   };
 
   const popupClasses = isVisible
@@ -320,20 +320,6 @@ const Signup = ({ onClose }: SignupProps) => {
           </Card>
         </div>
       </div>
-
-      {/* Terms & Conditions Modal */}
-      {showTerms && formData && (
-        <TermsConditions
-          onAccept={handleTermsAccept}
-          onClose={handleTermsClose}
-          isVisible={showTerms}
-          userData={{
-            phone: formData.phone,
-            name: formData.name,
-            userTypeId: formData.userType.toString()
-          }}
-        />
-      )}
     </>
   );
 };
