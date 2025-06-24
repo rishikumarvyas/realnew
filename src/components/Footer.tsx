@@ -1,8 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Facebook, Instagram, Twitter, MapPin, Phone, Mail, Building, Home, Key, IndianRupee, Clock, ChevronRight } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const navigate = useNavigate();
+  
+  const handleCityClick = (cityName: string) => {
+    navigate(`/properties?search=${encodeURIComponent(cityName)}`);
+  };
   
   return (
     <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
@@ -61,31 +66,31 @@ export function Footer() {
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
                 <Link to="/properties?type=buy" className="text-gray-300 hover:text-white transition duration-200">
-                  Buy Property
+                  Buy
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
                 <Link to="/properties?type=rent" className="text-gray-300 hover:text-white transition duration-200">
-                  Rent Property
+                  Rent
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/properties?type=sell" className="text-gray-300 hover:text-white transition duration-200">
-                  Sell Property
+                <Link to="/properties?type=plot" className="text-gray-300 hover:text-white transition duration-200">
+                  Plot
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/post-property" className="text-gray-300 hover:text-white transition duration-200">
-                  Post Your Property
+                <Link to="/properties?type=commercial" className="text-gray-300 hover:text-white transition duration-200">
+                  Commercial
                 </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-400 mr-2" />
-                <Link to="/agents" className="text-gray-300 hover:text-white transition duration-200">
-                  Find Agents
+                <Link to="/contactus" className="text-gray-300 hover:text-white transition duration-200">
+                  Contact
                 </Link>
               </li>
             </ul>
@@ -159,16 +164,35 @@ export function Footer() {
         {/* Popular cities section */}
         <div className="border-t border-gray-700 pt-8 mb-8">
           <h3 className="text-lg font-semibold mb-4 text-blue-200">Popular Cities</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            {['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 
-              'Pune', 'Ahmedabad', 'Jaipur', 'Chandigarh', 'Lucknow', 'Kochi'].map((city) => (
-              <Link 
-                key={city} 
-                to={`/properties?city=${city.toLowerCase()}`}
-                className="text-gray-400 hover:text-orange-400 text-sm transition duration-200"
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { name: 'Mumbai', state: 'Maharashtra' },
+              { name: 'Delhi', state: 'Delhi' },
+              { name: 'Bangalore', state: 'Karnataka' },
+              { name: 'Hyderabad', state: 'Telangana' },
+              { name: 'Chennai', state: 'Tamil Nadu' },
+              { name: 'Kolkata', state: 'West Bengal' },
+              { name: 'Pune', state: 'Maharashtra' },
+              { name: 'Ahmedabad', state: 'Gujarat' },
+              { name: 'Jaipur', state: 'Rajasthan' },
+              { name: 'Chandigarh', state: 'Chandigarh' },
+              { name: 'Lucknow', state: 'Uttar Pradesh' },
+              { name: 'Kochi', state: 'Kerala' }
+            ].map((city) => (
+              <button 
+                key={city.name} 
+                onClick={() => handleCityClick(city.name)}
+                className="group flex flex-col items-center p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 transition-all duration-300 border border-gray-700 hover:border-orange-400/50 cursor-pointer"
+                title={`Search properties in ${city.name}, ${city.state}`}
               >
-                {city}
-              </Link>
+                <MapPin className="h-4 w-4 text-orange-400 mb-1 group-hover:scale-110 transition-transform duration-300" />
+                <span className="text-gray-300 hover:text-orange-400 text-sm font-medium transition-colors duration-200 text-center">
+                  {city.name}
+                </span>
+                <span className="text-gray-500 text-xs mt-1 group-hover:text-gray-400 transition-colors duration-200 text-center">
+                  {city.state}
+                </span>
+              </button>
             ))}
           </div>
         </div>
