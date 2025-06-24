@@ -454,7 +454,7 @@ const fetchProperties = async () => {
     // Get the current type from URL, not from state
     const currentTypeParam = searchParams.get("type") || "all";
     
-    // Prepare filter options based on URL parameters - UPDATED: Set min/max to 0
+    // Prepare filter options based on URL parameters - UPDATED: Use actual area values
     const filterOptions: FilterOptions = {
       searchTerm: searchParams.get("search") || "",
       minPrice: 0, // Set to 0 as requested
@@ -462,8 +462,8 @@ const fetchProperties = async () => {
       minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
       minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
       minBalcony: parseInt(searchParams.get("balcony") || "0"),
-      minArea: 0, // Set to 0 as requested
-      maxArea: 0, // Set to 0 as requested
+      minArea: parseInt(searchParams.get("minArea") || "0"),
+      maxArea: parseInt(searchParams.get("maxArea") || "5000"),
       availableFrom: searchParams.get("availableFrom") || undefined,
       preferenceId: searchParams.get("preference") || undefined,
       furnished: searchParams.get("furnished") || undefined,
@@ -497,7 +497,7 @@ const fetchProperties = async () => {
       pageNumber = parseInt(searchParams.get("page") || "1") - 1;
     }
 
-    // Prepare request payload - UPDATED: Added StatusId: 2 and set min/max values to 0
+    // Prepare request payload - UPDATED: Use actual area values from filterOptions
     const requestPayload = {
       superCategoryId,
       propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
@@ -510,8 +510,8 @@ const fetchProperties = async () => {
       bedroom: filterOptions.minBedrooms,
       bathroom: filterOptions.minBathrooms,
       balcony: filterOptions.minBalcony,
-      minArea: 0, // UPDATED: Set to 0 as requested
-      maxArea: 0, // UPDATED: Set to 0 as requested
+      minArea: filterOptions.minArea, // UPDATED: Use actual minArea value
+      maxArea: filterOptions.maxArea, // UPDATED: Use actual maxArea value
       availableFrom: filterOptions.availableFrom,
       preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
       furnished: filterOptions.furnished,
@@ -900,6 +900,7 @@ useEffect(() => {
     setMinBathrooms(0);
     setMinBalcony(0);
     setMinArea(0);
+    setMaxArea(5000); // FIXED: Reset maxArea to 5000
     setSearchQuery("");
     setSearchTerm("");
     setAvailableFrom(undefined);
