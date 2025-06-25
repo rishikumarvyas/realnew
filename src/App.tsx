@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import { Layout } from "./components/Layout"; 
 import ProtectedRoute from "./components/ProtectedRoute"; 
 import ContactUs from "./pages/ContactUs"; 
+import AdminPage from "./pages/AdminPage";
 import ScrollToTop from "./components/ScrollToTop"; 
 import AuthModal from "./components/AuthModal"; // Import the AuthModal component  
 
@@ -57,7 +58,8 @@ const App = () => (
               <Route path="properties" element={<PropertyListing />} />               
               <Route path="properties/:id" element={<PropertyDetail />} />                              
               
-              <Route element={<ProtectedRoute />}>                 
+              <Route element={<ProtectedRoute />}>             
+                <Route path="/admin" element={<AdminPage />} />    
                 <Route path="dashboard" element={<Dashboard />} />                 
                 <Route path="post-property" element={<PostProperty />} />                 
                 <Route path="/edit-property/:propertyId" element={<EditProperty />} />               

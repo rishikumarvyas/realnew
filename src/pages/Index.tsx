@@ -7,6 +7,7 @@ import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
 import { Testimonial } from "@/components/Testimonial";
 import { StatCard } from "@/components/StatCard";
 import AllProperty from "./AllProperty";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Search, 
   ArrowRight, 
@@ -22,7 +23,9 @@ import {
   Key,
   Users,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Map,
+  Store
 } from "lucide-react";
 
 // Mock data for featured properties
@@ -99,6 +102,7 @@ const Index = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+  const { isAuthenticated, openLoginModal } = useAuth();
 
   // Auto-advance slider every 5 seconds
   useEffect(() => {
@@ -151,6 +155,14 @@ const Index = () => {
     setSearchTerm(suggestion);
     setShowSuggestions(false);
     navigate(`/properties?search=${encodeURIComponent(suggestion)}`);
+  };
+
+  const handlePostPropertyClick = () => {
+    if (isAuthenticated) {
+      navigate('/post-property');
+    } else {
+      openLoginModal();
+    }
   };
 
   return (
@@ -274,7 +286,7 @@ const Index = () => {
               className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
               onClick={() => navigate('/properties?type=plot')}
             >
-              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <Map className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Plot
             </Button>
             <Button 
@@ -283,7 +295,7 @@ const Index = () => {
               className="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border-blue-600 text-xs sm:text-sm md:text-base group transition-all duration-300 px-3 sm:px-5 md:px-8 py-2 sm:py-3 md:py-4 rounded-full shadow-md sm:shadow-lg"
               onClick={() => navigate('/properties?type=commercial')}
             >
-              <Key className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <Store className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Commercial
             </Button>
           </div>
@@ -411,7 +423,7 @@ const Index = () => {
       </p>
       <Button 
         size="lg"
-        onClick={() => navigate('/post-property')}
+        onClick={handlePostPropertyClick}
         className="bg-blue-600 text-white hover:bg-blue-700 px-12 py-6 text-lg font-semibold shadow-xl rounded-full"
       >
         Post Your Property

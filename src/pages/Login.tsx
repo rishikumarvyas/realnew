@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +23,7 @@ const Login = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { requestOtp, login } = useAuth();
+  const { requestOtp, login, openSignupModal } = useAuth(); // Added openSignupModal
 
   const handleClose = () => {
     // First hide the modal with animation
@@ -37,6 +36,17 @@ const Login = ({ onClose }) => {
       } else {
         navigate("/");
       }
+    }, 300);
+  };
+
+  // New function to switch to signup modal
+  const handleSwitchToSignup = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      if (onClose) {
+        onClose(); // Close current modal
+      }
+      openSignupModal(); // Open signup modal
     }, 300);
   };
 
@@ -228,12 +238,12 @@ const Login = ({ onClose }) => {
           <CardFooter className="flex justify-center border-t p-6">
             <div className="text-sm text-gray-500">
               Don't have an account?{" "}
-              <Link
-                to="/signup"
-                className="text-blue-600 hover:underline font-medium"
+              <button
+                onClick={handleSwitchToSignup}
+                className="text-blue-600 hover:underline font-medium cursor-pointer"
               >
                 Sign up
-              </Link>
+              </button>
             </div>
           </CardFooter>
         </Card>

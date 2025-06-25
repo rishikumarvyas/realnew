@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Home } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import axiosInstance from "../axiosCalls/axiosInstance";
+
 // API interfaces
 interface ApiResponse {
   statusCode: number;
   message: string;
+  count: number;
   propertyInfo: ApiProperty[];
 }
 
@@ -18,6 +20,7 @@ interface ApiProperty {
   price: number;
   city: string;
   superCategory: string;
+  propertyType: string;
   bedroom: number;
   bathroom: number;
   balcony: number;
@@ -27,6 +30,8 @@ interface ApiProperty {
   preferenceId?: number; // Tenant preference ID
   amenities?: string[]; // Array of amenity strings
   furnished?: string; // "Fully", "Semi", "Not" furnished status
+  likeCount?: number; // Optional like count
+  statusId: number; // Add StatusId field
 }
 
 // Property card props type
@@ -46,6 +51,8 @@ interface PropertyCardProps {
   amenities?: string[];
   furnished?: string;
   formattedPrice?: string;
+  likeCount?: number;
+  statusId?: number; // Add StatusId to props
 }
 
 // Filter options interface for API request
@@ -58,10 +65,6 @@ interface FilterOptions {
   minBalcony: number;
   minArea: number;
   maxArea: number;
-  availableFrom?: string;
-  preferenceId?: string;
-  furnished?: string;
-  amenities?: string[];
 }
 
 const AllProperty = () => {
@@ -73,7 +76,7 @@ const AllProperty = () => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      // Default filter options - you can modify these as needed
+      // Filter options - StatusId will be sent directly in API
       const filterOptions: FilterOptions = {
         searchTerm: "",
         minPrice: 0,
@@ -89,25 +92,22 @@ const AllProperty = () => {
       // 0 for all, 1 for buy, 2 for rent, 3 for sell
       const superCategoryId = 0;
 
-     const response = await axiosInstance.post<ApiResponse>(
-    "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+      const response = await axiosInstance.post<ApiResponse>(
+        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
         {
           superCategoryId: superCategoryId,
-          accountId: "string", // Replace with actual accountId if available
+          propertyTypeIds: [],
+          accountId: "",
           searchTerm: filterOptions.searchTerm,
+          StatusId: 2, // Direct StatusId parameter in API
           minPrice: filterOptions.minPrice,
           maxPrice: filterOptions.maxPrice,
           bedroom: filterOptions.minBedrooms,
-          bathroom: filterOptions.minBathrooms,
           balcony: filterOptions.minBalcony,
           minArea: filterOptions.minArea,
           maxArea: filterOptions.maxArea,
-          availableFrom: filterOptions.availableFrom,
-          preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
-          furnished: filterOptions.furnished,
-          amenities: filterOptions.amenities,
-          pageNumber: 0, // No pagination
-          pageSize: -1, // Get all properties
+          pageNumber: 1,
+          pageSize: -1,
         },
         {
           headers: {
@@ -116,8 +116,11 @@ const AllProperty = () => {
         }
       );
 
+      // API will return only StatusId = 2 properties, no need for client-side filtering
+      const filteredProperties = response.data.propertyInfo;
+
       // Transform API data to our property format
-      const transformedData = response.data.propertyInfo.map((prop): PropertyCardProps => ({
+      const transformedData = filteredProperties.map((prop): PropertyCardProps => ({
         id: prop.propertyId,
         title: prop.title,
         price: prop.price,
@@ -131,7 +134,9 @@ const AllProperty = () => {
         availableFrom: prop.availableFrom,
         preferenceId: prop.preferenceId,
         amenities: prop.amenities,
-        furnished: prop.furnished
+        furnished: prop.furnished,
+        likeCount: prop.likeCount || 0,
+        statusId: prop.statusId,
       }));
 
       setProperties(transformedData);
@@ -161,7 +166,8 @@ const AllProperty = () => {
         area: 1450,
         image: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
         amenities: ["Parking", "Security", "Power Backup"],
-        furnished: "Fully"
+        furnished: "Fully",
+        statusId: 2
       },
       {
         id: "prop2",
@@ -175,7 +181,8 @@ const AllProperty = () => {
         area: 2100,
         image: "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
         amenities: ["Swimming Pool", "Gym", "Club House", "Parking"],
-        furnished: "Fully"
+        furnished: "Fully",
+        statusId: 2
       },
       {
         id: "prop3",
@@ -191,7 +198,8 @@ const AllProperty = () => {
         availableFrom: "2025-05-15T00:00:00",
         preferenceId: 2, // Bachelor
         amenities: ["WiFi", "Power Backup"],
-        furnished: "Semi"
+        furnished: "Semi",
+        statusId: 2
       },
       {
         id: "prop4",
@@ -205,7 +213,8 @@ const AllProperty = () => {
         area: 1050,
         image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&q=80",
         amenities: ["Parking", "Security"],
-        furnished: "Semi"
+        furnished: "Semi",
+        statusId: 2
       },
       {
         id: "prop5",
@@ -221,53 +230,8 @@ const AllProperty = () => {
         availableFrom: "2025-06-01T00:00:00",
         preferenceId: 1, // Family
         amenities: ["Garden", "Parking", "Security"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop6",
-        title: "Commercial Space",
-        price: 9500000,
-        location: "Andheri, Mumbai",
-        type: "sell",
-        bedrooms: 0,
-        bathrooms: 2,
-        balcony: 0,
-        area: 2500,
-        image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup", "Parking"],
-        furnished: "Not"
-      },
-      {
-        id: "prop7",
-        title: "Cozy 1BHK for Rent",
-        price: 22000,
-        location: "HSR Layout, Bangalore",
-        type: "rent",
-        bedrooms: 1,
-        bathrooms: 1,
-        balcony: 1,
-        area: 750,
-        image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80",
-        availableFrom: "2025-05-10T00:00:00",
-        preferenceId: 2, // Bachelor
-        amenities: ["WiFi", "Power Backup", "Parking"],
-        furnished: "Fully"
-      },
-      {
-        id: "prop8",
-        title: "Corporate Office Space",
-        price: 65000,
-        location: "Cyber City, Gurgaon",
-        type: "rent",
-        bedrooms: 0,
-        bathrooms: 3,
-        balcony: 0,
-        area: 3200,
-        image: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&q=80",
-        availableFrom: "2025-07-01T00:00:00",
-        preferenceId: 3, // Company
-        amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully"
+        furnished: "Fully",
+        statusId: 2
       },
     ];
     
@@ -291,22 +255,22 @@ const AllProperty = () => {
     <div className="max-w-7xl mx-auto px-4 py-8 bg-gray-50">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-primary mb-3">Find Your Perfect Property</h1>
-        {/* <p className="text-gray-600 max-w-2xl mx-auto">
-          Discover the perfect space that fits your lifestyle and budget with our comprehensive property listings
-        </p> */}
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Discover active properties that fit your lifestyle and budget
+        </p>
       </div>
       
       <div className="mb-6">
-        {/* <h2 className="text-xl font-semibold text-gray-800">
+        <h2 className="text-xl font-semibold text-gray-800">
           {loading ? (
             <span className="flex items-center">
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Loading properties...
+              Loading active properties...
             </span>
           ) : (
-            `${properties.length} Properties Found`
+            `${properties.length} Active Properties Found`
           )}
-        </h2> */}
+        </h2>
       </div>
 
       {/* Error state */}
@@ -327,9 +291,9 @@ const AllProperty = () => {
       {!loading && properties.length === 0 && !error && (
         <div className="p-12 text-center bg-gray-50 rounded-lg mb-8">
           <Home className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No properties found</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No active properties found</h3>
           <p className="text-gray-600 mb-4">
-            There are currently no properties available.
+            There are currently no active properties available with StatusId = 2.
           </p>
         </div>
       )}
@@ -356,12 +320,15 @@ const AllProperty = () => {
             <PropertyCard
               key={property.id}
               {...property}
-              // Format price according to property type
+              likeCount={property.likeCount}
               formattedPrice={formatPrice(property.price, property.type)}
             />
           ))
         )}
       </div>
+
+
+ 
     </div>
   );
 };

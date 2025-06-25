@@ -8,12 +8,23 @@ export interface PropertyCardProps {
   title: string;
   price: number;
   location: string;
-  type: "buy" | "rent" | "sell";
+  type: "buy" | "rent" | "sell" | "plot" | "commercial"; // Added missing types
   bedrooms: number;
   bathrooms: number;
+  balcony?: number; // Added missing balcony field
   area: number;
   image: string;
-  likes?: number; // Keep the likes prop for each property
+  likes?: number;
+  // Added other missing fields for consistency
+  availableFrom?: string;
+  preferenceId?: number;
+  amenities?: string[];
+  furnished?: string;
+  isLike?: boolean;
+  propertyType?: string;
+  status?: string;
+  formattedPrice?: string;
+  likeCount?: number;
 }
 
 export function PropertyCard({
@@ -24,11 +35,13 @@ export function PropertyCard({
   type,
   bedrooms,
   bathrooms,
+  balcony = 0, // Added balcony prop with default value
   area,
   image,
-  likes = 0, // Default to 0 if not provided
+  likes = 0,
+  likeCount = 0,
 }: PropertyCardProps) {
-  // Get badge color based on property type
+  // Get badge color based on property type - Updated for all types
   const getBadgeStyle = () => {
     switch (type) {
       case "buy":
@@ -37,10 +50,35 @@ export function PropertyCard({
         return "bg-gradient-to-r from-teal-600 to-teal-500 text-white border-0";
       case "rent":
         return "bg-white border border-purple-400 text-purple-600";
+      case "plot":
+        return "bg-gradient-to-r from-green-600 to-green-500 text-white border-0";
+      case "commercial":
+        return "bg-gradient-to-r from-orange-600 to-orange-500 text-white border-0";
       default:
         return "";
     }
   };
+
+  // Get badge text based on property type
+  const getBadgeText = () => {
+    switch (type) {
+      case "buy":
+        return "For Sale";
+      case "sell":
+        return "Selling";
+      case "rent":
+        return "For Rent";
+      case "plot":
+        return "Plot";
+      case "commercial":
+        return "Commercial";
+      default:
+        return "Property";
+    }
+  };
+
+  // Check if we should show bedroom/bathroom info (not for plot/commercial)
+  const showBedroomBathroom = type !== "plot" && type !== "commercial";
 
   return (
     <Link to={`/properties/${id}`}>
@@ -52,20 +90,14 @@ export function PropertyCard({
             alt={title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
-          <Badge
-            className={`absolute top-3 right-3 z-20 ${getBadgeStyle()}`}
-          >
-            {type === "buy"
-              ? "For Sale"
-              : type === "rent"
-              ? "For Rent"
-              : "Selling"}
+          <Badge className={`absolute top-3 right-3 z-20 ${getBadgeStyle()}`}>
+            {getBadgeText()}
           </Badge>
           
           {/* Likes counter */}
           <div className="absolute top-3 left-3 z-20 flex items-center bg-black/50 text-white px-2 py-1 rounded-md">
             <Heart size={16} className="mr-1 fill-white text-white" />
-            <span className="text-xs font-medium">{likes}</span>
+            <span className="text-xs font-medium">{likeCount}</span>
           </div>
         </div>
         <CardContent className="p-5">
@@ -84,18 +116,34 @@ export function PropertyCard({
         </CardContent>
         <CardFooter className="px-5 py-4 border-t bg-gray-50">
           <div className="flex justify-between w-full text-sm">
-            <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
-              <Bed size={18} />
-              <span className="font-medium">
-                {bedrooms} {bedrooms === 1 ? "Bed" : "Beds"}
-              </span>
-            </div>
-            <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
-              <Bath size={18} />
-              <span className="font-medium">
-                {bathrooms} {bathrooms === 1 ? "Bath" : "Baths"}
-              </span>
-            </div>
+            {/* Conditionally show bedroom/bathroom info */}
+            {showBedroomBathroom && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Bed className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-500">
+                    {bedrooms >= 4 ? "4+" : bedrooms} Beds
+                  </span>
+                </div>
+                <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
+                  <Bath size={18} />
+                  <span className="font-medium">
+                    {bathrooms} {bathrooms === 1 ? "Bath" : "Baths"}
+                  </span>
+                </div>
+                {/* Show balcony if greater than 0 */}
+                {balcony > 0 && (
+                  <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
+                    <span className="text-sm">🏡</span>
+                    <span className="font-medium">
+                      {balcony} {balcony === 1 ? "Balcony" : "Balconies"}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* Always show area */}
             <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
               <Maximize2 size={18} />
               <span className="font-medium">{area} sq.ft</span>

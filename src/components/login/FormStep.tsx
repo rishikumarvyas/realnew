@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Form,
   FormControl,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -30,7 +32,12 @@ const formSchema = z.object({
   phone: z.string().refine((val) => phoneRegex.test(val), {
     message: "Please enter a valid 10-digit Indian phone number.",
   }),
-  userType: z.coerce.number(),
+  userType: z.coerce.number().min(1, {
+    message: "Please select a user type.",
+  }),
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must accept the Terms & Conditions to continue.",
+  }),
 });
 
 interface FormStepProps {
@@ -48,22 +55,37 @@ export const FormStep = ({
   loading, 
   userTypes = [], 
   states = [],
-  initialUserType = 1,
+  initialUserType,
   phoneError = null
 }: FormStepProps) => {
+  const navigate = useNavigate();
+  
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       phone: "",
-      userType: initialUserType,
+      userType: initialUserType || 0, // Set to 0 when no initial value provided
+      termsAccepted: false,
     },
   });
+
+  // Watch form values to determine if button should be enabled
+  const watchedValues = form.watch();
+  const isFormValid = watchedValues.name.trim() !== "" && 
+                     watchedValues.phone.trim() !== "" && 
+                     watchedValues.userType > 0 && 
+                     watchedValues.termsAccepted === true;
 
   const handleSubmit = (data: any) => {
     if (onSubmit) {
       onSubmit(data);
     }
+  };
+
+  const handleTermsClick = () => {
+    // Open Terms & Conditions page in a new tab
+    window.open('/terms', '_blank');
   };
 
   return (
@@ -126,7 +148,7 @@ export const FormStep = ({
                 <FormLabel className="text-xs font-medium">I am a</FormLabel>
                 <Select
                   onValueChange={(value) => field.onChange(parseInt(value))}
-                  defaultValue={field.value.toString()}
+                  value={field.value > 0 ? field.value.toString() : ""}
                 >
                   <FormControl>
                     <SelectTrigger className="h-9">
@@ -146,10 +168,43 @@ export const FormStep = ({
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="termsAccepted"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1"
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="text-xs text-gray-700 cursor-pointer">
+                    I have read and agree to the{" "}
+                    <span 
+                      className="font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      onClick={handleTermsClick}
+                    >
+                      Terms & Conditions
+                    </span>{" "}
+                    of HomeYatra.
+                  </FormLabel>
+                  <FormMessage className="text-xs" />
+                </div>
+              </FormItem>
+            )}
+          />
+
           <Button 
             type="submit" 
-            className="w-full h-9 text-sm mt-2 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500" 
-            disabled={loading}
+            className={`w-full h-9 text-sm mt-2 ${
+              isFormValid && !loading
+                ? "bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            disabled={!isFormValid || loading}
           >
             {loading ? "Processing..." : "Continue with OTP"}
           </Button>
