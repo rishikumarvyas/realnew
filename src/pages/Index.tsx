@@ -7,6 +7,7 @@ import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
 import { Testimonial } from "@/components/Testimonial";
 import { StatCard } from "@/components/StatCard";
 import AllProperty from "./AllProperty";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Search, 
   ArrowRight, 
@@ -101,6 +102,7 @@ const Index = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+  const { isAuthenticated, openLoginModal } = useAuth();
 
   // Auto-advance slider every 5 seconds
   useEffect(() => {
@@ -153,6 +155,14 @@ const Index = () => {
     setSearchTerm(suggestion);
     setShowSuggestions(false);
     navigate(`/properties?search=${encodeURIComponent(suggestion)}`);
+  };
+
+  const handlePostPropertyClick = () => {
+    if (isAuthenticated) {
+      navigate('/post-property');
+    } else {
+      openLoginModal();
+    }
   };
 
   return (
@@ -413,7 +423,7 @@ const Index = () => {
       </p>
       <Button 
         size="lg"
-        onClick={() => navigate('/post-property')}
+        onClick={handlePostPropertyClick}
         className="bg-blue-600 text-white hover:bg-blue-700 px-12 py-6 text-lg font-semibold shadow-xl rounded-full"
       >
         Post Your Property

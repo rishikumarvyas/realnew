@@ -1,23 +1,172 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Shield, FileText, Users, Lock } from "lucide-react";
+import { X, Shield, FileText, Users, Lock, Loader2, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface TermsCondition {
+  id: string;
+  termsconditions: string;
+}
+
+interface ApiResponse {
+  statusCode: number;
+  message: string;
+  data: TermsCondition[];
+}
+
+interface MessagePayload {
+  phone: string;
+  templateId: number;
+  message: string;
+  action: string;
+  name: string;
+  userTypeId: string;
+  isTermsConditionsAccepted: boolean;
+}
 
 interface TermsConditionsProps {
   onAccept: () => void;
   onClose: () => void;
   isVisible: boolean;
+  // Add user data props
+  userData?: {
+    phone: string;
+    name: string;
+    userTypeId: string;
+  };
 }
 
-const TermsConditions = ({ onAccept, onClose, isVisible }: TermsConditionsProps) => {
+const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsConditionsProps) => {
   const [accepted, setAccepted] = useState(false);
+  const [termsData, setTermsData] = useState<TermsCondition[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  const handleAccept = () => {
-    if (accepted) {
-      onAccept();
+  // Create axios instance
+  const apiClient = axios.create({
+    baseURL: 'https://homeyatraapi.azurewebsites.net/api',
+    timeout: 10000,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  // Fetch terms and conditions from API
+  const fetchTermsAndConditions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching terms and conditions...');
+      
+      const response = await apiClient.get<ApiResponse>(
+        '/Generic/GetActiveRecords?tableName=termsconditions'
+      );
+      
+      console.log('📥 Terms and conditions response:', response.data);
+      
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        setTermsData(response.data.data);
+        console.log('✅ Terms data loaded successfully');
+        
+        toast({
+          title: "Terms & Conditions Loaded",
+          description: `Loaded ${response.data.data.length} terms section(s).`,
+        });
+      } else {
+        console.log('⚠️ No data found in API response');
+        setError('No terms and conditions data found');
+        toast({
+          variant: "destructive",
+          title: "No Data Found",
+          description: "No terms and conditions data available.",
+        });
+      }
+    } catch (err) {
+      console.error('❌ Error fetching terms and conditions:', err);
+      setError('Failed to load terms and conditions');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load terms and conditions from server.",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Send terms acceptance to API
+  const sendTermsAcceptance = async () => {
+    try {
+      setIsSubmitting(true);
+      console.log('🔄 Sending terms acceptance...');
+
+      // Use provided userData or fallback values
+      const userPhone = userData?.phone || "user_phone_number";
+      const userName = userData?.name || "User";
+      const userTypeId = userData?.userTypeId || "1";
+
+      const payload: MessagePayload = {
+        phone: userPhone.startsWith('+91') ? userPhone : `+91${userPhone}`,
+        templateId: 0,
+        message: "Terms and Conditions accepted during signup",
+        action: "terms_accepted",
+        name: userName,
+        userTypeId: userTypeId,
+        isTermsConditionsAccepted: true
+      };
+
+      console.log('📤 Sending payload:', payload);
+
+      const response = await apiClient.post('/Message/Send', payload);
+
+      console.log('📤 Terms acceptance sent successfully:', response.data);
+
+      toast({
+        title: "Terms Accepted",
+        description: "Your acceptance has been recorded successfully.",
+      });
+
+      onAccept(); // Call the parent onAccept function
+
+    } catch (err) {
+      console.error('❌ Error sending terms acceptance:', err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to record your acceptance. Please try again.",
+      });
+      throw err; // Re-throw to handle in parent component
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isVisible) {
+      fetchTermsAndConditions();
+    }
+  }, [isVisible]);
+
+  const handleAccept = async () => {
+    if (accepted) {
+      await sendTermsAcceptance();
+    }
+  };
+
+  const formatTermsContent = (content: string) => {
+    // Split content into paragraphs and format
+    const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+    return paragraphs.map((paragraph, index) => (
+      <p key={index} className="mb-4 text-gray-700 leading-relaxed text-sm">
+        {paragraph.trim()}
+      </p>
+    ));
   };
 
   const popupClasses = isVisible
@@ -64,111 +213,59 @@ const TermsConditions = ({ onAccept, onClose, isVisible }: TermsConditionsProps)
           <CardContent className="p-0">
             {/* Terms content */}
             <ScrollArea className="h-64 p-6">
-              <div className="space-y-6 text-gray-700">
-                {/* Welcome Section */}
-                <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
-                  <h3 className="font-semibold text-blue-800 mb-2">Welcome to HomeYatra</h3>
-                  <p className="text-sm text-blue-700">
-                    By creating an account, you agree to our terms of service and privacy policy. 
-                    Please read these terms carefully before proceeding.
-                  </p>
-                </div>
-
-                {/* Key Points */}
-                <div className="grid gap-4">
-                  <div className="flex gap-3">
-                    <div className="bg-green-100 rounded-full p-2 h-fit">
-                      <Users className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800">Account Usage</h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        You agree to use your account responsibly and provide accurate information. 
-                        One account per user is permitted.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="bg-purple-100 rounded-full p-2 h-fit">
-                      <Lock className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800">Privacy & Data</h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        We protect your personal information and use it only to provide our services. 
-                        Your data will not be shared without consent.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <div className="bg-orange-100 rounded-full p-2 h-fit">
-                      <Shield className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800">Platform Rules</h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Maintain respectful communication, provide accurate property information, 
-                        and follow all applicable laws and regulations.
-                      </p>
-                    </div>
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+                    <p className="text-gray-600 text-sm">Loading Terms & Conditions...</p>
                   </div>
                 </div>
-
-                {/* Detailed Terms */}
-                <div className="space-y-4 border-t pt-4">
-                  <h3 className="font-semibold text-gray-800">Detailed Terms</h3>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">1. Service Description</h4>
-                    <p className="text-sm text-gray-600">
-                      HomeYatra provides a platform connecting property owners, brokers, builders, and buyers. 
-                      We facilitate property transactions but are not responsible for the actual deals between parties.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">2. User Responsibilities</h4>
-                    <p className="text-sm text-gray-600">
-                      Users must provide accurate information, maintain account security, respect other users, 
-                      and comply with all applicable laws. Misuse of the platform may result in account suspension.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">3. Property Listings</h4>
-                    <p className="text-sm text-gray-600">
-                      All property information must be accurate and up-to-date. Users are responsible for 
-                      verifying property details and legal documentation before any transactions.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">4. Privacy Policy</h4>
-                    <p className="text-sm text-gray-600">
-                      We collect and use personal information to provide our services. Your data is protected 
-                      and will not be shared with third parties without your explicit consent, except as required by law.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">5. Limitation of Liability</h4>
-                    <p className="text-sm text-gray-600">
-                      HomeYatra is not liable for any direct or indirect damages arising from platform use. 
-                      Users engage in property transactions at their own risk.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">6. Termination</h4>
-                    <p className="text-sm text-gray-600">
-                      Either party may terminate the agreement at any time. HomeYatra reserves the right 
-                      to suspend accounts that violate these terms.
-                    </p>
+              ) : error ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-3" />
+                    <p className="text-red-600 text-sm mb-3">{error}</p>
+                    <Button
+                      onClick={fetchTermsAndConditions}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Retry Loading
+                    </Button>
                   </div>
                 </div>
-              </div>
+              ) : termsData.length > 0 ? (
+                <div className="space-y-6 text-gray-700">
+                  {/* Welcome Section */}
+                  <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
+                    <h3 className="font-semibold text-blue-800 mb-2">Welcome to HomeYatra</h3>
+                    <p className="text-sm text-blue-700">
+                      By creating an account, you agree to our terms of service and privacy policy. 
+                      Please read these terms carefully before proceeding.
+                    </p>
+                  </div>
+
+                  {/* API Terms Content */}
+                  <div className="space-y-4 border-t pt-4">
+                    <h3 className="font-semibold text-gray-800">Platform Terms & Conditions</h3>
+                    {termsData.map((section, index) => (
+                      <div key={section.id} className="space-y-2">
+                        <h4 className="font-medium text-gray-700">Section {index + 1}</h4>
+                        <div className="text-sm text-gray-600">
+                          {formatTermsContent(section.termsconditions)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 text-sm">No terms and conditions available</p>
+                  </div>
+                </div>
+              )}
             </ScrollArea>
 
             {/* Accept section */}
@@ -179,6 +276,7 @@ const TermsConditions = ({ onAccept, onClose, isVisible }: TermsConditionsProps)
                   checked={accepted}
                   onCheckedChange={(checked) => setAccepted(checked as boolean)}
                   className="mt-1"
+                  disabled={loading || error !== null}
                 />
                 <label htmlFor="accept-terms" className="text-sm text-gray-700 cursor-pointer">
                   I have read and agree to the{" "}
@@ -193,15 +291,23 @@ const TermsConditions = ({ onAccept, onClose, isVisible }: TermsConditionsProps)
                   variant="outline"
                   onClick={onClose}
                   className="px-6"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAccept}
-                  disabled={!accepted}
-                  className="px-8 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
+                  disabled={!accepted || loading || error !== null || isSubmitting}
+                  className="px-8 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 flex items-center gap-2"
                 >
-                  Accept & Continue
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Accept & Continue"
+                  )}
                 </Button>
               </div>
             </div>

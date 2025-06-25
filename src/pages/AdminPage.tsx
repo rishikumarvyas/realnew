@@ -56,12 +56,36 @@ const AdminPage = () => {
   const fetchPropertiesByStatus = async (statusId: number) => {
     console.log('🔄 Fetching properties for statusId:', statusId);
     
+    // Convert dateFilter to lastMonth value for API
+    const getLastMonthValue = () => {
+      switch (dateFilter) {
+        case "1month":
+          return 1;
+        case "2months":
+          return 2;
+        case "3months":
+          return 3;
+        case "all":
+        default:
+          return 0; // 0 means all time
+      }
+    };
+
     const baseBody = {
       superCategoryId: 0,
       propertyTypeIds: [],
       accountId: "",
       searchTerm: "",
-      statusId: statusId
+      statusId: statusId,
+      lastMonth: getLastMonthValue(),
+      minPrice: 0,
+      maxPrice: 0,
+      bedroom: 0,
+      balcony: 0,
+      minArea: 0,
+      maxArea: 0,
+      pageNumber: 1,
+      pageSize: -1
     };
 
     try {
@@ -128,7 +152,7 @@ const AdminPage = () => {
 
   useEffect(() => {
     fetchAllProperties();
-  }, []);
+  }, [dateFilter]); // Re-fetch when date filter changes
 
   // Handle property action - call API and refresh data
   const handlePropertyAction = async (propertyId: string, action: string, newStatus: string) => {
@@ -193,35 +217,7 @@ const AdminPage = () => {
     }
   };
 
-  // Filter properties by date
-  const filterPropertiesByDate = (properties: Property[]) => {
-    if (dateFilter === "all") return properties;
-    
-    const now = new Date();
-    const cutoffDate = new Date();
-    
-    switch (dateFilter) {
-      case "1month":
-        cutoffDate.setMonth(now.getMonth() - 1);
-        break;
-      case "2months":
-        cutoffDate.setMonth(now.getMonth() - 2);
-        break;
-      case "3months":
-        cutoffDate.setMonth(now.getMonth() - 3);
-        break;
-      default:
-        return properties;
-    }
-    
-    return properties.filter(property => {
-      if (!property.createdDate) return false;
-      const propertyDate = new Date(property.createdDate);
-      return propertyDate >= cutoffDate;
-    });
-  };
-
-  // Filter properties based on status and date
+  // Filter properties based on status (no date filtering needed as API handles it)
   const getFilteredProperties = (tab: string) => {
     console.log('🔍 Filtering properties for tab:', tab);
     
@@ -232,7 +228,7 @@ const AdminPage = () => {
 
     // For 'all' tab, return all properties
     if (tab === 'all') {
-      return filterPropertiesByDate(properties);
+      return properties;
     }
 
     const statusMap = {
@@ -244,28 +240,25 @@ const AdminPage = () => {
     const targetStatus = statusMap[tab as keyof typeof statusMap];
     console.log('🎯 Looking for properties with statusId:', targetStatus, 'for tab:', tab);
 
-    // Filter properties by status first, then by date
+    // Filter properties by status
     const statusFiltered = properties.filter(property => {
       const matches = property.statusId === targetStatus;
       console.log(`Property ${property.propertyId}: status=${property.statusId}, target=${targetStatus}, matches=${matches}`);
       return matches;
     });
 
-    const finalFiltered = filterPropertiesByDate(statusFiltered);
+    console.log(`📊 Filtered properties (${tab}):`, statusFiltered.length);
+    console.log('📋 Filtered properties details:', statusFiltered.map(p => ({ id: p.propertyId, status: p.statusId, title: p.title })));
     
-    console.log(`📊 Filtered properties (${tab}):`, finalFiltered.length);
-    console.log('📋 Filtered properties details:', finalFiltered.map(p => ({ id: p.propertyId, status: p.statusId, title: p.title })));
-    
-    return finalFiltered;
+    return statusFiltered;
   };
 
   const getStatusCounts = () => {
-    const dateFilteredProperties = filterPropertiesByDate(properties);
     return {
-      pending: dateFilteredProperties.filter(p => p.statusId === '1').length,
-      approved: dateFilteredProperties.filter(p => p.statusId === '2').length,
-      rejected: dateFilteredProperties.filter(p => p.statusId === '3').length,
-      total: dateFilteredProperties.length
+      pending: properties.filter(p => p.statusId === '1').length,
+      approved: properties.filter(p => p.statusId === '2').length,
+      rejected: properties.filter(p => p.statusId === '3').length,
+      total: properties.length
     };
   };
 

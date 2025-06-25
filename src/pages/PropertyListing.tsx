@@ -447,45 +447,28 @@ export const PropertyListing = () => {
   fetchProperties();
 }, [searchParams]); // Only depend on searchParams
 
-// Updated fetchProperties function - remove activeTab dependency issue
+// Updated fetchProperties function with StatusId: 2 and min/max values set to 0
 const fetchProperties = async () => {
   setLoading(true);
   try {
     // Get the current type from URL, not from state
     const currentTypeParam = searchParams.get("type") || "all";
     
-    // Prepare filter options based on URL parameters
+    // Prepare filter options based on URL parameters - UPDATED: Use actual area values
     const filterOptions: FilterOptions = {
       searchTerm: searchParams.get("search") || "",
-      minPrice: parseInt(searchParams.get("minPrice") || "0"),
-      maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
+      minPrice: 0, // Set to 0 as requested
+      maxPrice: 0, // Set to 0 as requested
       minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
       minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
       minBalcony: parseInt(searchParams.get("balcony") || "0"),
       minArea: parseInt(searchParams.get("minArea") || "0"),
-      maxArea: 0,
+      maxArea: parseInt(searchParams.get("maxArea") || "5000"),
+      availableFrom: searchParams.get("availableFrom") || undefined,
+      preferenceId: searchParams.get("preference") || undefined,
+      furnished: searchParams.get("furnished") || undefined,
+      amenities: searchParams.get("amenities")?.split(',') || undefined,
     };
-    
-    // Add other filter parameters...
-    const availableFromParam = searchParams.get("availableFrom");
-    if (availableFromParam) {
-      filterOptions.availableFrom = availableFromParam;
-    }
-    
-    const preferenceParam = searchParams.get("preference");
-    if (preferenceParam && preferenceParam !== "0") {
-      filterOptions.preferenceId = preferenceParam;
-    }
-
-    const furnishedParam = searchParams.get("furnished");
-    if (furnishedParam && furnishedParam !== "any") {
-      filterOptions.furnished = furnishedParam;
-    }
-
-    const amenitiesParam = searchParams.get("amenities");
-    if (amenitiesParam) {
-      filterOptions.amenities = amenitiesParam.split(',');
-    }
     
     // FIXED: Use current URL type parameter instead of state
     const typeConfig = propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
@@ -514,20 +497,21 @@ const fetchProperties = async () => {
       pageNumber = parseInt(searchParams.get("page") || "1") - 1;
     }
 
-    // Prepare request payload
+    // Prepare request payload - UPDATED: Use actual area values from filterOptions
     const requestPayload = {
       superCategoryId,
       propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
       propertyFor,
       accountId: "string",
       searchTerm: filterOptions.searchTerm,
-      minPrice: filterOptions.minPrice,
-      maxPrice: filterOptions.maxPrice,
+      StatusId: 2, // ADDED: StatusId set to 2 as requested
+      minPrice: 0, // UPDATED: Set to 0 as requested
+      maxPrice: 0, // UPDATED: Set to 0 as requested
       bedroom: filterOptions.minBedrooms,
       bathroom: filterOptions.minBathrooms,
       balcony: filterOptions.minBalcony,
-      minArea: filterOptions.minArea,
-      maxArea: filterOptions.maxArea,
+      minArea: filterOptions.minArea, // UPDATED: Use actual minArea value
+      maxArea: filterOptions.maxArea, // UPDATED: Use actual maxArea value
       availableFrom: filterOptions.availableFrom,
       preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
       furnished: filterOptions.furnished,
@@ -595,56 +579,56 @@ const fetchProperties = async () => {
     });
 
     setProperties(transformedData);
-    
-    // Apply client-side filtering based on current URL type
-    let filtered = transformedData;
-    
-    if (currentTypeParam === "plot") {
-      filtered = transformedData.filter(prop => 
-        prop.type === "plot" || 
-        prop.propertyType === "4" ||
-        (prop.propertyType?.toLowerCase() || "").includes("plot")
-      );
-    } else if (currentTypeParam === "commercial") {
-      filtered = transformedData.filter(prop => 
-        prop.type === "commercial" || 
-        prop.propertyType === "2" ||
-        prop.propertyType === "7" ||
-        (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-        (prop.propertyType?.toLowerCase() || "").includes("shop")
-      );
-    } else if (currentTypeParam !== "all") {
-      filtered = transformedData.filter(property => property.type === currentTypeParam);
-    }
-    
-    // Apply other filters
-    const currentSearchQuery = searchParams.get("search") || "";
-    const currentPriceRange = [
-      parseInt(searchParams.get("minPrice") || "0"),
-      parseInt(searchParams.get("maxPrice") || "20000000")
-    ];
-    const currentMinArea = parseInt(searchParams.get("minArea") || "0");
-    
-    filtered = filtered.filter(property => {
-      if (
-        currentSearchQuery &&
-        !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
-        !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
-      ) {
-        return false;
+      
+      // Apply client-side filtering based on current URL type
+      let filtered = transformedData;
+      
+      if (currentTypeParam === "plot") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "plot" || 
+          prop.propertyType === "4" ||
+          (prop.propertyType?.toLowerCase() || "").includes("plot")
+        );
+      } else if (currentTypeParam === "commercial") {
+        filtered = transformedData.filter(prop => 
+          prop.type === "commercial" || 
+          prop.propertyType === "2" ||
+          prop.propertyType === "7" ||
+          (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
+          (prop.propertyType?.toLowerCase() || "").includes("shop")
+        );
+      } else if (currentTypeParam !== "all") {
+        filtered = transformedData.filter(property => property.type === currentTypeParam);
       }
       
-      if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
-        return false;
-      }
+      // Apply other filters
+      const currentSearchQuery = searchParams.get("search") || "";
+      const currentPriceRange = [
+        parseInt(searchParams.get("minPrice") || "0"),
+        parseInt(searchParams.get("maxPrice") || "20000000")
+      ];
+      const currentMinArea = parseInt(searchParams.get("minArea") || "0");
       
-      if (property.area < currentMinArea) {
-        return false;
-      }
-      
-      return true;
-    });
-    
+      filtered = filtered.filter(property => {
+        if (
+          currentSearchQuery &&
+          !property.title.toLowerCase().includes(currentSearchQuery.toLowerCase()) &&
+          !property.location.toLowerCase().includes(currentSearchQuery.toLowerCase())
+        ) {
+          return false;
+        }
+        
+        if (property.price < currentPriceRange[0] || property.price > currentPriceRange[1]) {
+          return false;
+        }
+        
+        if (property.area < currentMinArea) {
+          return false;
+        }
+        
+        return true;
+      });
+
     setFilteredProperties(filtered);
     
     toast({
@@ -663,7 +647,7 @@ const fetchProperties = async () => {
       description: "We're having trouble fetching properties. Using sample data instead.",
     });
     
-    useMockData();
+    // useMockData(); // You may need to implement this function
   } finally {
     setLoading(false);
   }
@@ -916,6 +900,7 @@ useEffect(() => {
     setMinBathrooms(0);
     setMinBalcony(0);
     setMinArea(0);
+    setMaxArea(5000); // FIXED: Reset maxArea to 5000
     setSearchQuery("");
     setSearchTerm("");
     setAvailableFrom(undefined);
@@ -1053,12 +1038,27 @@ useEffect(() => {
   // Add state for sidebar visibility
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
+  // Add state for property type section collapse
+  const [propertyTypeCollapsed, setPropertyTypeCollapsed] = useState(false);
+
   // In the component, use the correct amenityOptions based on activeTab
   const getCurrentAmenityOptions = () => {
     if (activeTab === "commercial") {
       return commercialAmenityOptions;
     }
     return amenityOptions;
+  };
+
+  // Get current property type icon
+  const getCurrentPropertyTypeIcon = () => {
+    const propertyTypes = [
+      { key: 'all', icon: '🏘️' },
+      { key: 'buy', icon: '🏠' },
+      { key: 'rent', icon: '🔑' },
+      { key: 'plot', icon: '🏞️' },
+      { key: 'commercial', icon: '🏢' }
+    ];
+    return propertyTypes.find(pt => pt.key === activeTab)?.icon || '🏘️';
   };
 
   return (
@@ -1082,80 +1082,48 @@ useEffect(() => {
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
               <p className="text-lg text-white/90 mb-8">Use our advanced filters to find the perfect property that matches your requirements</p>
+              {/* Search Input Form (copied from Index.tsx) */}
+              <form onSubmit={handleSearch} className="mt-4 sm:mt-6 relative mx-auto">
+                <div className="relative flex shadow-xl">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
+                    <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                  </div>
+                  <Input
+                    type="text"
+                    className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                    placeholder="Search Society, Locality, City, State"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  />
+                  <Button
+                    type="submit"
+                    className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-r-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+                  >
+                    Search
+                  </Button>
+                </div>
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
+                    {suggestions.map((suggestion, index) => (
+                      <li
+                        key={index}
+                        onMouseDown={() => handleSuggestionClick(suggestion)}
+                        className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                      >
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </form>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
-        {/* Modern Tab Bar */}
-        <div className="w-full px-4 py-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="relative">
-              <div className="bg-gradient-to-r from-blue-200 via-blue-300 to-blue-400 rounded-2xl p-1 shadow-2xl backdrop-blur-sm">
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3">
-                  <div className="overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-2 min-w-max md:min-w-0 md:justify-center">
-                      {[
-                        { key: 'all', label: 'All Properties', icon: '🏘️' },
-                        { key: 'buy', label: 'Buy', icon: '🏠' },
-                        { key: 'rent', label: 'Rent', icon: '🔑' },
-                        { key: 'plot', label: 'Plot', icon: '🏞️' },
-                        { key: 'commercial', label: 'Commercial', icon: '🏢' }
-                      ].map((tab) => (
-                        <div key={tab.key} className="relative">
-                          <button
-                            onClick={() => handleTabChange(tab.key)}
-                            className={`group relative flex items-center gap-2 px-4 py-3 md:px-6 md:py-4 rounded-xl text-sm md:text-base font-semibold transition-all duration-300 ease-out transform hover:scale-105 min-w-max ${
-                              activeTab === tab.key
-                                ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/25 border border-blue-100'
-                                : 'text-white hover:bg-white/20 hover:backdrop-blur-md hover:shadow-lg'
-                            }`}
-                          >
-                            <span className="text-lg md:text-xl">{tab.icon}</span>
-                            <span className="whitespace-nowrap">{tab.label}</span>
-                            {activeTab === tab.key && (
-                              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
-                            )}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Current Selection Display */}
-            <div className="mt-6 text-center">
-              <div className="inline-flex items-center gap-2 bg-white rounded-full px-6 py-3 shadow-lg border border-gray-100">
-                <span className="text-sm text-gray-600">Currently selected:</span>
-                <span className="font-semibold text-blue-600">
-                  {activeTab === 'commercial' 
-                    ? `Commercial - ${commercialType.charAt(0).toUpperCase() + commercialType.slice(1)}`
-                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
-                        (['All Properties','Buy','Rent','Plot','Commercial'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
-                      )
-                  }
-                </span>
-                <span className="text-lg">
-                  {activeTab === 'commercial' 
-                    ? (commercialType === 'buy' ? '💰' : '📋')
-                    : (['all','buy','rent','plot','commercial'].find(tab => tab === activeTab) ? 
-                        (['🏘️','🏠','🔑','🏞️','🏢'][['all','buy','rent','plot','commercial'].indexOf(activeTab)]) : ''
-                      )
-                  }
-                </span>
-              </div>
-            </div>
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500 md:hidden">
-                ← Swipe horizontally to see all tabs →
-              </p>
-            </div>
-          </div>
-        </div>
-
+      <div className="w-full px-0 py-8">
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">
           <Button 
@@ -1196,7 +1164,7 @@ useEffect(() => {
                 className="mb-2"
               >
                 {sidebarVisible ? (
-                  <><Minus className="h-4 w-4 mr-2" /> Hide Filters</>
+                  <><Minus className="h-4 w-4 mr-2" /> Hide</>
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
@@ -1209,20 +1177,48 @@ useEffect(() => {
                 <div className="p-0">
                   {/* Filter Card */}
                   <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 flex flex-col gap-4">
-                    {/* Sidebar Header */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FilterX className="h-5 w-5 text-blue-600" />
-                        <span className="text-lg font-bold text-blue-700">Filters</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={resetFilters}
-                        className="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-2"
+                    {/* Property Type Tabs Section - Collapsible */}
+                    <div className="mb-6">
+                      <div 
+                        className="font-semibold text-blue-700 text-sm mb-2 flex items-center justify-between cursor-pointer"
+                        onClick={() => setPropertyTypeCollapsed(!propertyTypeCollapsed)}
                       >
-                        Clear All
-                      </Button>
+                        <span className="flex items-center gap-2">
+                          <span>Property Type</span>
+                          {propertyTypeCollapsed && (
+                            <span className="text-lg">{getCurrentPropertyTypeIcon()}</span>
+                          )}
+                        </span>
+                        {propertyTypeCollapsed ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4" />
+                        )}
+                      </div>
+                      {!propertyTypeCollapsed && (
+                        <div className="flex flex-col gap-2">
+                          {[
+                            { key: 'all', label: 'All Properties', icon: '🏘️' },
+                            { key: 'buy', label: 'Buy', icon: '🏠' },
+                            { key: 'rent', label: 'Rent', icon: '🔑' },
+                            { key: 'plot', label: 'Plot', icon: '🏞️' },
+                            { key: 'commercial', label: 'Commercial', icon: '🏢' }
+                          ].map((tab) => (
+                            <button
+                              key={tab.key}
+                              onClick={() => handleTabChange(tab.key)}
+                              className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200
+                                ${activeTab === tab.key
+                                  ? 'bg-blue-600 text-white shadow-lg border border-blue-200'
+                                  : 'bg-white text-blue-700 hover:bg-blue-100 border border-blue-100'}
+                              `}
+                            >
+                              <span className="text-lg">{tab.icon}</span>
+                              <span>{tab.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Commercial Type Selection */}
@@ -1257,6 +1253,22 @@ useEffect(() => {
                         </div>
                       </div>
                     )}
+
+                    {/* Sidebar Header */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <FilterX className="h-5 w-5 text-blue-600" />
+                        <span className="text-lg font-bold text-blue-700">Filters</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetFilters}
+                        className="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-2"
+                      >
+                        Clear All
+                      </Button>
+                    </div>
 
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
@@ -1453,6 +1465,162 @@ useEffect(() => {
                 </div>
               )}
             </div>
+
+            {/* Collapsed Sidebar Icons - Only visible when sidebar is collapsed */}
+            {!sidebarVisible && (
+              <div className="flex flex-col items-center gap-4 p-2">
+                {/* Property Type Icons - All visible and clickable */}
+                {[
+                  { key: 'all', label: 'All Properties', icon: '🏘️' },
+                  { key: 'buy', label: 'Buy', icon: '🏠' },
+                  { key: 'rent', label: 'Rent', icon: '🔑' },
+                  { key: 'plot', label: 'Plot', icon: '🏞️' },
+                  { key: 'commercial', label: 'Commercial', icon: '🏢' }
+                ].map((tab) => (
+                  <div 
+                    key={tab.key}
+                    className="relative group cursor-pointer"
+                    title={tab.label}
+                    onClick={() => handleTabChange(tab.key)}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg transition-colors ${
+                      activeTab === tab.key
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}>
+                      {tab.icon}
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      {tab.label}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Commercial Type Icon (if commercial is selected) */}
+                {activeTab === "commercial" && (
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { key: 'buy', label: 'Buy', icon: '💰' },
+                      { key: 'rent', label: 'Rent', icon: '📋' }
+                    ].map((type) => (
+                      <div 
+                        key={type.key}
+                        className="relative group cursor-pointer"
+                        title={`Commercial ${type.label}`}
+                        onClick={() => handleCommercialTypeChange(type.key as "buy" | "rent")}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg transition-colors ${
+                          commercialType === type.key
+                            ? 'bg-green-600 text-white shadow-lg'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}>
+                          {type.icon}
+                        </div>
+                        {/* Tooltip */}
+                        <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                          Commercial {type.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Filter Icons */}
+                <div 
+                  className="relative group cursor-pointer"
+                  title="Filters"
+                >
+                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white hover:bg-purple-700 transition-colors">
+                    <FilterX className="h-4 w-4" />
+                  </div>
+                  {/* Tooltip */}
+                  <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                    Filters
+                  </div>
+                </div>
+
+                {/* Price Range Icon */}
+                {shouldShowFilter("showPrice") && (
+                  <div 
+                    className="relative group cursor-pointer"
+                    title="Price Range"
+                  >
+                    <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white hover:bg-orange-700 transition-colors">
+                      <IndianRupeeIcon className="h-4 w-4" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      Price Range
+                    </div>
+                  </div>
+                )}
+
+                {/* Area Icon */}
+                {shouldShowFilter("showArea") && (
+                  <div 
+                    className="relative group cursor-pointer"
+                    title="Area"
+                  >
+                    <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white hover:bg-teal-700 transition-colors">
+                      <Ruler className="h-4 w-4" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      Area
+                    </div>
+                  </div>
+                )}
+
+                {/* Bedrooms Icon */}
+                {shouldShowFilter("showBedrooms") && (
+                  <div 
+                    className="relative group cursor-pointer"
+                    title="Bedrooms"
+                  >
+                    <div className="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white hover:bg-pink-700 transition-colors">
+                      <Bed className="h-4 w-4" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      Bedrooms
+                    </div>
+                  </div>
+                )}
+
+                {/* Bathrooms Icon */}
+                {shouldShowFilter("showBathrooms") && (
+                  <div 
+                    className="relative group cursor-pointer"
+                    title="Bathrooms"
+                  >
+                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white hover:bg-indigo-700 transition-colors">
+                      <Bath className="h-4 w-4" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      Bathrooms
+                    </div>
+                  </div>
+                )}
+
+                {/* Amenities Icon */}
+                {shouldShowFilter("showAmenities") && (
+                  <div 
+                    className="relative group cursor-pointer"
+                    title="Amenities"
+                  >
+                    <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center text-white hover:bg-yellow-700 transition-colors">
+                      <CheckSquare className="h-4 w-4" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      Amenities
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Property listings - takes full remaining width */}
@@ -1667,7 +1835,7 @@ useEffect(() => {
             )}
 
             {/* Results grid - modern card design, 3 per row on desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8 mb-10 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-10 w-full">
               {loading ? (
                 // Loading skeletons
                 Array(6).fill(0).map((_, index) => (
