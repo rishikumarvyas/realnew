@@ -89,9 +89,9 @@ const preferenceOptions = [
 
 // Furnished status options
 const furnishedOptions = [
-  { id: "fully", label: "Fully Furnished" },
-  { id: "semi", label: "Semi Furnished" },
-  { id: "not", label: "Unfurnished" }
+  { id: "Fully", label: "Fully Furnished" },
+  { id: "Semi", label: "Semi Furnished" },
+  { id: "Not", label: "Unfurnished" }
 ];
 
 // Amenity options for commercial properties
@@ -105,18 +105,24 @@ const commercialAmenityOptions = [
   "Unfurnished"
 ];
 
-// Common amenities (updated to match user request)
-const amenityOptions = [
-  "Lift",
-  "Swimming Pool",
-  "Club House",
-  "Garden",
-  "Gym",
-  "Security",
-  "Power Backup",
-  "Parking",
-  "Gas Pipeline"
-];
+// Amenity ID to name mapping
+const AMENITY_MAP = {
+  1: "Lift",
+  2: "Swimming Pool",
+  3: "Club House",
+  4: "Garden",
+  5: "Gym",
+  6: "Security",
+  7: "Power Backup",
+  8: "Parking",
+  9: "Gas Pipeline",
+  10: "Fully Furnished",
+  11: "Semi Furnished",
+  12: "Unfurnished"
+};
+
+// For amenity filter options, use the mapping
+const amenityOptions = Object.entries(AMENITY_MAP).map(([id, label]) => ({ id, label }));
 
 // Property type mapping - Updated to merge shop and commercial, remove land/office
 const propertyTypeMapping = {
@@ -514,11 +520,17 @@ const fetchProperties = async () => {
       maxArea: filterOptions.maxArea, // UPDATED: Use actual maxArea value
       availableFrom: filterOptions.availableFrom,
       preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
-      furnished: filterOptions.furnished,
+      furnished: filterOptions.furnished === "any" ? undefined : filterOptions.furnished,
       amenities: filterOptions.amenities,
       pageNumber,
       pageSize,
     };
+    
+    console.log('API Request Payload:', {
+      type: currentTypeParam,
+      furnished: filterOptions.furnished,
+      payload: requestPayload
+    });
     
     console.log(`Fetching properties for type: ${currentTypeParam}`, requestPayload);
     setApiDebug(prev => ({ ...prev, request: requestPayload }));
@@ -706,7 +718,16 @@ const applyFilters = (data: PropertyCardProps[]) => {
 
   // Apply furnished filter
   if (furnished !== "any") {
+    console.log('Applying furnished filter:', {
+      filterValue: furnished,
+      propertiesBefore: filtered.length,
+      furnishedValues: filtered.map(p => p.furnished)
+    });
     filtered = filtered.filter(property => property.furnished === furnished);
+    console.log('After furnished filter:', {
+      propertiesAfter: filtered.length,
+      remainingFurnishedValues: filtered.map(p => p.furnished)
+    });
   }
 
   // Apply amenities filter
@@ -1440,8 +1461,8 @@ useEffect(() => {
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="bg-white border-blue-200">
-                            {getCurrentAmenityOptions().map((amenity) => (
-                              <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
+                            {amenityOptions.map((amenity) => (
+                              <SelectItem key={amenity.id} value={amenity.id}>{amenity.label}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>

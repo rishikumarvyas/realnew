@@ -707,28 +707,44 @@ const PropertyDetail = () => {
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-6">
-                {property.bedroom !== undefined && (
-                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
-                      <Bed className="text-blue-600" size={20} />
-                    </div>
-                    <div>
-                      <span className="block font-medium">{property.bedroom}</span>
-                      <span className="text-gray-500 text-sm">Bedrooms</span>
-                    </div>
-                  </div>
-                )}
-                {property.bathroom !== undefined && (
-                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
-                      <Bath className="text-blue-600" size={20} />
-                    </div>
-                    <div>
-                      <span className="block font-medium">{property.bathroom}</span>
-                      <span className="text-gray-500 text-sm">Bathrooms</span>
-                    </div>
-                  </div>
-                )}
+                {/* Only show for non-Plot and non-Shop */}
+                {property.propertyType && !["plot", "shop"].includes(property.propertyType.toLowerCase()) ? (
+                  <>
+                    {property.bedroom !== undefined && (
+                      <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                          <Bed className="text-blue-600" size={20} />
+                        </div>
+                        <div>
+                          <span className="block font-medium">{property.bedroom}</span>
+                          <span className="text-gray-500 text-sm">Bedrooms</span>
+                        </div>
+                      </div>
+                    )}
+                    {property.bathroom !== undefined && (
+                      <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                          <Bath className="text-blue-600" size={20} />
+                        </div>
+                        <div>
+                          <span className="block font-medium">{property.bathroom}</span>
+                          <span className="text-gray-500 text-sm">Bathrooms</span>
+                        </div>
+                      </div>
+                    )}
+                    {property.balcony !== undefined && property.balcony > 0 && (
+                      <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors text-blue-600 font-bold">
+                          B
+                        </div>
+                        <div>
+                          <span className="block font-medium">{property.balcony}</span>
+                          <span className="text-gray-500 text-sm">Balconies</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : null}
                 {property.area !== undefined && (
                   <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
                     <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -737,17 +753,6 @@ const PropertyDetail = () => {
                     <div>
                       <span className="block font-medium">{property.area}</span>
                       <span className="text-gray-500 text-sm">sq.ft Area</span>
-                    </div>
-                  </div>
-                )}
-                {property.balcony !== undefined && property.balcony > 0 && (
-                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors text-blue-600 font-bold">
-                      B
-                    </div>
-                    <div>
-                      <span className="block font-medium">{property.balcony}</span>
-                      <span className="text-gray-500 text-sm">Balconies</span>
                     </div>
                   </div>
                 )}
@@ -760,7 +765,6 @@ const PropertyDetail = () => {
                     <span className="text-gray-500 text-sm">Listed By</span>
                   </div>
                 </div>
-                
                 {/* Likes Count Pill */}
                 <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
                   <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -834,54 +838,45 @@ const PropertyDetail = () => {
                 </TabsContent>
                 
                 <TabsContent value="details" className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex justify-between border-b pb-3">
+                  <div className="divide-y">
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Property Type</span>
                       <span className="font-medium">{property.propertyType || "Not specified"}</span>
                     </div>
-                    <div className="flex justify-between border-b pb-3">
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Location</span>
                       <span className="font-medium">{property.city || ""}{property.state ? `, ${property.state}` : ""}</span>
                     </div>
-                    {property.area !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Total Area</span>
-                        <span className="font-medium">{property.area} sq.ft</span>
-                      </div>
-                    )}
-                    {property.bedroom !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Bedrooms</span>
-                        <span className="font-medium">{property.bedroom}</span>
-                      </div>
-                    )}
-                    {property.bathroom !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Bathrooms</span>
-                        <span className="font-medium">{property.bathroom}</span>
-                      </div>
-                    )}
-                    {property.balcony !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Balconies</span>
-                        <span className="font-medium">{property.balcony}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-b pb-3">
+                    <div className="flex justify-between py-3">
+                      <span className="text-gray-600">Total Area</span>
+                      <span className="font-medium">{property.area} sq.ft</span>
+                    </div>
+                    {/* Only show for non-Plot and non-Shop */}
+                    {property.propertyType && !["plot", "shop"].includes(property.propertyType.toLowerCase()) ? (
+                      <>
+                        <div className="flex justify-between py-3">
+                          <span className="text-gray-600">Bedrooms</span>
+                          <span className="font-medium">{property.bedroom}</span>
+                        </div>
+                        <div className="flex justify-between py-3">
+                          <span className="text-gray-600">Bathrooms</span>
+                          <span className="font-medium">{property.bathroom}</span>
+                        </div>
+                        <div className="flex justify-between py-3">
+                          <span className="text-gray-600">Balconies</span>
+                          <span className="font-medium">{property.balcony}</span>
+                        </div>
+                      </>
+                    ) : null}
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Listed By</span>
                       <span className="font-medium">{property.userType || "Owner"}</span>
                     </div>
-                    {/* Added from PostProperty fields */}
-                    {property.preference && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Tenant Preference</span>
-                        <span className="font-medium">{property.preference || getPreferenceText(property.preferenceId)}</span>
-                      </div>
-                    )}
-                    {property.availableFrom && (
-                      <div className="flex justify-between border-b pb-3">
+                    {/* Only show 'Available From' if not Plot and not Buy */}
+                    {!(property.propertyType && property.propertyType.toLowerCase() === 'plot') && !(property.superCategory && property.superCategory.toLowerCase() === 'buy') && (
+                      <div className="flex justify-between py-3">
                         <span className="text-gray-600">Available From</span>
-                        <span className="font-medium">{new Date(property.availableFrom).toLocaleDateString()}</span>
+                        <span className="font-medium">{property.availableFrom && new Date(property.availableFrom).toLocaleDateString()}</span>
                       </div>
                     )}
                   </div>
@@ -889,52 +884,108 @@ const PropertyDetail = () => {
                 
                 <TabsContent value="moreInfo" className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* New fields from PostProperty */}
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">RERA Approved</span>
-                      <span className="font-medium flex items-center">
-                        {property.isReraApproved ? (
-                          <Badge variant="default" className="bg-green-600">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                    {/* For Plot, only show RERA Approved, Liked by You, and Listed Date */}
+                    {property.propertyType && property.propertyType.toLowerCase() === 'plot' ? (
+                      <>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">RERA Approved</span>
+                          <span className="font-medium flex items-center">
+                            {property.isReraApproved ? (
+                              <Badge variant="default" className="bg-green-600">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Liked by You</span>
+                          <span className="font-medium flex items-center">
+                            {isFavorite ? (
+                              <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Listed Date</span>
+                          <span className="font-medium">{formatDate(property.createdDt)}</span>
+                        </div>
+                      </>
+                    ) : property.propertyType && property.propertyType.toLowerCase() === 'shop' && property.superCategory && property.superCategory.toLowerCase() === 'rent' ? (
+                      <>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Like Count</span>
+                          <span className="font-medium flex items-center">
+                            <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                            {likesCount}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Liked by You</span>
+                          <span className="font-medium flex items-center">
+                            {isFavorite ? (
+                              <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Listed Date</span>
+                          <span className="font-medium">{formatDate(property.createdDt)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {property.superCategory?.toLowerCase() !== 'rent' && (
+                          <>
+                            <div className="flex justify-between border-b pb-3">
+                              <span className="text-gray-600">RERA Approved</span>
+                              <span className="font-medium flex items-center">
+                                {property.isReraApproved ? (
+                                  <Badge variant="default" className="bg-green-600">Yes</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b pb-3">
+                              <span className="text-gray-600">OC Approved</span>
+                              <span className="font-medium flex items-center">
+                                {property.isOCApproved ? (
+                                  <Badge variant="default" className="bg-green-600">Yes</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b pb-3">
+                              <span className="text-gray-600">Like Count</span>
+                              <span className="font-medium flex items-center">
+                                <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                                {likesCount}
+                              </span>
+                            </div>
+                          </>
                         )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">OC Approved</span>
-                      <span className="font-medium flex items-center">
-                        {property.isOCApproved ? (
-                          <Badge variant="default" className="bg-green-600">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Like Count</span>
-                      <span className="font-medium flex items-center">
-                        <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-                        {likesCount}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Liked by You</span>
-                      <span className="font-medium flex items-center">
-                        {isFavorite ? (
-                          <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Listed Date</span>
-                      <span className="font-medium">{formatDate(property.createdDt)}</span>
-                    </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Liked by You</span>
+                          <span className="font-medium flex items-center">
+                            {isFavorite ? (
+                              <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Listed Date</span>
+                          <span className="font-medium">{formatDate(property.createdDt)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  
-                  {/* Property images button */}
-               
                 </TabsContent>
               </Tabs>
             </div>
