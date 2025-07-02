@@ -412,12 +412,18 @@ const PostProperty = () => {
       // Add preference and available from date for rental properties
       if (propertyType === "Rent") {
         // Use the first preference or a default if none selected
-        if (selectedPreferences.length > 0) {
-          formData.append("PreferenceId", selectedPreferences[0]);
-        } else {
-          formData.append("PreferenceId", "4"); // Default to "Anyone"
+        if (isFlatOrBunglowOrHouse) {
+          if (selectedPreferences.length > 0) {
+            selectedPreferences.forEach((prefId) => {
+              formData.append("PreferenceIds", prefId);
+            });
+          } else {
+            formData.append("PreferenceIds", "4"); // Default to "Anyone"
+          }
         }
-
+        if (isShop) {
+          formData.append("PreferenceIds", "");
+        }
         if (availableFrom) {
           formData.append("AvailableFrom", availableFrom.toISOString());
         }
@@ -932,6 +938,77 @@ const PostProperty = () => {
               )}
             </CardContent>
           </Card>
+          {/* Amenities */}
+          {/* Show only if NOT Plot */}
+          {!isPlot && (
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+                <div className="flex items-center">
+                  <Check className="h-5 w-5 text-blue-600 mr-2" />
+                  <CardTitle>Amenities</CardTitle>
+                </div>
+                <CardDescription>
+                  Select the amenities available at your property
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {checkBoxAmenities.map(({ id, amenity }) => (
+                      <div
+                        key={id}
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                          amenities.includes(id)
+                            ? "bg-blue-100 border-2 border-blue-300"
+                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                        }`}
+                        onClick={() => handleAmenityCheckBox(id)}
+                      >
+                        <input
+                          type="checkbox"
+                          id={id}
+                          checked={amenities.includes(id)}
+                          onChange={() => {}}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                        />
+                        <Label
+                          htmlFor={amenity}
+                          className="cursor-pointer text-sm"
+                        >
+                          {amenity}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="my-6" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {radioButtonAmenities.map(({ id, amenity }) => (
+                      <div
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                          selectedOption.includes(id)
+                            ? "bg-blue-100 border-2 border-blue-300"
+                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                        }`}
+                      >
+                        <label key={id}>
+                          <input
+                            type="radio"
+                            name="furnishing"
+                            value={id}
+                            checked={selectedOption === id}
+                            onChange={handleAmenityRadioButton}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                          />
+                          {amenity}
+                          <br />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {/* Location Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -1049,77 +1126,6 @@ const PostProperty = () => {
               </div>
             </CardContent>
           </Card>
-          {/* Amenities */}
-          {/* Show only if NOT Plot */}
-          {!isPlot && (
-            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-blue-600 mr-2" />
-                  <CardTitle>Amenities</CardTitle>
-                </div>
-                <CardDescription>
-                  Select the amenities available at your property
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {checkBoxAmenities.map(({ id, amenity }) => (
-                      <div
-                        key={id}
-                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                          amenities.includes(id)
-                            ? "bg-blue-100 border-2 border-blue-300"
-                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                        }`}
-                        onClick={() => handleAmenityCheckBox(id)}
-                      >
-                        <input
-                          type="checkbox"
-                          id={id}
-                          checked={amenities.includes(id)}
-                          onChange={() => {}}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                        />
-                        <Label
-                          htmlFor={amenity}
-                          className="cursor-pointer text-sm"
-                        >
-                          {amenity}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="my-6" />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {radioButtonAmenities.map(({ id, amenity }) => (
-                      <div
-                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                          selectedOption.includes(id)
-                            ? "bg-blue-100 border-2 border-blue-300"
-                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                        }`}
-                      >
-                        <label key={id}>
-                          <input
-                            type="radio"
-                            name="furnishing"
-                            value={id}
-                            checked={selectedOption === id}
-                            onChange={handleAmenityRadioButton}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                          />
-                          {amenity}
-                          <br />
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
           {/* Owner Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
