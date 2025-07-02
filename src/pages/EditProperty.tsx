@@ -12,15 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import axiosInstance from "../axiosCalls/axiosInstance";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Save,
@@ -30,8 +22,6 @@ import {
   Bed,
   Bath,
   MapPin,
-  AreaChart,
-  CheckCircle,
   Upload,
   X,
   Camera,
@@ -47,7 +37,6 @@ const EditProperty = () => {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState([]);
   const [imageURLs, setImageURLs] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(null);
@@ -266,12 +255,6 @@ const EditProperty = () => {
     }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
   const handleImageUpload = async (e) => {
     const imageFile = e.target.files[0];
     const options = {
