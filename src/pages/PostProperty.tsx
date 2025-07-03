@@ -157,7 +157,7 @@ const PostProperty = () => {
   const handleImageUpload = async (e) => {
     const imageFile = e.target.files[0];
     const options = {
-      maxSizeMB: 0.1, // Max size in MB
+      maxSizeMB: 0.2, // Max size in MB
       maxWidthOrHeight: 1920,
       useWebWorker: true,
     };
