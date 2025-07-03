@@ -145,7 +145,11 @@ const EditProperty = () => {
             });
             return updated;
           });
-          setAvailableFrom(property.availableFrom ?? undefined); // Convert string date to Date object
+          setAvailableFrom(
+            property.availableFrom
+              ? new Date(property.availableFrom)
+              : undefined
+          ); // Convert string date to Date object
 
           // Set initial form data
           setIsNA(property.isNA ? "true" : "false"); // Convert boolean to string
