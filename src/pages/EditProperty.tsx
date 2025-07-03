@@ -519,7 +519,7 @@ const EditProperty = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative group">
                   <Label htmlFor="propertyType" className="text-sm font-medium">
-                    Category
+                    Property Type
                   </Label>
                   <Input
                     id="propertyType"
@@ -547,7 +547,7 @@ const EditProperty = () => {
                     htmlFor="superCategory"
                     className="text-sm font-medium"
                   >
-                    Property Type
+                    Category
                   </Label>
                   <Input
                     id="superCategory"

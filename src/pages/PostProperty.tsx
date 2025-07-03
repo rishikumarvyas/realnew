@@ -527,7 +527,7 @@ const PostProperty = () => {
                     htmlFor="category"
                     className="text-gray-700 font-medium"
                   >
-                    Category <span className="text-red-500">*</span>
+                    Property Type <span className="text-red-500">*</span>
                   </Label>
                   <Select value={category} onValueChange={setCategory} required>
                     <SelectTrigger
@@ -550,7 +550,7 @@ const PostProperty = () => {
                     htmlFor="propertyType"
                     className="text-gray-700 font-medium"
                   >
-                    Property Type <span className="text-red-500">*</span>
+                    Category <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={propertyType}
