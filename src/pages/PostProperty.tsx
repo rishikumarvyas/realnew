@@ -502,8 +502,8 @@ const PostProperty = () => {
 
       <div className="bg-blue-50 p-4 rounded-lg mb-8 border border-blue-100">
         <p className="text-blue-800 font-medium">
-          Complete the form below to list your property. Fields marked with *
-          are required.
+          Complete the form below to list your property. Fields marked with{" "}
+          <span className="text-red-500">*</span> are mandatory.
         </p>
       </div>
 
