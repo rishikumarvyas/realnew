@@ -332,7 +332,7 @@ const Dashboard = () => {
         if (newPropertyId) {
           toast({
             title: "New Property Added!",
-            description: `Your property with ID ${newPropertyId} has been successfully added.`,
+            description: `Your property with has been successfully added.`,
           });
         }
       } catch (error) {
