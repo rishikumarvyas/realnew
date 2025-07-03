@@ -349,11 +349,7 @@ const EditProperty = () => {
       formDataObj.append("Bathroom", formData.bathroom);
       formDataObj.append("Balcony", formData.balcony);
       formDataObj.append("Address", formData.address);
-      formDataObj.append("CityId", formData.cityId);
-      formDataObj.append("StateId", formData.stateId);
       formDataObj.append("Locality", formData.locality);
-      formDataObj.append("PropertyTypeId", formData.propertyTypeId);
-      formDataObj.append("UserTypeId", formData.userTypeId);
 
       // Add amenity IDs
       const finalAmenityIds =
@@ -1127,8 +1123,6 @@ const EditProperty = () => {
                   <div>
                     <p className="font-medium">Image Guidelines:</p>
                     <ul className="list-disc list-inside space-y-1 mt-1">
-                      <li>Upload clear, well-lit photos</li>
-                      <li>Include all major areas of the property</li>
                       <li>At least one image is required</li>
                       <li>Maximum file size: 5MB per image</li>
                     </ul>

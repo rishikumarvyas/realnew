@@ -1241,8 +1241,6 @@ const PostProperty = () => {
                   <div>
                     <p className="font-medium">Image Guidelines:</p>
                     <ul className="list-disc list-inside space-y-1 mt-1">
-                      <li>Upload clear, well-lit photos</li>
-                      <li>Include all major areas of the property</li>
                       <li>At least one image is required</li>
                       <li>Maximum file size: 5MB per image</li>
                     </ul>
