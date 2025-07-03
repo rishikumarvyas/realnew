@@ -1168,11 +1168,23 @@ const PostProperty = () => {
                 <Camera className="h-5 w-5 text-blue-600 mr-2" />
                 <CardTitle>Property Images</CardTitle>
               </div>
-              <CardDescription>
-                Upload up to 6 high-quality images of your property
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div className="flex gap-3 text-sm text-blue-700">
+                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Image Guidelines:</p>
+                    <ul className="list-disc list-inside space-y-1 mt-1">
+                      <li>
+                        Upload up to 6 high-quality images of your property
+                      </li>
+                      <li>At least one image is required</li>
+                      <li>Maximum file size: 5MB per image</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                 {imageURLs.map((url, index) => (
                   <div
@@ -1233,19 +1245,6 @@ const PostProperty = () => {
                     </span>
                   </label>
                 )}
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="flex gap-3 text-sm text-blue-700">
-                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Image Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 mt-1">
-                      <li>At least one image is required</li>
-                      <li>Maximum file size: 5MB per image</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
