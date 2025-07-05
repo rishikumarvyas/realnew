@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -24,7 +30,7 @@ import {
   Settings,
   ThumbsUp,
   PowerOff,
-  Check
+  Check,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -218,7 +224,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Add new state for confirmation dialogs
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -230,7 +236,9 @@ const Dashboard = () => {
 
   // Add state for all properties and liked properties from all
   const [allProperties, setAllProperties] = useState<any[]>([]);
-  const [likedPropertiesFromAll, setLikedPropertiesFromAll] = useState<any[]>([]);
+  const [likedPropertiesFromAll, setLikedPropertiesFromAll] = useState<any[]>(
+    []
+  );
 
   // Add new state for liked properties by me
   const [likedPropertiesByMe, setLikedPropertiesByMe] = useState<any[]>([]);
@@ -305,7 +313,9 @@ const Dashboard = () => {
             setProperties(formattedProperties);
 
             // Filter liked properties from userDetails
-            const likedProps = data.userDetails.filter((p: any) => p.isLiked === true);
+            const likedProps = data.userDetails.filter(
+              (p: any) => p.isLiked === true
+            );
             setLikedPropertiesFromAll(likedProps);
           } else {
             throw new Error("No property data received from API");
@@ -322,7 +332,7 @@ const Dashboard = () => {
         if (newPropertyId) {
           toast({
             title: "New Property Added!",
-            description: `Your property with ID ${newPropertyId} has been successfully added.`,
+            description: `Your property with has been successfully added.`,
           });
         }
       } catch (error) {
@@ -351,7 +361,7 @@ const Dashboard = () => {
   const handleActivateAccount = async () => {
     try {
       setLoading(true);
-      
+
       // Make API call to activate the account using axiosInstance
       const response = await axiosInstance.post(
         `/api/Account/ActivateAccount`,
@@ -362,10 +372,10 @@ const Dashboard = () => {
           },
         }
       );
-      
+
       // Update local state
       setAccountIsActive(true);
-      
+
       toast({
         title: "Account Activated",
         description: "Your account has been successfully activated.",
@@ -387,15 +397,15 @@ const Dashboard = () => {
   const handleDeactivateAccount = async () => {
     try {
       setLoading(true);
-      
+
       // Make API call to deactivate the account using axiosInstance
       const response = await axiosInstance.delete(
         `/api/Account/DeactivateAccount?userid=${userId}`
       );
-      
+
       // Update local state
       setAccountIsActive(false);
-      
+
       toast({
         title: "Account Deactivated",
         description: "Your account has been deactivated successfully.",
@@ -417,17 +427,17 @@ const Dashboard = () => {
   const handleDeleteAccount = async () => {
     try {
       setLoading(true);
-      
+
       // Make API call to delete the account using axiosInstance
       const response = await axiosInstance.delete(
         `/api/Account/DeleteAccount?userid=${userId}`
       );
-      
+
       toast({
         title: "Account Deleted",
         description: "Your account has been permanently deleted.",
       });
-      
+
       // After successful deletion, log the user out
       if (logout) {
         logout();
@@ -471,7 +481,7 @@ const Dashboard = () => {
       );
 
       console.log("Delete response:", response.data);
-      
+
       if (response.data.statusCode === 200) {
         // Update the UI by removing the deleted property
         setProperties((prev) => prev.filter((prop) => prop.propertyId !== id));
@@ -569,7 +579,9 @@ const Dashboard = () => {
               {loadingLikedByMe ? (
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
               ) : (
-                <span className="text-3xl font-bold">{likedPropertiesByMe.length}</span>
+                <span className="text-3xl font-bold">
+                  {likedPropertiesByMe.length}
+                </span>
               )}
             </div>
           </CardContent>
@@ -590,33 +602,46 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={async (val) => {
-        setActiveTab(val);
-        if (val === "likedByMe" && likedPropertiesByMe.length === 0) {
-          setLoadingLikedByMe(true);
-          try {
-            console.log("Calling /api/Account/GetLikedPropertiesByUser...");
-            const response = await axiosInstance.get("/api/Account/GetLikedPropertiesByUser");
-            console.log("API response:", response.data);
+      <Tabs
+        value={activeTab}
+        onValueChange={async (val) => {
+          setActiveTab(val);
+          if (val === "likedByMe" && likedPropertiesByMe.length === 0) {
+            setLoadingLikedByMe(true);
+            try {
+              console.log("Calling /api/Account/GetLikedPropertiesByUser...");
+              const response = await axiosInstance.get(
+                "/api/Account/GetLikedPropertiesByUser"
+              );
+              console.log("API response:", response.data);
 
-            if (response.data.statusCode === 200 && Array.isArray(response.data.propertyInfo)) {
-              console.log("Liked properties array:", response.data.propertyInfo);
-              setLikedPropertiesByMe(response.data.propertyInfo);
-              if (response.data.propertyInfo.length === 0) {
-                console.log("No liked properties found for this user.");
+              if (
+                response.data.statusCode === 200 &&
+                Array.isArray(response.data.propertyInfo)
+              ) {
+                console.log(
+                  "Liked properties array:",
+                  response.data.propertyInfo
+                );
+                setLikedPropertiesByMe(response.data.propertyInfo);
+                if (response.data.propertyInfo.length === 0) {
+                  console.log("No liked properties found for this user.");
+                }
+              } else {
+                console.log(
+                  "API did not return propertyInfo array or statusCode is not 200."
+                );
+                setLikedPropertiesByMe([]);
               }
-            } else {
-              console.log("API did not return propertyInfo array or statusCode is not 200.");
+            } catch (e) {
+              console.error("Error fetching liked properties by me:", e);
               setLikedPropertiesByMe([]);
+            } finally {
+              setLoadingLikedByMe(false);
             }
-          } catch (e) {
-            console.error("Error fetching liked properties by me:", e);
-            setLikedPropertiesByMe([]);
-          } finally {
-            setLoadingLikedByMe(false);
           }
-        }
-      }}>
+        }}
+      >
         <TabsList className="mb-4 sm:mb-6 w-full flex overflow-x-auto no-scrollbar">
           <TabsTrigger
             value="properties"
@@ -799,24 +824,38 @@ const Dashboard = () => {
             {likedPropertiesFromAll.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <ThumbsUp className="mx-auto h-12 w-12 text-rose-400" />
-                <h3 className="mt-2 text-lg font-medium">No Liked Properties</h3>
-                <p className="mt-1 text-gray-500">You haven't liked any properties yet.</p>
+                <h3 className="mt-2 text-lg font-medium">
+                  No Liked Properties
+                </h3>
+                <p className="mt-1 text-gray-500">
+                  You haven't liked any properties yet.
+                </p>
               </div>
             ) : (
               <div className="bg-white rounded-lg border overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Price</th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Type</th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status</th>
-                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Property
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                        Price
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                        Type
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                        Status
+                      </th>
+                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {likedPropertiesFromAll.map((property: any) => (
-                      <tr key={property.propertyId}> 
+                      <tr key={property.propertyId}>
                         <td className="py-4 px-4">
                           <div className="flex items-center">
                             <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
@@ -827,23 +866,45 @@ const Dashboard = () => {
                               />
                             </div>
                             <div className="ml-3">
-                              <div className="font-medium text-gray-900 line-clamp-1">{property.title}</div>
-                              <div className="text-gray-500 text-sm line-clamp-1">{property.address || 'No location specified'}</div>
+                              <div className="font-medium text-gray-900 line-clamp-1">
+                                {property.title}
+                              </div>
+                              <div className="text-gray-500 text-sm line-clamp-1">
+                                {property.address || "No location specified"}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-4 hidden sm:table-cell">
-                          <div className="text-gray-900">₹{property.price > 0 ? property.price.toLocaleString() : 'Not specified'}</div>
-                          <div className="text-gray-500 text-sm">{property.superCategory?.toLowerCase() === 'rent' ? '/month' : ''}</div>
+                          <div className="text-gray-900">
+                            ₹
+                            {property.price > 0
+                              ? property.price.toLocaleString()
+                              : "Not specified"}
+                          </div>
+                          <div className="text-gray-500 text-sm">
+                            {property.superCategory?.toLowerCase() === "rent"
+                              ? "/month"
+                              : ""}
+                          </div>
                         </td>
                         <td className="py-4 px-4 hidden md:table-cell">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">
-                            {property.propertyType || 'Not specified'}
+                            {property.propertyType || "Not specified"}
                           </span>
                         </td>
                         <td className="py-4 px-4 hidden lg:table-cell">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${property.superCategory?.toLowerCase() === 'buy' ? 'bg-green-100 text-green-800' : property.superCategory?.toLowerCase() === 'rent' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                            {property.superCategory || 'Not specified'}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              property.superCategory?.toLowerCase() === "buy"
+                                ? "bg-green-100 text-green-800"
+                                : property.superCategory?.toLowerCase() ===
+                                  "rent"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {property.superCategory || "Not specified"}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-right">
@@ -851,7 +912,9 @@ const Dashboard = () => {
                             <Button
                               variant="outline"
                               size="icon"
-                              onClick={() => navigate(`/properties/${property.propertyId}`)}
+                              onClick={() =>
+                                navigate(`/properties/${property.propertyId}`)
+                              }
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -986,7 +1049,7 @@ const Dashboard = () => {
                       </Button>
                     )}
                     <Button
-                      variant="outline" 
+                      variant="outline"
                       className="border-red-500 text-red-500 hover:bg-red-50"
                       onClick={() => setIsDeleteDialogOpen(true)}
                     >
@@ -995,7 +1058,7 @@ const Dashboard = () => {
                     </Button>
                   </div>
                   <p className="text-gray-500 text-xs mt-2">
-                    {accountIsActive 
+                    {accountIsActive
                       ? "Deactivating will temporarily disable your account. Deleting will permanently remove all your data."
                       : "Activate your account to make your listings visible again. Deleting will permanently remove all your data."}
                   </p>
@@ -1021,19 +1084,33 @@ const Dashboard = () => {
             ) : likedPropertiesByMe.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border">
                 <ThumbsUp className="mx-auto h-12 w-12 text-blue-400" />
-                <h3 className="mt-2 text-lg font-medium">No Liked Properties</h3>
-                <p className="mt-1 text-gray-500">You haven't liked any properties yet.</p>
+                <h3 className="mt-2 text-lg font-medium">
+                  No Liked Properties
+                </h3>
+                <p className="mt-1 text-gray-500">
+                  You haven't liked any properties yet.
+                </p>
               </div>
             ) : (
               <div className="bg-white rounded-lg border overflow-hidden">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Price</th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Type</th>
-                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status</th>
-                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Property
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                        Price
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                        Type
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                        Status
+                      </th>
+                      <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -1048,33 +1125,57 @@ const Dashboard = () => {
                                   property.mainImageUrl ||
                                   property.imageUrl ||
                                   property.image ||
-                                  (Array.isArray(property.imageDetails) && property.imageDetails.length > 0
-                                    ? property.imageDetails[0].imageUrl || property.imageDetails[0].url
+                                  (Array.isArray(property.imageDetails) &&
+                                  property.imageDetails.length > 0
+                                    ? property.imageDetails[0].imageUrl ||
+                                      property.imageDetails[0].url
                                     : undefined) ||
-                                  'https://via.placeholder.com/48'
+                                  "https://via.placeholder.com/48"
                                 }
                                 alt={property.title}
                                 className="h-full w-full object-cover"
                               />
                             </div>
                             <div className="ml-3">
-                              <div className="font-medium text-gray-900 line-clamp-1">{property.title}</div>
-                              <div className="text-gray-500 text-sm line-clamp-1">{property.address || 'No location specified'}</div>
+                              <div className="font-medium text-gray-900 line-clamp-1">
+                                {property.title}
+                              </div>
+                              <div className="text-gray-500 text-sm line-clamp-1">
+                                {property.address || "No location specified"}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-4 hidden sm:table-cell">
-                          <div className="text-gray-900">₹{property.price > 0 ? property.price.toLocaleString() : 'Not specified'}</div>
-                          <div className="text-gray-500 text-sm">{property.superCategory?.toLowerCase() === 'rent' ? '/month' : ''}</div>
+                          <div className="text-gray-900">
+                            ₹
+                            {property.price > 0
+                              ? property.price.toLocaleString()
+                              : "Not specified"}
+                          </div>
+                          <div className="text-gray-500 text-sm">
+                            {property.superCategory?.toLowerCase() === "rent"
+                              ? "/month"
+                              : ""}
+                          </div>
                         </td>
                         <td className="py-4 px-4 hidden md:table-cell">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">
-                            {property.propertyType || 'Not specified'}
+                            {property.propertyType || "Not specified"}
                           </span>
                         </td>
                         <td className="py-4 px-4 hidden lg:table-cell">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${property.superCategory?.toLowerCase() === 'buy' ? 'bg-green-100 text-green-800' : property.superCategory?.toLowerCase() === 'rent' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                            {property.superCategory || 'Not specified'}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              property.superCategory?.toLowerCase() === "buy"
+                                ? "bg-green-100 text-green-800"
+                                : property.superCategory?.toLowerCase() ===
+                                  "rent"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {property.superCategory || "Not specified"}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-right">
@@ -1082,7 +1183,9 @@ const Dashboard = () => {
                             <Button
                               variant="outline"
                               size="icon"
-                              onClick={() => navigate(`/properties/${property.propertyId}`)}
+                              onClick={() =>
+                                navigate(`/properties/${property.propertyId}`)
+                              }
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -1099,20 +1202,22 @@ const Dashboard = () => {
       </Tabs>
 
       {/* Activate Account Confirmation Dialog */}
-      <AlertDialog 
-        open={isActivateDialogOpen} 
+      <AlertDialog
+        open={isActivateDialogOpen}
         onOpenChange={setIsActivateDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Activate Account</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to activate your account? Your listings will be visible again and you'll receive messages from interested users.
+              Are you sure you want to activate your account? Your listings will
+              be visible again and you'll receive messages from interested
+              users.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleActivateAccount}
               className="bg-green-500 hover:bg-green-600"
             >
@@ -1123,20 +1228,22 @@ const Dashboard = () => {
       </AlertDialog>
 
       {/* Deactivate Account Confirmation Dialog */}
-      <AlertDialog 
-        open={isDeactivateDialogOpen} 
+      <AlertDialog
+        open={isDeactivateDialogOpen}
         onOpenChange={setIsDeactivateDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Deactivate Account</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to deactivate your account? Your listings will be hidden and you won't receive any messages. You can reactivate your account by logging in again.
+              Are you sure you want to deactivate your account? Your listings
+              will be hidden and you won't receive any messages. You can
+              reactivate your account by logging in again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeactivateAccount}
               className="bg-amber-500 hover:bg-amber-600"
             >
@@ -1147,20 +1254,22 @@ const Dashboard = () => {
       </AlertDialog>
 
       {/* Delete Account Confirmation Dialog */}
-      <AlertDialog 
-        open={isDeleteDialogOpen} 
+      <AlertDialog
+        open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Account</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your account and remove all your data from our servers, including all your property listings.
+              This action cannot be undone. This will permanently delete your
+              account and remove all your data from our servers, including all
+              your property listings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteAccount}
               className="bg-red-500 hover:bg-red-600 text-white"
             >

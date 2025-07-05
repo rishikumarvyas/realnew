@@ -157,7 +157,7 @@ const PostProperty = () => {
   const handleImageUpload = async (e) => {
     const imageFile = e.target.files[0];
     const options = {
-      maxSizeMB: 0.1, // Max size in MB
+      maxSizeMB: 0.2, // Max size in MB
       maxWidthOrHeight: 1920,
       useWebWorker: true,
     };
@@ -502,8 +502,8 @@ const PostProperty = () => {
 
       <div className="bg-blue-50 p-4 rounded-lg mb-8 border border-blue-100">
         <p className="text-blue-800 font-medium">
-          Complete the form below to list your property. Fields marked with *
-          are required.
+          Complete the form below to list your property. Fields marked with{" "}
+          <span className="text-red-500">*</span> are mandatory.
         </p>
       </div>
 
@@ -527,7 +527,7 @@ const PostProperty = () => {
                     htmlFor="category"
                     className="text-gray-700 font-medium"
                   >
-                    Category <span className="text-red-500">*</span>
+                    Property Type <span className="text-red-500">*</span>
                   </Label>
                   <Select value={category} onValueChange={setCategory} required>
                     <SelectTrigger
@@ -550,7 +550,7 @@ const PostProperty = () => {
                     htmlFor="propertyType"
                     className="text-gray-700 font-medium"
                   >
-                    Property Type <span className="text-red-500">*</span>
+                    Category <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={propertyType}
@@ -1168,11 +1168,23 @@ const PostProperty = () => {
                 <Camera className="h-5 w-5 text-blue-600 mr-2" />
                 <CardTitle>Property Images</CardTitle>
               </div>
-              <CardDescription>
-                Upload up to 6 high-quality images of your property
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div className="flex gap-3 text-sm text-blue-700">
+                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Image Guidelines:</p>
+                    <ul className="list-disc list-inside space-y-1 mt-1">
+                      <li>
+                        Upload up to 6 high-quality images of your property
+                      </li>
+                      <li>At least one image is required</li>
+                      <li>Maximum file size: 5MB per image</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                 {imageURLs.map((url, index) => (
                   <div
@@ -1233,21 +1245,6 @@ const PostProperty = () => {
                     </span>
                   </label>
                 )}
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="flex gap-3 text-sm text-blue-700">
-                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Image Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 mt-1">
-                      <li>Upload clear, well-lit photos</li>
-                      <li>Include all major areas of the property</li>
-                      <li>At least one image is required</li>
-                      <li>Maximum file size: 5MB per image</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

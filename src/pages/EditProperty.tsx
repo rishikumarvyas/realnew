@@ -145,7 +145,11 @@ const EditProperty = () => {
             });
             return updated;
           });
-          setAvailableFrom(property.availableFrom ?? undefined); // Convert string date to Date object
+          setAvailableFrom(
+            property.availableFrom
+              ? new Date(property.availableFrom)
+              : undefined
+          ); // Convert string date to Date object
 
           // Set initial form data
           setIsNA(property.isNA ? "true" : "false"); // Convert boolean to string
@@ -258,7 +262,7 @@ const EditProperty = () => {
   const handleImageUpload = async (e) => {
     const imageFile = e.target.files[0];
     const options = {
-      maxSizeMB: 0.1, // Max size in MB
+      maxSizeMB: 0.2, // Max size in MB
       maxWidthOrHeight: 1920,
       useWebWorker: true,
     };
@@ -345,11 +349,7 @@ const EditProperty = () => {
       formDataObj.append("Bathroom", formData.bathroom);
       formDataObj.append("Balcony", formData.balcony);
       formDataObj.append("Address", formData.address);
-      formDataObj.append("CityId", formData.cityId);
-      formDataObj.append("StateId", formData.stateId);
       formDataObj.append("Locality", formData.locality);
-      formDataObj.append("PropertyTypeId", formData.propertyTypeId);
-      formDataObj.append("UserTypeId", formData.userTypeId);
 
       // Add amenity IDs
       const finalAmenityIds =
@@ -519,7 +519,7 @@ const EditProperty = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative group">
                   <Label htmlFor="propertyType" className="text-sm font-medium">
-                    Category
+                    Property Type
                   </Label>
                   <Input
                     id="propertyType"
@@ -547,7 +547,7 @@ const EditProperty = () => {
                     htmlFor="superCategory"
                     className="text-sm font-medium"
                   >
-                    Property Type
+                    Category
                   </Label>
                   <Input
                     id="superCategory"
@@ -1049,11 +1049,23 @@ const EditProperty = () => {
                 <Camera className="h-5 w-5 text-blue-600 mr-2" />
                 <CardTitle>Property Images</CardTitle>
               </div>
-              <CardDescription>
-                Upload up to 6 high-quality images of your property
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div className="flex gap-3 text-sm text-blue-700">
+                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Image Guidelines:</p>
+                    <ul className="list-disc list-inside space-y-1 mt-1">
+                      <li>
+                        Upload up to 6 high-quality images of your property
+                      </li>
+                      <li>At least one image is required</li>
+                      <li>Maximum file size: 5MB per image</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                 {imageURLs.map((url, index) => (
                   <div
@@ -1115,21 +1127,6 @@ const EditProperty = () => {
                     </span>
                   </label>
                 )}
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="flex gap-3 text-sm text-blue-700">
-                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Image Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 mt-1">
-                      <li>Upload clear, well-lit photos</li>
-                      <li>Include all major areas of the property</li>
-                      <li>At least one image is required</li>
-                      <li>Maximum file size: 5MB per image</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
