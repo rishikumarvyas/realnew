@@ -348,10 +348,11 @@ export const PropertyListing = () => {
     setSearchParams(searchParams);
     setSearchQuery(suggestion);
     
-    toast({
-      title: "Search Applied",
-      description: `Showing results for "${suggestion}"`,
-    });
+    // Remove toast notification for search applied
+    // toast({
+    //   title: "Search Applied",
+    //   description: `Showing results for "${suggestion}"`,
+    // });
   };
   
   // Check if advanced filters should be hidden based on property type
@@ -643,21 +644,23 @@ const fetchProperties = async () => {
 
     setFilteredProperties(filtered);
     
-    toast({
-      title: "Properties Loaded",
-      description: `Found ${filtered.length} ${currentTypeParam === 'all' ? '' : currentTypeParam} properties.`,
-    });
+    // Remove toast notification for properties loaded
+    // toast({
+    //   title: "Properties Loaded",
+    //   description: `Found ${filtered.length} ${currentTypeParam === 'all' ? '' : currentTypeParam} properties.`,
+    // });
     
   } catch (err) {
     console.error("Failed to fetch properties:", err);
     setError("Unable to load properties. Please try again later.");
     setApiDebug(prev => ({ ...prev, error: err }));
     
-    toast({
-      variant: "destructive",
-      title: "Error loading properties",
-      description: "We're having trouble fetching properties. Using sample data instead.",
-    });
+    // Remove toast notification for error loading properties
+    // toast({
+    //   variant: "destructive",
+    //   title: "Error loading properties",
+    //   description: "We're having trouble fetching properties. Using sample data instead.",
+    // });
     
     // useMockData(); // You may need to implement this function
   } finally {
@@ -907,10 +910,11 @@ useEffect(() => {
       setSearchParams(searchParams);
       setSearchQuery(searchTerm);
       
-      toast({
-        title: "Search Applied",
-        description: `Showing results for "${searchTerm}"`,
-      });
+      // Remove toast notification for search applied
+      // toast({
+      //   title: "Search Applied",
+      //   description: `Showing results for "${searchTerm}"`,
+      // });
     }
   };
 
@@ -931,10 +935,11 @@ useEffect(() => {
     setActiveTab("all");
     setSearchParams(new URLSearchParams());
     
-    toast({
-      title: "Filters Reset",
-      description: "All filters have been cleared.",
-    });
+    // Remove toast notification for filters reset
+    // toast({
+    //   title: "Filters Reset",
+    //   description: "All filters have been cleared.",
+    // });
   };
 
   // Handle price range change
@@ -1448,27 +1453,6 @@ useEffect(() => {
                       </div>
                     )}
 
-                    {/* Amenities Dropdown */}
-                    {shouldShowFilter("showAmenities") && (
-                      <div>
-                        <label className="block text-xs font-semibold text-blue-700 mb-1">Amenities</label>
-                        <Select value={selectedAmenities.join(',')} onValueChange={v => {
-                          const amenities = v ? v.split(',') : [];
-                          amenities.forEach(a => { if (!selectedAmenities.includes(a)) handleAmenityToggle(a); });
-                          selectedAmenities.forEach(a => { if (!amenities.includes(a)) handleAmenityToggle(a); });
-                        }}>
-                          <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-blue-200">
-                            {amenityOptions.map((amenity) => (
-                              <SelectItem key={amenity.id} value={amenity.id}>{amenity.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
                     {/* Available From Date Picker */}
                     {shouldShowFilter("showAvailableFrom") && (
                       <div>
@@ -1490,14 +1474,14 @@ useEffect(() => {
             {/* Collapsed Sidebar Icons - Only visible when sidebar is collapsed */}
             {!sidebarVisible && (
               <div className="flex flex-col items-center gap-4 p-2">
-                {/* Property Type Icons - All visible and clickable */}
+                {/* Property Type Icons - Only first 5 visible and clickable */}
                 {[
                   { key: 'all', label: 'All Properties', icon: '🏘️' },
                   { key: 'buy', label: 'Buy', icon: '🏠' },
                   { key: 'rent', label: 'Rent', icon: '🔑' },
                   { key: 'plot', label: 'Plot', icon: '🏞️' },
                   { key: 'commercial', label: 'Commercial', icon: '🏢' }
-                ].map((tab) => (
+                ].slice(0, 5).map((tab) => (
                   <div 
                     key={tab.key}
                     className="relative group cursor-pointer"
@@ -1517,129 +1501,7 @@ useEffect(() => {
                     </div>
                   </div>
                 ))}
-
-                {/* Commercial Type Icon (if commercial is selected) */}
-                {activeTab === "commercial" && (
-                  <div className="flex flex-col gap-2">
-                    {[
-                      { key: 'buy', label: 'Buy', icon: '💰' },
-                      { key: 'rent', label: 'Rent', icon: '📋' }
-                    ].map((type) => (
-                      <div 
-                        key={type.key}
-                        className="relative group cursor-pointer"
-                        title={`Commercial ${type.label}`}
-                        onClick={() => handleCommercialTypeChange(type.key as "buy" | "rent")}
-                      >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-lg transition-colors ${
-                          commercialType === type.key
-                            ? 'bg-green-600 text-white shadow-lg'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}>
-                          {type.icon}
-                        </div>
-                        {/* Tooltip */}
-                        <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                          Commercial {type.label}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Filter Icons */}
-                <div 
-                  className="relative group cursor-pointer"
-                  title="Filters"
-                >
-                  <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white hover:bg-purple-700 transition-colors">
-                    <FilterX className="h-4 w-4" />
-                  </div>
-                  {/* Tooltip */}
-                  <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                    Filters
-                  </div>
-                </div>
-
-                {/* Price Range Icon */}
-                {shouldShowFilter("showPrice") && (
-                  <div 
-                    className="relative group cursor-pointer"
-                    title="Price Range"
-                  >
-                    <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center text-white hover:bg-orange-700 transition-colors">
-                      <IndianRupeeIcon className="h-4 w-4" />
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                      Price Range
-                    </div>
-                  </div>
-                )}
-
-                {/* Area Icon */}
-                {shouldShowFilter("showArea") && (
-                  <div 
-                    className="relative group cursor-pointer"
-                    title="Area"
-                  >
-                    <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white hover:bg-teal-700 transition-colors">
-                      <Ruler className="h-4 w-4" />
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                      Area
-                    </div>
-                  </div>
-                )}
-
-                {/* Bedrooms Icon */}
-                {shouldShowFilter("showBedrooms") && (
-                  <div 
-                    className="relative group cursor-pointer"
-                    title="Bedrooms"
-                  >
-                    <div className="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white hover:bg-pink-700 transition-colors">
-                      <Bed className="h-4 w-4" />
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                      Bedrooms
-                    </div>
-                  </div>
-                )}
-
-                {/* Bathrooms Icon */}
-                {shouldShowFilter("showBathrooms") && (
-                  <div 
-                    className="relative group cursor-pointer"
-                    title="Bathrooms"
-                  >
-                    <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white hover:bg-indigo-700 transition-colors">
-                      <Bath className="h-4 w-4" />
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                      Bathrooms
-                    </div>
-                  </div>
-                )}
-
-                {/* Amenities Icon */}
-                {shouldShowFilter("showAmenities") && (
-                  <div 
-                    className="relative group cursor-pointer"
-                    title="Amenities"
-                  >
-                    <div className="w-8 h-8 bg-yellow-600 rounded-lg flex items-center justify-center text-white hover:bg-yellow-700 transition-colors">
-                      <CheckSquare className="h-4 w-4" />
-                    </div>
-                    {/* Tooltip */}
-                    <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                      Amenities
-                    </div>
-                  </div>
-                )}
+                {/* The rest of the icons are hidden in collapsed state */}
               </div>
             )}
           </div>
@@ -1648,7 +1510,7 @@ useEffect(() => {
           <div className="flex-1 min-w-0 w-full">
             {/* Applied filters display */}
             {(searchQuery || minBedrooms > 0 || minBathrooms > 0 || minBalcony > 0 || minArea > 0 || 
-              availableFrom || preferenceId !== "0" || furnished !== "any" || selectedAmenities.length > 0) && (
+              availableFrom || preferenceId !== "0" || furnished !== "any") && (
               <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-medium mr-2">Active Filters:</h3>
@@ -1766,19 +1628,6 @@ useEffect(() => {
                     </Badge>
                   )}
                   
-                  {selectedAmenities.map(amenity => (
-                    <Badge 
-                      key={amenity} 
-                      className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200"
-                    >
-                      {amenity}
-                      <X 
-                        className="h-3 w-3 ml-1 cursor-pointer" 
-                        onClick={() => handleAmenityToggle(amenity)}
-                      />
-                    </Badge>
-                  ))}
-                  
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -1793,17 +1642,7 @@ useEffect(() => {
 
             {/* Results count and sort */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {loading ? (
-                  <span className="flex items-center">
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Loading properties...
-                  </span>
-                ) : (
-                  `${filteredProperties.length} ${filteredProperties.length === 1 ? 'Property' : 'Properties'} Found`
-                )}
-              </h2>
-              
+              {/* Removed loading spinner and message */}
               <div className="mt-2 sm:mt-0">
                 <Select defaultValue="newest">
                   <SelectTrigger className="w-[180px]">
@@ -1831,25 +1670,6 @@ useEffect(() => {
                     className="bg-white border-red-200 hover:bg-red-50"
                   >
                     Try Again
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Empty state */}
-            {!loading && filteredProperties.length === 0 && !error && (
-              <Card className="border-dashed border-2 mb-8">
-                <CardContent className="p-12 text-center">
-                  <Home className="h-12 w-12 mx-auto text-blue-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-800 mb-2">No properties found</h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    We couldn't find any properties matching your current filters. Try adjusting your search criteria to see more results.
-                  </p>
-                  <Button 
-                    onClick={resetFilters}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Clear All Filters
                   </Button>
                 </CardContent>
               </Card>

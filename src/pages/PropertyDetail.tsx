@@ -700,9 +700,6 @@ const PropertyDetail = () => {
                   <Badge className="mr-2 bg-blue-600">
                     {property.propertyType || "Residential"}
                   </Badge>
-                  <Badge variant="outline" className="border-blue-600 text-blue-700">
-                    {property.bedroom || 0} BHK
-                  </Badge>
                 </div>
               </div>
               
@@ -877,6 +874,20 @@ const PropertyDetail = () => {
                       <div className="flex justify-between py-3">
                         <span className="text-gray-600">Available From</span>
                         <span className="font-medium">{property.availableFrom && new Date(property.availableFrom).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {/* Show isNA for Plot */}
+                    {property.propertyType && property.propertyType.toLowerCase() === 'plot' && (
+                      <div className="flex justify-between py-3">
+                        <span className="text-gray-600">Is NA</span>
+                        <span className="font-medium">{property.isNA !== null && property.isNA !== undefined ? (property.isNA ? 'Yes' : 'No') : 'Not specified'}</span>
+                      </div>
+                    )}
+                    {/* Show preferences for Rent */}
+                    {property.superCategory && property.superCategory.toLowerCase() === 'rent' && property.preferences && property.preferences.length > 0 && (
+                      <div className="flex justify-between py-3">
+                        <span className="text-gray-600">Preferences</span>
+                        <span className="font-medium">{property.preferences.map((pref: any) => pref.preference).join(', ')}</span>
                       </div>
                     )}
                   </div>
@@ -1084,32 +1095,7 @@ const PropertyDetail = () => {
     {/* Contact buttons - show based on toggle state and login status */}
     {showContactInfo && user && ownerContactInfo ? (
       <div className="space-y-4 animate-fade-in">
-        <Button
-          onClick={() => handleContactModal("whatsapp")}
-          variant="outline"
-          className="w-full justify-start hover:bg-green-50 hover:text-green-600 transition-colors"
-        >
-          <MessageSquare className="mr-2 h-5 w-5 text-green-600" /> 
-          WhatsApp Now
-        </Button>
-        
-        <Button
-          className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
-          onClick={() => window.open(`tel:${ownerContactInfo.publisherPhone}`, '_self')}
-        >
-          <Phone className="mr-2 h-5 w-5" /> 
-          Call {ownerContactInfo.publisherPhone}
-        </Button>
-        
-        {/* Schedule Visit Button */}
-        <div className="pt-4 border-t border-gray-200">
-          <Button
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 transition-all shadow-md hover:shadow-lg"
-          >
-            <Calendar className="mr-2 h-5 w-5" /> 
-            Schedule Visit
-          </Button>
-        </div>
+        {/* All contact action buttons removed */}
       </div>
     ) : null}
     
