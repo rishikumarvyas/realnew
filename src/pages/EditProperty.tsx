@@ -125,7 +125,7 @@ const EditProperty = () => {
               property?.imageDetails.map((img) => {
                 const blob = new Blob([img.imageUrl], { type: "image/jpeg" });
 
-                return new File([blob], "property-image.jpg", {
+                return new File([blob], "example.jpg", {
                   type: "image/jpeg",
                 });
               })
@@ -271,7 +271,7 @@ const EditProperty = () => {
       const compressedFile = await imageCompression(imageFile, options);
 
       //converting compressedFile blob type to FileList type
-      const convertedfile = new File([compressedFile], "example.txt", {
+      const convertedfile = new File([compressedFile], "example.jpg", {
         type: compressedFile.type,
       }); // Convert Blob to File
       const dataTransfer = new DataTransfer();
@@ -370,10 +370,21 @@ const EditProperty = () => {
         const isOld = oldImageURLs.includes(url);
         const isNew = !isOld;
         const isMain = mainImageIndex === idx;
-        formDataObj.append(`Images[${idx}].File`, getFileByUrl(url));
-        formDataObj.append(`Images[${idx}].ImageUrl`, url);
-        formDataObj.append(`Images[${idx}].IsMain`, isMain ? "true" : "false");
-        formDataObj.append(`Images[${idx}].IsNew`, isNew ? "true" : "false");
+        if (isNew) {
+          formDataObj.append(`Images[${idx}].File`, getFileByUrl(url));
+
+          formDataObj.append(
+            `Images[${idx}].IsMain`,
+            isMain ? "true" : "false"
+          );
+        }
+        if (isOld) {
+          formDataObj.append(`Images[${idx}].ImageUrl`, url);
+          formDataObj.append(
+            `Images[${idx}].IsMain`,
+            isMain ? "true" : "false"
+          );
+        }
       });
 
       if ((isFlatOrBunglowOrHouse && isSell) || (isShop && isSell)) {

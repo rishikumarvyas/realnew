@@ -166,7 +166,7 @@ const PostProperty = () => {
       const compressedFile = await imageCompression(imageFile, options);
 
       //converting compressedFile blob type to FileList type
-      const convertedfile = new File([compressedFile], "example.txt", {
+      const convertedfile = new File([compressedFile], "example.jpg", {
         type: compressedFile.type,
       }); // Convert Blob to File
       const dataTransfer = new DataTransfer();
