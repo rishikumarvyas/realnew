@@ -113,12 +113,12 @@ export function Navbar() {
                 </Link>
               ))}
               <Link
-                to="/contactus"
+                to="/builderpost"
                 className={cn(
                   "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
                 )}
               >
-                Contact
+                Builder Project
               </Link>
               
             </div>
