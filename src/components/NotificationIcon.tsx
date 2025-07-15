@@ -404,9 +404,7 @@ const NotificationIcon: React.FC = () => {
                   onClick={() =>
                     createNotification("Test notification created", "user")
                   }
-                >
-                  + Test
-                </Button>
+                ></Button>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
