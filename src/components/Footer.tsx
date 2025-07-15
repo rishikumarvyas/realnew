@@ -275,12 +275,6 @@ export function Footer() {
               >
                 Privacy
               </Link>
-              <Link
-                to="/sitemap"
-                className="text-gray-400 hover:text-white text-sm"
-              >
-                Sitemap
-              </Link>
             </div>
           </div>
         </div>
