@@ -463,7 +463,7 @@ const Index = () => {
         </div>
       </section>
       {/* App Download Section */}
-      <section className="py-24 bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-800">
+      {/* <section className="py-24 bg-gradient-to-r from-blue-50 to-white text-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="md:w-1/2 mb-10 md:mb-0 md:pr-10">
@@ -511,7 +511,7 @@ const Index = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 };
