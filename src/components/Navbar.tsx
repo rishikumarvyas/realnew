@@ -102,13 +102,24 @@ export function Navbar() {
                 </Link>
               ))}
               <Link
-                to="/contactus"
+                to="/newlanching"
                 className={cn(
                   "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
                 )}
               >
-                Contact
+                New Launching
               </Link>
+              {/* Builder Project button only for builder role */}
+              {user?.role === "Builder" && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/builderpost")}
+                  className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full mr-2"
+                >
+                  <Home className="h-4 w-4 mr-1" />
+                  Builder Project
+                </Button>
+              )}
             </div>
           </div>
 
@@ -231,12 +242,26 @@ export function Navbar() {
             </Link>
           ))}
           <Link
-            to="/contactus"
+            to="/newlanching"
             className="block px-4 py-3 text-base font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-600 border-l-4 border-transparent hover:border-blue-500"
             onClick={() => setIsOpen(false)}
           >
-            Contact
+            New Launching
           </Link>
+          {/* Builder Project button only for builder role */}
+          {user?.role === "Builder" && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                navigate("/builderpost");
+                setIsOpen(false);
+              }}
+              className="w-full justify-center flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full my-2"
+            >
+              <Home className="h-4 w-4 mr-1" />
+              Builder Project
+            </Button>
+          )}
           {isAuthenticated && (
             <>
               <Button

@@ -700,35 +700,48 @@ const PropertyDetail = () => {
                   <Badge className="mr-2 bg-blue-600">
                     {property.propertyType || "Residential"}
                   </Badge>
-                  <Badge variant="outline" className="border-blue-600 text-blue-700">
-                    {property.bedroom || 0} BHK
-                  </Badge>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-6">
-                {property.bedroom !== undefined && (
-                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
-                      <Bed className="text-blue-600" size={20} />
-                    </div>
-                    <div>
-                      <span className="block font-medium">{property.bedroom}</span>
-                      <span className="text-gray-500 text-sm">Bedrooms</span>
-                    </div>
-                  </div>
-                )}
-                {property.bathroom !== undefined && (
-                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
-                      <Bath className="text-blue-600" size={20} />
-                    </div>
-                    <div>
-                      <span className="block font-medium">{property.bathroom}</span>
-                      <span className="text-gray-500 text-sm">Bathrooms</span>
-                    </div>
-                  </div>
-                )}
+                {/* Only show for non-Plot and non-Shop */}
+                {property.propertyType && !["plot", "shop"].includes(property.propertyType.toLowerCase()) ? (
+                  <>
+                    {property.bedroom !== undefined && (
+                      <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                          <Bed className="text-blue-600" size={20} />
+                        </div>
+                        <div>
+                          <span className="block font-medium">{property.bedroom}</span>
+                          <span className="text-gray-500 text-sm">Bedrooms</span>
+                        </div>
+                      </div>
+                    )}
+                    {property.bathroom !== undefined && (
+                      <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
+                          <Bath className="text-blue-600" size={20} />
+                        </div>
+                        <div>
+                          <span className="block font-medium">{property.bathroom}</span>
+                          <span className="text-gray-500 text-sm">Bathrooms</span>
+                        </div>
+                      </div>
+                    )}
+                    {property.balcony !== undefined && property.balcony > 0 && (
+                      <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors text-blue-600 font-bold">
+                          B
+                        </div>
+                        <div>
+                          <span className="block font-medium">{property.balcony}</span>
+                          <span className="text-gray-500 text-sm">Balconies</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : null}
                 {property.area !== undefined && (
                   <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
                     <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -737,17 +750,6 @@ const PropertyDetail = () => {
                     <div>
                       <span className="block font-medium">{property.area}</span>
                       <span className="text-gray-500 text-sm">sq.ft Area</span>
-                    </div>
-                  </div>
-                )}
-                {property.balcony !== undefined && property.balcony > 0 && (
-                  <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors text-blue-600 font-bold">
-                      B
-                    </div>
-                    <div>
-                      <span className="block font-medium">{property.balcony}</span>
-                      <span className="text-gray-500 text-sm">Balconies</span>
                     </div>
                   </div>
                 )}
@@ -760,7 +762,6 @@ const PropertyDetail = () => {
                     <span className="text-gray-500 text-sm">Listed By</span>
                   </div>
                 </div>
-                
                 {/* Likes Count Pill */}
                 <div className="flex items-center gap-3 group hover:bg-blue-50 p-2 rounded-lg transition-colors">
                   <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -784,157 +785,224 @@ const PropertyDetail = () => {
             
             {/* Tabbed Details */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-              <Tabs defaultValue="amenities">
+              <Tabs defaultValue="details" className="w-full">
                 <TabsList className="w-full border-b p-0 bg-gray-50">
-                  <TabsTrigger value="amenities" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
-                    Amenities
-                  </TabsTrigger>
                   <TabsTrigger value="details" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
-                    Property Details
+                    Details
                   </TabsTrigger>
+                  {/* Only show Amenities tab if not a plot */}
+                  {property.propertyType && property.propertyType.toLowerCase() !== 'plot' && (
+                    <TabsTrigger value="amenities" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
+                      Amenities
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="moreInfo" className="flex-1 rounded-none py-4 data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-blue-600">
                     More Info
                   </TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="amenities" className="p-6">
-                  {property.amenityDetails && property.amenityDetails.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {property.amenityDetails.map((amenity: any, index: number) => {
-                        let icon = null;
-                        
-                        if (amenity.amenity.toLowerCase().includes("lift")) icon = <ArrowUpDown className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.toLowerCase().includes("swimming")) icon = <Droplets className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.toLowerCase().includes("wifi")) icon = <Wifi className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.toLowerCase().includes("parking")) icon = <Car className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.toLowerCase().includes("tv") || amenity.amenity.toLowerCase().includes("television")) 
-                          icon = <Bath className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.toLowerCase().includes("air") || amenity.amenity.toLowerCase().includes("ac")) 
-                          icon = <Wind className="text-blue-600" size={18} />;
-                        else if (amenity.amenity.toLowerCase().includes("security") || amenity.amenity.toLowerCase().includes("guard")) 
-                          icon = <Lock className="text-blue-600" size={18} />;
-                        else icon = <div className="w-2 h-2 rounded-full bg-blue-600 mt-2"></div>;
-                        
-                        return (
-                          <div 
-                            key={amenity.amenityId || index} 
-                            className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform"
-                          >
-                            <div className="bg-white p-2 rounded-full shadow-sm">
-                              {icon}
-                            </div>
-                            <span className="font-medium">{amenity.amenity}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500">No amenities listed for this property.</p>
-                  )}
-                </TabsContent>
-                
                 <TabsContent value="details" className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex justify-between border-b pb-3">
+                  <div className="divide-y">
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Property Type</span>
                       <span className="font-medium">{property.propertyType || "Not specified"}</span>
                     </div>
-                    <div className="flex justify-between border-b pb-3">
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Location</span>
                       <span className="font-medium">{property.city || ""}{property.state ? `, ${property.state}` : ""}</span>
                     </div>
-                    {property.area !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Total Area</span>
-                        <span className="font-medium">{property.area} sq.ft</span>
-                      </div>
-                    )}
-                    {property.bedroom !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Bedrooms</span>
-                        <span className="font-medium">{property.bedroom}</span>
-                      </div>
-                    )}
-                    {property.bathroom !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Bathrooms</span>
-                        <span className="font-medium">{property.bathroom}</span>
-                      </div>
-                    )}
-                    {property.balcony !== undefined && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Balconies</span>
-                        <span className="font-medium">{property.balcony}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between border-b pb-3">
+                    <div className="flex justify-between py-3">
+                      <span className="text-gray-600">Total Area</span>
+                      <span className="font-medium">{property.area} sq.ft</span>
+                    </div>
+                    {/* Only show for non-Plot and non-Shop */}
+                    {property.propertyType && !["plot", "shop"].includes(property.propertyType.toLowerCase()) ? (
+                      <>
+                        <div className="flex justify-between py-3">
+                          <span className="text-gray-600">Bedrooms</span>
+                          <span className="font-medium">{property.bedroom}</span>
+                        </div>
+                        <div className="flex justify-between py-3">
+                          <span className="text-gray-600">Bathrooms</span>
+                          <span className="font-medium">{property.bathroom}</span>
+                        </div>
+                        <div className="flex justify-between py-3">
+                          <span className="text-gray-600">Balconies</span>
+                          <span className="font-medium">{property.balcony}</span>
+                        </div>
+                      </>
+                    ) : null}
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Listed By</span>
                       <span className="font-medium">{property.userType || "Owner"}</span>
                     </div>
-                    {/* Added from PostProperty fields */}
-                    {property.preference && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Tenant Preference</span>
-                        <span className="font-medium">{property.preference || getPreferenceText(property.preferenceId)}</span>
+                    {/* Only show 'Available From' if not Plot and not Buy */}
+                    {!(property.propertyType && property.propertyType.toLowerCase() === 'plot') && !(property.superCategory && property.superCategory.toLowerCase() === 'buy') && (
+                      <div className="flex justify-between py-3">
+                        <span className="text-gray-600">Available From</span>
+                        <span className="font-medium">{property.availableFrom && new Date(property.availableFrom).toLocaleDateString()}</span>
                       </div>
                     )}
-                    {property.availableFrom && (
-                      <div className="flex justify-between border-b pb-3">
-                        <span className="text-gray-600">Available From</span>
-                        <span className="font-medium">{new Date(property.availableFrom).toLocaleDateString()}</span>
+                    {/* Show isNA for Plot */}
+                    {property.propertyType && property.propertyType.toLowerCase() === 'plot' && (
+                      <div className="flex justify-between py-3">
+                        <span className="text-gray-600">Is NA</span>
+                        <span className="font-medium">{property.isNA !== null && property.isNA !== undefined ? (property.isNA ? 'Yes' : 'No') : 'Not specified'}</span>
+                      </div>
+                    )}
+                    {/* Show preferences for Rent */}
+                    {property.superCategory && property.superCategory.toLowerCase() === 'rent' && property.preferences && property.preferences.length > 0 && (
+                      <div className="flex justify-between py-3">
+                        <span className="text-gray-600">Preferences</span>
+                        <span className="font-medium">{property.preferences.map((pref: any) => pref.preference).join(', ')}</span>
                       </div>
                     )}
                   </div>
                 </TabsContent>
                 
+                {/* Only show Amenities tab content if not a plot */}
+                {property.propertyType && property.propertyType.toLowerCase() !== 'plot' && (
+                  <TabsContent value="amenities" className="p-6">
+                    {property.amenityDetails && property.amenityDetails.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {property.amenityDetails.map((amenity: any, index: number) => {
+                          let icon = null;
+                          
+                          if (amenity.amenity.toLowerCase().includes("lift")) icon = <ArrowUpDown className="text-blue-600" size={18} />;
+                          else if (amenity.amenity.toLowerCase().includes("swimming")) icon = <Droplets className="text-blue-600" size={18} />;
+                          else if (amenity.amenity.toLowerCase().includes("wifi")) icon = <Wifi className="text-blue-600" size={18} />;
+                          else if (amenity.amenity.toLowerCase().includes("parking")) icon = <Car className="text-blue-600" size={18} />;
+                          else if (amenity.amenity.toLowerCase().includes("tv") || amenity.amenity.toLowerCase().includes("television")) 
+                            icon = <Bath className="text-blue-600" size={18} />;
+                          else if (amenity.amenity.toLowerCase().includes("air") || amenity.amenity.toLowerCase().includes("ac")) 
+                            icon = <Wind className="text-blue-600" size={18} />;
+                          else if (amenity.amenity.toLowerCase().includes("security") || amenity.amenity.toLowerCase().includes("guard")) 
+                            icon = <Lock className="text-blue-600" size={18} />;
+                          else icon = <div className="w-2 h-2 rounded-full bg-blue-600 mt-2"></div>;
+                          
+                          return (
+                            <div 
+                              key={amenity.amenityId || index} 
+                              className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform"
+                            >
+                              <div className="bg-white p-2 rounded-full shadow-sm">
+                                {icon}
+                              </div>
+                              <span className="font-medium">{amenity.amenity}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">No amenities listed for this property.</p>
+                    )}
+                  </TabsContent>
+                )}
+                
                 <TabsContent value="moreInfo" className="p-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* New fields from PostProperty */}
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">RERA Approved</span>
-                      <span className="font-medium flex items-center">
-                        {property.isReraApproved ? (
-                          <Badge variant="default" className="bg-green-600">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                    {/* For Plot, only show Is NA, Liked by You, and Listed Date */}
+                    {property.propertyType && property.propertyType.toLowerCase() === 'plot' ? (
+                      <>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">NA (Plot)</span>
+                          <span className="font-medium flex items-center">
+                            {property.isNA !== null && property.isNA !== undefined ? (
+                              <Badge variant="default" className={property.isNA ? "bg-green-600" : "bg-red-600 text-white"}>{property.isNA ? 'Yes' : 'No'}</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">Not specified</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Liked by You</span>
+                          <span className="font-medium flex items-center">
+                            {isFavorite ? (
+                              <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Listed Date</span>
+                          <span className="font-medium">{formatDate(property.createdDt)}</span>
+                        </div>
+                      </>
+                    ) : property.propertyType && property.propertyType.toLowerCase() === 'shop' && property.superCategory && property.superCategory.toLowerCase() === 'rent' ? (
+                      <>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Like Count</span>
+                          <span className="font-medium flex items-center">
+                            <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                            {likesCount}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Liked by You</span>
+                          <span className="font-medium flex items-center">
+                            {isFavorite ? (
+                              <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Listed Date</span>
+                          <span className="font-medium">{formatDate(property.createdDt)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {property.superCategory?.toLowerCase() !== 'rent' && (
+                          <>
+                            <div className="flex justify-between border-b pb-3">
+                              <span className="text-gray-600">RERA Approved</span>
+                              <span className="font-medium flex items-center">
+                                {property.isReraApproved ? (
+                                  <Badge variant="default" className="bg-green-600">Yes</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b pb-3">
+                              <span className="text-gray-600">OC Approved</span>
+                              <span className="font-medium flex items-center">
+                                {property.isOCApproved ? (
+                                  <Badge variant="default" className="bg-green-600">Yes</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b pb-3">
+                              <span className="text-gray-600">Like Count</span>
+                              <span className="font-medium flex items-center">
+                                <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                                {likesCount}
+                              </span>
+                            </div>
+                          </>
                         )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">OC Approved</span>
-                      <span className="font-medium flex items-center">
-                        {property.isOCApproved ? (
-                          <Badge variant="default" className="bg-green-600">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Like Count</span>
-                      <span className="font-medium flex items-center">
-                        <Heart className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-                        {likesCount}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Liked by You</span>
-                      <span className="font-medium flex items-center">
-                        {isFavorite ? (
-                          <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
-                        ) : (
-                          <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-3">
-                      <span className="text-gray-600">Listed Date</span>
-                      <span className="font-medium">{formatDate(property.createdDt)}</span>
-                    </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Liked by You</span>
+                          <span className="font-medium flex items-center">
+                            {isFavorite ? (
+                              <Badge variant="default" className="bg-red-600 text-white">Yes</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-400 text-gray-600">No</Badge>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-3">
+                          <span className="text-gray-600">Listed Date</span>
+                          <span className="font-medium">{formatDate(property.createdDt)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  
-                  {/* Property images button */}
-               
                 </TabsContent>
               </Tabs>
             </div>
@@ -1033,32 +1101,7 @@ const PropertyDetail = () => {
     {/* Contact buttons - show based on toggle state and login status */}
     {showContactInfo && user && ownerContactInfo ? (
       <div className="space-y-4 animate-fade-in">
-        <Button
-          onClick={() => handleContactModal("whatsapp")}
-          variant="outline"
-          className="w-full justify-start hover:bg-green-50 hover:text-green-600 transition-colors"
-        >
-          <MessageSquare className="mr-2 h-5 w-5 text-green-600" /> 
-          WhatsApp Now
-        </Button>
-        
-        <Button
-          className="w-full bg-blue-600 hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
-          onClick={() => window.open(`tel:${ownerContactInfo.publisherPhone}`, '_self')}
-        >
-          <Phone className="mr-2 h-5 w-5" /> 
-          Call {ownerContactInfo.publisherPhone}
-        </Button>
-        
-        {/* Schedule Visit Button */}
-        <div className="pt-4 border-t border-gray-200">
-          <Button
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 transition-all shadow-md hover:shadow-lg"
-          >
-            <Calendar className="mr-2 h-5 w-5" /> 
-            Schedule Visit
-          </Button>
-        </div>
+        {/* All contact action buttons removed */}
       </div>
     ) : null}
     

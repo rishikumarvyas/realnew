@@ -650,23 +650,6 @@ const Dashboard = () => {
             <span className="block truncate">Listed Properties</span>
           </TabsTrigger>
           <TabsTrigger
-            value="liked"
-            className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
-          >
-            <span className="block truncate">Liked Properties</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="messages"
-            className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
-          >
-            <span className="block truncate">Messages</span>
-            {unreadCount > 0 && (
-              <span className="ml-1 bg-red-500 text-white rounded-full w-4 h-4 sm:w-5 sm:h-5 inline-flex items-center justify-center text-xs">
-                {unreadCount}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger
             value="account"
             className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
           >

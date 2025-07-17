@@ -462,56 +462,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-      {/* App Download Section */}
-      {/* <section className="py-24 bg-gradient-to-r from-blue-50 to-white text-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="md:w-1/2 mb-10 md:mb-0 md:pr-10">
-              <h2 className="text-4xl font-bold mb-6 text-gray-800">
-                Download Our Mobile App
-              </h2>
-              <p className="text-xl mb-8 text-gray-600">
-                Take Homeyatra with you everywhere. Search properties, get
-                notifications, and connect with agents on the go.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button className="bg-gray-900 text-white hover:bg-gray-800 px-8 py-4 rounded-xl flex items-center text-lg shadow-lg">
-                  <svg
-                    className="w-6 h-6 mr-2"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M17.9 19.9l-5.4-2.9c-0.4-0.2-0.6-0.6-0.6-1v-8c0-0.4 0.2-0.8 0.6-1l5.4-2.9c0.4-0.2 0.9-0.2 1.2 0s0.6 0.6 0.6 1v12.8c0 0.4-0.2 0.8-0.6 1s-0.8 0.2-1.2 0z" />
-                    <path d="M2.5 4.1l7.4 5.9v3.8l-7.4 5.9c-0.4 0.3-0.9 0.3-1.2 0.1s-0.5-0.6-0.5-1V5c0-0.4 0.2-0.8 0.5-1s0.8-0.2 1.2 0.1z" />
-                    <path d="M2.5 19.8l7.4-5.9v-3.8l-7.4-5.9c-0.4-0.3-0.5-0.8-0.3-1.2s0.7-0.6 1.1-0.4l12.4 8.2c0.3 0.2 0.5 0.6 0.5 0.9s-0.2 0.7-0.5 0.9l-12.4 8.2c-0.4 0.3-1 0.2-1.2-0.2s-0.1-0.8 0.3-1.1v0.3z" />
-                  </svg>
-                  Play Store
-                </Button>
-                <Button className="bg-gray-900 text-white hover:bg-gray-800 px-8 py-4 rounded-xl flex items-center text-lg shadow-lg">
-                  <svg
-                    className="w-6 h-6 mr-2"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                  </svg>
-                  App Store
-                </Button>
-              </div>
-            </div>
-            <div className="md:w-1/2 flex justify-center">
-              <div className="relative">
-                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-blue-500 to-indigo-600 brightness-110 opacity-30"></div>
-                <img
-                  src="/api/placeholder/300/600"
-                  alt="Homeyatra Mobile App"
-                  className="relative z-10 rounded-3xl shadow-2xl"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section> */}
     </div>
   );
 };
