@@ -304,7 +304,7 @@ const TermsAndConditions = () => {
         )}
 
         {/* Agreement Section */}
-        {termsData.length > 0 && (
+        {/* {termsData.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
               Agreement Acceptance
@@ -353,7 +353,7 @@ const TermsAndConditions = () => {
               </button>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Last Updated */}
         <div className="text-center mt-8">
