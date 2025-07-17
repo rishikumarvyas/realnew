@@ -36,9 +36,9 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center mb-4">
-              <Building className="h-8 w-8 text-blue-300" />
+              <Building className="h-8 w-8 text-[#0EA5E9]" />
               <h3 className="text-xl font-bold ml-2">
-                <span className="text-blue-300">Home</span>
+                <span className="text-[#0EA5E9]">Home</span>
                 <span className="text-orange-400">Yatra</span>
               </h3>
             </div>
@@ -59,7 +59,7 @@ export function Footer() {
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-6 text-blue-200 border-b border-gray-700 pb-2">
+            <h3 className="text-lg font-semibold mb-6 text-[#0EA5E9] border-b border-gray-700 pb-2">
               Quick Links
             </h3>
             <ul className="space-y-3">
@@ -97,7 +97,7 @@ export function Footer() {
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-6 text-blue-200 border-b border-gray-700 pb-2">
+            <h3 className="text-lg font-semibold mb-6 text-[#0EA5E9] border-b border-gray-700 pb-2">
               Company
             </h3>
             <ul className="space-y-3">
@@ -135,7 +135,7 @@ export function Footer() {
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-6 text-blue-200 border-b border-gray-700 pb-2">
+            <h3 className="text-lg font-semibold mb-6 text-[#0EA5E9] border-b border-gray-700 pb-2">
               Contact Information
             </h3>
             <ul className="space-y-4">
@@ -163,7 +163,7 @@ export function Footer() {
         
         {/* Popular cities section */}
         <div className="border-t border-gray-700 pt-8 mb-8">
-          <h3 className="text-lg font-semibold mb-4 text-blue-200">Popular Cities</h3>
+          <h3 className="text-lg font-semibold mb-4 text-[#0EA5E9]">Popular Cities</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { name: 'Mumbai', state: 'Maharashtra' },
@@ -182,15 +182,12 @@ export function Footer() {
               <button 
                 key={city.name} 
                 onClick={() => handleCityClick(city.name)}
-                className="group flex flex-col items-center p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 transition-all duration-300 border border-gray-700 hover:border-orange-400/50 cursor-pointer"
-                title={`Search properties in ${city.name}, ${city.state}`}
+                className="group flex flex-row items-center gap-2 p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/70 transition-all duration-300 border border-gray-700 hover:border-orange-400/50 cursor-pointer"
+                title={`Search properties in ${city.name}`}
               >
-                <MapPin className="h-4 w-4 text-orange-400 mb-1 group-hover:scale-110 transition-transform duration-300" />
-                <span className="text-gray-300 hover:text-orange-400 text-sm font-medium transition-colors duration-200 text-center">
+                <MapPin className="h-4 w-4 text-orange-400 group-hover:scale-110 transition-transform duration-300" />
+                <span className="text-gray-300 hover:text-orange-400 text-sm font-medium transition-colors duration-200">
                   {city.name}
-                </span>
-                <span className="text-gray-500 text-xs mt-1 group-hover:text-gray-400 transition-colors duration-200 text-center">
-                  {city.state}
                 </span>
               </button>
             ))}
