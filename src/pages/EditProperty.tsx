@@ -61,7 +61,6 @@ const EditProperty = () => {
     bedroom: "",
     bathroom: "",
     balcony: "",
-    area: "",
     propertyId: "",
   });
   const [selectedCheckboxes, setSelectedCheckboxes] = useState([]);
@@ -77,6 +76,9 @@ const EditProperty = () => {
   );
   const [priceValidation, setPriceValidation] = useState(true);
   const [price, setPrice] = useState("");
+  const [area, setArea] = useState("");
+  const [areaValidation, setAreaValidation] = useState(true);
+
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       if (!propertyId) {
@@ -158,6 +160,7 @@ const EditProperty = () => {
           setIsReraApproved(property.isReraApproved ? "true" : "false"); // Convert boolean to string
           setIsOCApproved(property.isOCApproved ? "true" : "false"); // Map API response to form data
           setPrice(property.price?.toString() || ""); // Convert price to string
+          setArea(property.area?.toString() || ""); // Convert area to string
           setFormData({
             title: property.title || "",
             description: property.description || "",
@@ -175,7 +178,6 @@ const EditProperty = () => {
             bedroom: property.bedroom?.toString() || "",
             bathroom: property.bathroom?.toString() || "",
             balcony: property.balcony?.toString() || "",
-            area: property.area?.toString() || "",
             propertyId: property.propertyId || propertyId,
           });
         } else {
@@ -268,6 +270,14 @@ const EditProperty = () => {
     setPrice(value);
   };
 
+  // Handle area change with validation
+  const handleAreaChange = (e) => {
+    const value = e.target.value;
+    const isValid = validatePrice(value);
+    setAreaValidation(isValid);
+    setArea(value);
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -354,6 +364,33 @@ const EditProperty = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Basic validation
+    if (!price || !area) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!priceValidation) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!areaValidation) {
+      toast({
+        title: "Invalid Area",
+        description: "Please enter a valid area in sq.ft.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       setSaving(true);
 
@@ -362,7 +399,6 @@ const EditProperty = () => {
       formDataObj.append("PropertyId", formData.propertyId);
       formDataObj.append("Title", formData.title);
       formDataObj.append("Description", formData.description);
-      formDataObj.append("Area", formData.area);
       formDataObj.append("Bedroom", formData.bedroom);
       formDataObj.append("Bathroom", formData.bathroom);
       formDataObj.append("Balcony", formData.balcony);
@@ -377,6 +413,13 @@ const EditProperty = () => {
           // Format with exactly 2 decimal places
           const formattedPrice = priceValue.toFixed(2);
           formDataObj.append("Price", formattedPrice);
+        }
+      }
+      // Area handling
+      if (area) {
+        const areaValue = parseFloat(area);
+        if (!isNaN(areaValue)) {
+          formDataObj.append("Area", areaValue.toString());
         }
       }
       // Add amenity IDs
@@ -681,15 +724,17 @@ const EditProperty = () => {
                       htmlFor="area"
                       className="text-gray-700 font-medium flex items-center"
                     >
-                      Area (sq.ft)
+                      Area <span className="text-red-500">*</span> (sq.ft)
                     </Label>
                     <div className="relative">
                       <Input
                         id="area"
                         placeholder="Enter area"
-                        value={formData.area}
-                        onChange={handleInputChange}
-                        className="border-blue-200 focus:border-blue-500"
+                        value={area}
+                        onChange={handleAreaChange}
+                        className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
+                          !areaValidation ? "border-red-500" : ""
+                        }`}
                         type="text" // Changed to text
                         inputMode="decimal" // Better for mobile decimal input
                       />
@@ -697,6 +742,11 @@ const EditProperty = () => {
                         sq.ft
                       </span>
                     </div>
+                    {!areaValidation && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Please enter a valid area
+                      </p>
+                    )}
                   </div>
                 </div>
                 {/* RERA, OC, NA Approval */}

@@ -243,7 +243,7 @@ const PostProperty = () => {
   // Handle area change with validation
   const handleAreaChange = (e) => {
     const value = e.target.value;
-    const isValid = !value || parseFloat(value) > 0;
+    const isValid = validatePrice(value);
     setAreaValidation(isValid);
     setArea(value);
   };
@@ -286,6 +286,7 @@ const PostProperty = () => {
       !category ||
       !title ||
       !price ||
+      !area ||
       !address ||
       !cityId ||
       !selectedStateId ||
@@ -436,11 +437,6 @@ const PostProperty = () => {
           index === mainImageIndex ? "true" : "false"
         );
       });
-
-      // For debugging - log the entire FormData
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
-      }
 
       // API call
       // API call using axios instance with automatic token handling
