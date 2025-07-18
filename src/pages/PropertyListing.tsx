@@ -2004,41 +2004,41 @@ export const PropertyListing = () => {
             {/* Pagination */}
             {filteredProperties.length > 0 && (
               <div className="mt-8 flex justify-center">
-                <div className="inline-flex shadow-sm rounded-md">
+                <div className="inline-flex rounded-md space-x-2">
                   <Button
                     variant="outline"
                     size="default"
-                    className="rounded-l-md rounded-r-none"
+                    className="rounded-full "
                   >
-                    Previous
+                    {"<"}
                   </Button>
                   <Button
                     variant="default"
                     size="default"
-                    className="rounded-none border-l-0 border-r-0 bg-blue-600"
+                    className="rounded-full"
                   >
                     1
                   </Button>
                   <Button
                     variant="outline"
                     size="default"
-                    className="rounded-none border-r-0"
+                    className="rounded-full "
                   >
                     2
                   </Button>
                   <Button
                     variant="outline"
                     size="default"
-                    className="rounded-none border-r-0"
+                    className="rounded-full "
                   >
                     3
                   </Button>
                   <Button
                     variant="outline"
                     size="default"
-                    className="rounded-r-md"
+                    className="rounded-full"
                   >
-                    Next
+                    {">"}
                   </Button>
                 </div>
               </div>
