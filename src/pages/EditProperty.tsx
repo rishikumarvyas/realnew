@@ -804,7 +804,7 @@ const EditProperty = () => {
                           </div>
                           <div>
                             <Label className="text-gray-700 font-medium mb-2 block">
-                              OC Approved
+                              Occupancy Certificate
                             </Label>
                             <RadioGroup
                               value={isOCApproved}
@@ -854,7 +854,7 @@ const EditProperty = () => {
                           </div>
                           <div>
                             <Label className="text-gray-700 font-medium mb-2 block">
-                              OC Approved
+                              Occupancy Certificate
                             </Label>
                             <RadioGroup
                               value={isOCApproved}
