@@ -191,15 +191,14 @@ export function Navbar() {
             ) : (
               <div className="flex items-center space-x-3">
                 <Button
-                  variant="ghost"
                   onClick={handleLoginClick}
-                  className="font-medium text-blue-600 hover:bg-blue-50"
+                  className="bg-blue-500 rounded-full hover:bg-blue-700 text-white"
                 >
                   Login
                 </Button>
                 <Button
                   onClick={handleSignupClick}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-500 rounded-full hover:bg-blue-700 text-white"
                 >
                   Sign Up
                 </Button>
