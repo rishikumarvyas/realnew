@@ -240,11 +240,11 @@ export function Footer() {
               <button
                 key={city.name}
                 onClick={() => handleCityClick(city.name)}
-                className="group flex flex-row items-center gap-2 p-3 rounded-lg bg-blue-50/50 hover:bg-blue-100/70 transition-all duration-300 border border-gray-600 hover:border-orange-600/50 cursor-pointer"
+                className="group flex flex-row items-center gap-2 p-3 rounded-lg bg-blue-500 hover:bg-blue-700 transition-all duration-300 border border-gray-600 hover:border-orange-600/50 cursor-pointer"
                 title={`Search properties in ${city.name}`}
               >
-                <MapPin className="h-4 w-4 text-orange-400 group-hover:scale-110 transition-transform duration-300" />
-                <span className="text-gray-600 group-hover:text-blue-600 text-sm font-medium transition-colors duration-200 text-center">
+                <MapPin className="h-4 w-4 text-orange-400 group-hover:text-orange-500 group-hover:scale-110 transition-transform duration-300" />
+                <span className="text-white group-hover:text-black text-sm font-medium transition-colors duration-200 text-center">
                   {city.name}
                 </span>
               </button>
