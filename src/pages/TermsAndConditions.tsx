@@ -260,8 +260,8 @@ const TermsAndConditions = () => {
                     <div className="bg-blue-100 p-2 rounded-lg">
                       <FileText className="h-6 w-6 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Terms & Conditions {index + 1}
+                    <h3 className="text-lg font-semibold text-blue-600">
+                      Terms & Conditions
                     </h3>
                   </div>
                   <ChevronDown
