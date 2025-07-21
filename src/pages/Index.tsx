@@ -353,7 +353,7 @@ const Index = () => {
         <AllProperty />
       </div>
       {/* Why Choose Us Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-gradient-to-b from-gray-50 to-white">
+      {/* <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-gradient-to-b from-gray-50 to-white">
         <div className="text-center mb-16">
           <p className="text-blue-600 font-semibold uppercase tracking-wider mb-2">
             Why Choose Homeyatra
@@ -398,7 +398,7 @@ const Index = () => {
             </p>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-white">
         <div className="flex flex-col md:flex-row md:justify-between items-center mb-16">
