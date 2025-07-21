@@ -22,7 +22,6 @@ import axiosInstance from "../axiosCalls/axiosInstance";
 const USER_TYPES = [
   { id: 1, name: "Owner" },
   { id: 2, name: "Broker" },
-  { id: 3, name: "Builder" },
   { id: 4, name: "Normal" },
 ];
 
@@ -87,7 +86,8 @@ const Signup = ({ onClose }: SignupProps) => {
       // We can show a toast here, but let's not block the signup flow
       toast({
         title: "Terms Acceptance Failed",
-        description: "Could not record your terms acceptance, but you can continue.",
+        description:
+          "Could not record your terms acceptance, but you can continue.",
         variant: "destructive",
       });
     }
