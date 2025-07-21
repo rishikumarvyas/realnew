@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import hmBanner from "@/Images/hm.jpg";
+import { useNavigate } from 'react-router-dom';
 
 // Mock builder project data
 const mockBuilderProjects = [
@@ -23,7 +24,7 @@ const mockBuilderProjects = [
     city: "Pune",
     location: "Wakad",
     projectPlanImages: [
-      { url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80" }
+      { url: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80" }
     ],
     floorPlanImages: [],
     amenities: ["Swimming Pool", "Gym", "Club House"],
@@ -50,7 +51,7 @@ const mockBuilderProjects = [
     city: "Ahmedabad",
     location: "SG Highway",
     projectPlanImages: [
-      { url: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=600&q=80" }
+      { url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80" }
     ],
     floorPlanImages: [],
     amenities: ["Parking", "Power Backup"],
@@ -77,7 +78,7 @@ const mockBuilderProjects = [
     city: "Pune",
     location: "Hinjawadi Phase 1",
     projectPlanImages: [
-      { url: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=600&q=80" }
+      { url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" }
     ],
     floorPlanImages: [],
     amenities: ["Swimming Pool", "Kids Play Area", "Jogging Track"],
@@ -88,6 +89,60 @@ const mockBuilderProjects = [
     area: "Available on Request",
     possessionDate: "Jun 2030",
     priceDisplay: "INR 78.00 Lakh onwards"
+  },
+  {
+    id: "4",
+    projectName: "Luxury Heights",
+    reraNumber: "RERA98765",
+    projectStatus: "New Launch",
+    projectPhase: "Phase 1",
+    projectArea: 6.0,
+    legal: "RERA Approved",
+    launchDate: "2024-08-01",
+    propertyType: "Residential",
+    startingPrice: "8500000",
+    state: "Maharashtra",
+    city: "Mumbai",
+    location: "Andheri West",
+    projectPlanImages: [
+      { url: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80" }
+    ],
+    floorPlanImages: [],
+    amenities: ["Infinity Pool", "Spa", "Tennis Court"],
+    exclusiveFeatures: ["Ocean View", "Helipad"],
+    paymentPlans: ["15% on Booking", "75% on Possession", "10% on Handover"],
+    builder: "Prestige Group",
+    bhk: "4 & 5 BHK",
+    area: "Available on Request",
+    possessionDate: "Dec 2029",
+    priceDisplay: "INR 8.50 Cr. onwards"
+  },
+  {
+    id: "5",
+    projectName: "Tech Park Plaza",
+    reraNumber: "RERA24680",
+    projectStatus: "Under Construction",
+    projectPhase: "Phase 3",
+    projectArea: 4.5,
+    legal: "RERA Approved",
+    launchDate: "2023-11-30",
+    propertyType: "Commercial",
+    startingPrice: "15000000",
+    state: "Karnataka",
+    city: "Bangalore",
+    location: "Electronic City",
+    projectPlanImages: [
+      { url: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=800&q=80" }
+    ],
+    floorPlanImages: [],
+    amenities: ["24/7 Security", "Food Court", "Conference Center"],
+    exclusiveFeatures: ["Smart Building", "Green Certification"],
+    paymentPlans: ["30% on Booking", "40% on Construction", "30% on Possession"],
+    builder: "Brigade Group",
+    bhk: "Office Spaces",
+    area: "1000-5000 sq.ft",
+    possessionDate: "Mar 2030",
+    priceDisplay: "INR 1.50 Cr. onwards"
   }
 ];
 
@@ -104,6 +159,7 @@ const metroCities = [
 const allCityOptions = Array.from(new Set([...metroCities, ...mockBuilderProjects.map(p => p.city)]));
 
 const NewLanching = () => {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -145,6 +201,10 @@ const NewLanching = () => {
       matchesNewLaunch
     );
   });
+
+  const handleProjectClick = (projectId: string) => {
+    navigate(`/builder-property/${projectId}`);
+  };
 
   // Dynamic banner image: use first filtered project's image, else fallback
   const bannerImage =
@@ -283,7 +343,7 @@ const NewLanching = () => {
       </div>
       {/* Project Grid */}
       <div className="max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10 xl:gap-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {filteredProjects.map((project) => {
             const image = project.projectPlanImages && project.projectPlanImages.length > 0
               ? project.projectPlanImages[0].url
@@ -291,51 +351,106 @@ const NewLanching = () => {
             return (
               <div
                 key={project.id}
-                className="group bg-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-2 hover:scale-[1.03] cursor-pointer animate-fade-in relative flex flex-col mb-8"
-                style={{ minWidth: 380, maxWidth: 440 }}
+                onClick={() => handleProjectClick(project.id)}
+                className="group bg-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer animate-fade-in relative flex flex-col w-full"
               >
                 {/* Card Image */}
-                <div className="relative h-80 w-full overflow-hidden">
+                <div className="relative w-full aspect-[4/3] overflow-hidden">
                   <img
                     src={image}
                     alt={project.projectName}
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   />
-                  <span className={`absolute top-4 left-4 px-3 py-1 text-xs font-semibold rounded-full shadow ${project.projectStatus === 'New Launch' ? 'bg-blue-600' : project.projectStatus === 'Under Construction' ? 'bg-yellow-500' : 'bg-green-600'} text-white tracking-wide`}>{project.projectStatus.toUpperCase()}</span>
+                  <span className={`absolute top-4 left-4 px-3 py-1 text-xs font-semibold rounded-full shadow ${project.projectStatus === 'New Launch' ? 'bg-blue-600' : project.projectStatus === 'Under Construction' ? 'bg-yellow-500' : 'bg-green-600'} text-white tracking-wide`}>
+                    {project.projectStatus.toUpperCase()}
+                  </span>
                   {/* Overlay strictly within image */}
-                  <div className="absolute inset-0 flex flex-col justify-center items-start bg-black/70 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 p-4 sm:p-6 md:p-7" style={{borderRadius: 'inherit'}}>
+                  <div className="absolute inset-0 flex flex-col justify-center items-start bg-black/70 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 p-4">
                     <div className="mb-4 space-y-2 text-white w-full">
-                      <div className="flex items-center gap-2 text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><rect width="16" height="8" x="4" y="10" rx="2"/></svg><span className="font-semibold">Beds</span><span className="ml-auto">{project.bhk}</span></div>
-                      <div className="flex items-center gap-2 text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="8" rx="2"/><path d="M12 8v8"/></svg><span className="font-semibold">Area</span><span className="ml-auto">{project.area}</span></div>
-                      <div className="flex items-center gap-2 text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 1v22M17 5H7m10 4H7m10 4H7m10 4H7"/></svg><span className="font-semibold">Price</span><span className="ml-auto">{project.priceDisplay}</span></div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/>
+                          <rect width="16" height="8" x="4" y="10" rx="2"/>
+                        </svg>
+                        <span className="font-semibold">Beds</span>
+                        <span className="ml-auto">{project.bhk}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <rect width="20" height="8" x="2" y="8" rx="2"/>
+                          <path d="M12 8v8"/>
+                        </svg>
+                        <span className="font-semibold">Area</span>
+                        <span className="ml-auto">{project.area}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M12 1v22M17 5H7m10 4H7m10 4H7m10 4H7"/>
+                        </svg>
+                        <span className="font-semibold">Price</span>
+                        <span className="ml-auto">{project.priceDisplay}</span>
+                      </div>
                     </div>
                     <div className="border-t border-white/30 w-full my-2"></div>
-                    <div className="flex flex-col gap-3 w-full">
-                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Enquire Now</button>
-                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Schedule a Visit</button>
-                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92V19a2 2 0 0 1-2.18 2A19.72 19.72 0 0 1 3 5.18 2 2 0 0 1 5 3h2.09a2 2 0 0 1 2 1.72c.13 1.13.37 2.23.72 3.28a2 2 0 0 1-.45 2.11l-.27.27a16 16 0 0 0 6.29 6.29l.27-.27a2 2 0 0 1 2.11-.45c1.05.35 2.15.59 3.28.72A2 2 0 0 1 22 16.92z"/></svg>Call Us</button>
-                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm md:text-base"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20.52 3.48A11.94 11.94 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.21.6 4.28 1.65 6.05l-1.6 5.85a1 1 0 0 0 1.25 1.25l5.85-1.6A11.94 11.94 0 0 0 12 24c6.63 0 12-5.37 12-12 0-2.21-.6-4.28-1.65-6.05z"/></svg>WhatsApp</button>
+                    <div className="flex flex-col gap-2 w-full">
+                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        Enquire Now
+                      </button>
+                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M12 6v6l4 2"/>
+                        </svg>
+                        Schedule a Visit
+                      </button>
+                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M22 16.92V19a2 2 0 0 1-2.18 2A19.72 19.72 0 0 1 3 5.18 2 2 0 0 1 5 3h2.09a2 2 0 0 1 2 1.72c.13 1.13.37 2.23.72 3.28a2 2 0 0 1-.45 2.11l-.27.27a16 16 0 0 0 6.29 6.29l.27-.27a2 2 0 0 1 2.11-.45c1.05.35 2.15.59 3.28.72A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                        Call Us
+                      </button>
+                      <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M20.52 3.48A11.94 11.94 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.21.6 4.28 1.65 6.05l-1.6 5.85a1 1 0 0 0 1.25 1.25l5.85-1.6A11.94 11.94 0 0 0 12 24c6.63 0 12-5.37 12-12 0-2.21-.6-4.28-1.65-6.05z"/>
+                        </svg>
+                        WhatsApp
+                      </button>
                     </div>
-                    <button className="absolute top-3 right-3 text-white text-2xl hover:text-gray-300 transition-colors"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                   </div>
                   {/* Expand overlay icon */}
-                  <button className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow-lg group-hover:opacity-0 transition-opacity duration-300 z-10 border border-gray-200"><svg width="24" height="24" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+                  <button className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow-lg group-hover:opacity-0 transition-opacity duration-300 z-10 border border-gray-200">
+                    <svg width="20" height="20" fill="none" stroke="#2563eb" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                  </button>
                 </div>
                 {/* Card Content */}
-                <div className="p-6 flex-1 flex flex-col justify-between">
+                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <div className="text-xs text-gray-400 uppercase mb-1 tracking-wider">{project.location}{project.city ? `, ${project.city}` : ''}</div>
-                    <div className="font-bold text-lg text-gray-800 mb-1 leading-tight">{project.projectName}</div>
-                    <div className="text-sm font-semibold text-gray-700 mb-2">{project.builder}</div>
+                    <div className="text-xs text-gray-400 uppercase mb-1 tracking-wider">
+                      {project.location}{project.city ? `, ${project.city}` : ''}
+                    </div>
+                    <div className="font-bold text-base sm:text-lg text-gray-800 mb-1 leading-tight line-clamp-2">
+                      {project.projectName}
+                    </div>
+                    <div className="text-sm font-semibold text-gray-700 mb-2">
+                      {project.builder}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 items-center mb-2 mt-2">
-                    <span className="bg-blue-50 text-blue-700 border border-blue-200 rounded px-2 py-1 text-xs font-semibold tracking-wide">{project.projectStatus.toUpperCase()}</span>
+                  <div className="flex flex-wrap gap-2 items-center mb-2">
+                    <span className="bg-blue-50 text-blue-700 border border-blue-200 rounded px-2 py-1 text-xs font-semibold tracking-wide">
+                      {project.projectStatus.toUpperCase()}
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-gray-600 mt-auto">
-                    <span>{project.priceDisplay}</span>
-                    <span className="mx-1">|</span>
-                    <span><span className="font-semibold">Possession Date</span> {project.possessionDate}</span>
-                    <span className="mx-1">|</span>
+                  <div className="flex flex-wrap gap-1 text-xs text-gray-600 mt-2">
+                    <span className="font-medium">{project.priceDisplay}</span>
+                    <span className="mx-1 text-gray-300">•</span>
+                    <span>{project.possessionDate}</span>
+                    <span className="mx-1 text-gray-300">•</span>
                     <span>{project.bhk}</span>
                   </div>
                 </div>

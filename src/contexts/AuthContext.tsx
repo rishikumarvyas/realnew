@@ -9,11 +9,25 @@ import { BASE_URL } from "@/constants/api";
 import { formatPhoneNumber } from "@/utils/auth";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
-// Define types
+import axiosInstance from "@/axiosCalls/axiosInstance";
+import type { decodedToken, User } from "@/Types/AuthContext";
+
+// Define types for notifications
+interface Notification {
+  notificationId: string;
+  message: string;
+  isRead: boolean;
+  createdDt: string;
+  propertyId?: string;
+  notificationType?: 'user' | 'property';
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
+  notifications: Notification[];
+  unreadCount: number;
   // Auth modal state
   showAuthModal: boolean;
   modalType: "login" | "signup" | null;
@@ -30,6 +44,7 @@ interface AuthContextType {
     userTypeId: string
   ) => Promise<boolean>;
   logout: () => void;
+  fetchNotifications: () => Promise<void>;
 }
 
 // Create context with default values
@@ -40,6 +55,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  // Add effect to fetch notifications when user is available
+  useEffect(() => {
+    if (user?.userId) {
+      console.log('User available in AuthContext, fetching notifications...');
+      fetchNotifications();
+    }
+  }, [user?.userId]);
 
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -98,8 +123,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const responseOtp = await axios.post(
-        `${BASE_URL}/api/Message/Send`,
+      const responseOtp = await axiosInstance.post(
+        `/api/Message/Send`,
         {
           phone: formattedPhone,
           templateId: 3,
@@ -107,9 +132,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           action: "HomeYatra",
           name: "HomeYatra",
           userTypeId: "0",
-        },
-        {
-          headers: { "Content-Type": "application/json" },
         }
       );
 
@@ -139,16 +161,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const signupResponse = await axios.post(
-        `${BASE_URL}/api/Auth/SignUp`,
+      const signupResponse = await axiosInstance.post(
+        `/api/Auth/SignUp`,
         {
           name: fullName,
           phone: formattedPhone,
           otp,
           userTypeId,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
         }
       );
 
@@ -159,25 +178,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         signupResponse?.data?.token != ""
       ) {
         const data = signupResponse?.data;
-
-        // Get token from response
         const token = data?.token;
 
         if (!token) {
           return false;
         }
+        
         localStorage.setItem("token", token);
-        const decodedToken: decodedToken = jwtDecode(token);
+        const decodedToken = jwtDecode<decodedToken>(token);
 
         // Create user data object
         const userData: User = {
-          userId: decodedToken?.UserId,
-          phone: decodedToken?.Phone,
-          name: decodedToken?.UserName,
+          userId: decodedToken.UserId,
+          phone: decodedToken.Phone,
+          name: decodedToken.UserName,
           token,
-          userType: decodedToken?.userType || decodedToken?.userTypeId || data?.userType || data?.userTypeId,
-          role: decodedToken?.Role,
-          userTypeId: decodedToken?.userTypeId || data?.userTypeId
+          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          role: decodedToken.Role,
+          userTypeId: decodedToken.userTypeId || data?.userTypeId
         };
 
         // Store user data for immediate use
@@ -195,19 +213,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const fetchNotifications = async () => {
+    if (!user?.userId) {
+      console.log('No user ID available for fetching notifications');
+      return;
+    }
+
+    try {
+      console.log('Fetching notifications for user:', user.userId);
+      const response = await axiosInstance.get(`/api/Notification/GetNotifications?userId=${user.userId}`);
+
+      console.log('Notifications API response:', response.data);
+
+      if (response.status === 200 && response.data.notifications) {
+        const allNotifications: Notification[] = response.data.notifications;
+        
+        // Sort notifications by date (newest first)
+        allNotifications.sort((a, b) => new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime());
+
+        console.log('Setting notifications:', allNotifications.length, 'items');
+        setNotifications(allNotifications);
+        const newUnreadCount = allNotifications.filter(n => !n.isRead).length;
+        console.log('Setting unread count:', newUnreadCount);
+        setUnreadCount(newUnreadCount);
+      } else {
+        console.warn('No notifications found in response or unexpected response format:', response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('API Error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers
+        });
+      }
+    }
+  };
+
   const login = async (phoneNumber: string, otp: string): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const loginResponse = await axios.post(
-        `${BASE_URL}/api/Auth/Login`,
+      const loginResponse = await axiosInstance.post(
+        `/api/Auth/Login`,
         {
           phone: formattedPhone,
           otp,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
         }
       );
 
@@ -221,33 +274,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       try {
         const data = loginResponse?.data;
-
-        // Get token from response
         const token = data?.token;
 
         if (!token) {
           return false;
         }
-        const decodedToken: decodedToken = jwtDecode(token);
-
+        
+        const decodedToken = jwtDecode<decodedToken>(token);
         localStorage.setItem("token", token);
-        fetchAmenities(); // Fetch amenities after successful login
-        fetchAllStates(); // Fetch all states after successful login
-        fetchUserTypes(); // Fetch user types after successful login
-        fetchSuperCategory(); // Fetch super categories after successful login
 
         // Create user data with API values
-        const userData = {
-          userId: decodedToken?.UserId,
-          phone: decodedToken?.Phone,
+        const userData: User = {
+          userId: decodedToken.UserId,
+          phone: decodedToken.Phone,
           token,
-          name: decodedToken?.UserName,
-          userType: decodedToken?.userType || decodedToken?.userTypeId || data?.userType || data?.userTypeId,
-          role: decodedToken?.Role,
-          userTypeId: decodedToken?.userTypeId || data?.userTypeId
+          name: decodedToken.UserName,
+          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          role: decodedToken.Role,
+          userTypeId: decodedToken.userTypeId || data?.userTypeId
         };
 
         setUser(userData);
+
+        // Fetch all required data in parallel
+        await Promise.all([
+          fetchNotifications(),
+          fetchAmenities(),
+          fetchAllStates(),
+          fetchUserTypes(),
+          fetchSuperCategory()
+        ]);
 
         // Close the auth modal after successful login
         closeAuthModal();
@@ -264,15 +320,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchAmenities = async () => {
-    // Fetch Amenity data after successful login and save to localStorage
     try {
-      const amenityRes = await axios.get(
-        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=Amenity",
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const amenityRes = await axiosInstance.get(
+        "/api/Generic/GetActiveRecords?tableName=Amenity"
       );
       if (
         amenityRes?.data?.statusCode === 200 &&
@@ -291,15 +341,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchAllStates = async () => {
-    // Fetch Amenity data after successful login and save to localStorage
     try {
-      const allStatesRes = await axios.get(
-        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=State",
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const allStatesRes = await axiosInstance.get(
+        "/api/Generic/GetActiveRecords?tableName=State"
       );
       if (
         allStatesRes?.data?.statusCode === 200 &&
@@ -318,15 +362,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchUserTypes = async () => {
-    // Fetch Amenity data after successful login and save to localStorage
     try {
-      const UserTypesRes = await axios.get(
-        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=userType",
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const UserTypesRes = await axiosInstance.get(
+        "/api/Generic/GetActiveRecords?tableName=userType"
       );
       if (
         UserTypesRes?.data?.statusCode === 200 &&
@@ -345,15 +383,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchSuperCategory = async () => {
-    // Fetch Amenity data after successful login and save to localStorage
     try {
-      const superCategoryRes = await axios.get(
-        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=superCategory",
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const superCategoryRes = await axiosInstance.get(
+        "/api/Generic/GetActiveRecords?tableName=superCategory"
       );
       if (
         superCategoryRes?.data?.statusCode === 200 &&
@@ -377,6 +409,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const logout = () => {
     // Clear user data and token
     setUser(null);
+    setNotifications([]);
+    setUnreadCount(0);
     localStorage.removeItem("token");
     localStorage.removeItem("amenities");
     localStorage.removeItem("allStates");
@@ -388,6 +422,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     user,
     isAuthenticated: !!user,
     loading,
+    notifications,
+    unreadCount,
     // Auth modal state
     showAuthModal,
     modalType,
@@ -399,6 +435,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     login,
     signup,
     logout,
+    fetchNotifications,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
