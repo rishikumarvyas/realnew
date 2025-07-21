@@ -496,7 +496,7 @@ export default function EnhancedPrivacyPolicy() {
         </div>
 
         {/* Enhanced Contact Form with Animation */}
-        <div
+        {/* <div
           id="contact-section"
           className={`animation-trigger bg-white/90 backdrop-blur-lg rounded-2xl shadow-xl p-8 transition-all duration-1000 ${
             animatedElements["contact-section"]
@@ -576,11 +576,11 @@ export default function EnhancedPrivacyPolicy() {
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
       </main>
 
       {/* Footer with wave */}
-      <div className="relative mt-20">
+      <div className="relative mt-0">
         {/* Top wave */}
         <div className="absolute top-0 left-0 right-0 transform -translate-y-full">
           <svg
