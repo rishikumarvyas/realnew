@@ -570,7 +570,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
-              Liked Properties by Me
+              Liked Properties
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -659,7 +659,7 @@ const Dashboard = () => {
             value="likedByMe"
             className="text-xs sm:text-sm flex-1 py-1.5 sm:py-2"
           >
-            <span className="block truncate">Liked Properties by Me</span>
+            <span className="block truncate">Liked Properties</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1059,7 +1059,7 @@ const Dashboard = () => {
 
         <TabsContent value="likedByMe">
           <div>
-            <h2 className="text-xl font-bold mb-4">Liked Properties by Me</h2>
+            <h2 className="text-xl font-bold mb-4">Liked Properties</h2>
             {loadingLikedByMe ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
