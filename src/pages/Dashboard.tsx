@@ -552,7 +552,7 @@ const Dashboard = () => {
         </Card>
 
         {/* New Like Count Card */}
-        <Card>
+        {/* <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
               Liked Properties
@@ -564,7 +564,7 @@ const Dashboard = () => {
               <span className="text-3xl font-bold">{likeCount}</span>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Liked Properties by Me Card */}
         <Card>
