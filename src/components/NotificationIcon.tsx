@@ -40,17 +40,23 @@ interface CreateNotificationRequest {
 }
 
 const NotificationIcon: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, notifications, unreadCount, fetchNotifications } = useAuth();
+
+  // Add effect to log notifications changes
+  useEffect(() => {
+    console.log("NotificationIcon: notifications updated", {
+      count: notifications.length,
+      unreadCount,
+    });
+  }, [notifications, unreadCount]);
 
   useEffect(() => {
     if (user) {
-      console.log("User object available:", user);
+      console.log("NotificationIcon: User available:", user);
     }
   }, [user]);
 
@@ -114,113 +120,21 @@ const NotificationIcon: React.FC = () => {
     }
   };
 
-  const fetchNotifications = async () => {
-    if (!user) {
-      useMockData();
-      return;
-    }
-
-    const userId = user.userId;
-    if (!userId) {
-      console.warn("No user ID found in user object:", user);
-      useMockData();
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Use the single GetNotifications endpoint
-      const response = await axiosInstance.get(
-        `/api/Notification/GetNotifications?userId=${userId}`
-      );
-
-      if (response.status === 200 && response.data.notifications) {
-        const allNotifications: Notification[] = response.data.notifications;
-
-        // Sort notifications by date (newest first)
-        allNotifications.sort(
-          (a, b) =>
-            new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime()
-        );
-
-        setNotifications(allNotifications);
-        setUnreadCount(allNotifications.filter((n) => !n.isRead).length);
-      } else {
-        console.warn("No notifications found in response");
-        useMockData();
-      }
-    } catch (error: any) {
-      console.error("Error fetching notifications:", error);
-
-      toast({
-        title: "Failed to load notifications",
-        description: "Unable to fetch notifications. Please try again later.",
-        variant: "destructive",
-      });
-      useMockData();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const useMockData = () => {
-    const testData: Notification[] = [
-      {
-        notificationId: "1",
-        message: "Your property listing has been approved.",
-        createdDt: new Date().toISOString(),
-        isRead: false,
-        notificationType: "property",
-        propertyId: "property1",
-      },
-      {
-        notificationId: "2",
-        message: "New message received from a potential buyer.",
-        createdDt: new Date(Date.now() - 3600 * 1000).toISOString(),
-        isRead: false,
-        notificationType: "user",
-      },
-      {
-        notificationId: "3",
-        message: "Your property has received 5 new views.",
-        createdDt: new Date(Date.now() - 86400 * 1000).toISOString(),
-        isRead: true,
-        notificationType: "property",
-        propertyId: "property1",
-      },
-      {
-        notificationId: "4",
-        message: "Profile updated successfully.",
-        createdDt: new Date(Date.now() - 172800 * 1000).toISOString(),
-        isRead: true,
-        notificationType: "user",
-      },
-    ];
-
-    // Sort by date (newest first)
-    testData.sort(
-      (a, b) =>
-        new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime()
-    );
-
-    setNotifications(testData);
-    setUnreadCount(testData.filter((n) => !n.isRead).length);
-  };
-
   const toggleDropdown = async () => {
     if (!showDropdown) {
+      console.log(
+        "NotificationIcon: Opening dropdown, fetching notifications..."
+      );
+      setIsLoading(true);
       await fetchNotifications();
+      setIsLoading(false);
     }
     setShowDropdown((prev) => !prev);
   };
 
-  const updateNotificationState = (notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.notificationId === notificationId ? { ...n, isRead: true } : n
-      )
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+  const updateNotificationState = async (notificationId: string) => {
+    // After marking as read, refresh notifications to get updated state
+    await fetchNotifications();
   };
 
   const markAsRead = async (
@@ -254,7 +168,7 @@ const NotificationIcon: React.FC = () => {
       );
 
       if (response.status === 200) {
-        updateNotificationState(notificationId);
+        await updateNotificationState(notificationId);
         console.log("Notification marked as read successfully");
       }
     } catch (error: any) {
@@ -267,8 +181,8 @@ const NotificationIcon: React.FC = () => {
         console.error("Response headers:", error.response.headers);
       }
 
-      // Still update UI even if API call fails
-      updateNotificationState(notificationId);
+      // Still update UI by refreshing notifications
+      await updateNotificationState(notificationId);
 
       // Show error toast for API failures
       toast({
@@ -284,10 +198,6 @@ const NotificationIcon: React.FC = () => {
     const unreadNotifications = notifications.filter((n) => !n.isRead);
 
     if (unreadNotifications.length === 0) return;
-
-    // Update UI immediately
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    setUnreadCount(0);
 
     // Try to update on server
     if (user && user.userId) {
@@ -310,6 +220,9 @@ const NotificationIcon: React.FC = () => {
             return axiosInstance.put("/api/Notification/MarkAsRead", payload);
           })
         );
+
+        // Refresh notifications after marking all as read
+        await fetchNotifications();
       } catch (error) {
         console.error("Error marking all notifications as read:", error);
         toast({
@@ -357,9 +270,9 @@ const NotificationIcon: React.FC = () => {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
-      markAsRead(
+      await markAsRead(
         notification.notificationId,
         notification.notificationType,
         notification.propertyId

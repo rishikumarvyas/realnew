@@ -1,9 +1,21 @@
-type decodedToken = {
+interface decodedToken {
+  UserId: string;
   Phone: string;
   UserName: string;
-  UserId: string;
-  jti: string;
   exp: number;
-  iss: string;
-  aud: string;
-};
+  userType?: string;
+  userTypeId?: string;
+  Role?: string;
+}
+
+interface User {
+  userId: string;
+  phone: string;
+  name: string;
+  token: string;
+  userType?: string;
+  role?: string;
+  userTypeId?: string;
+}
+
+export type { decodedToken, User };
