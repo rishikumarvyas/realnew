@@ -78,6 +78,8 @@ const EditProperty = () => {
   const [price, setPrice] = useState("");
   const [area, setArea] = useState("");
   const [areaValidation, setAreaValidation] = useState(true);
+  const [ageOfProperty, setAgeOfProperty] = useState("");
+  const [ageError, setAgeError] = useState("");
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -161,6 +163,7 @@ const EditProperty = () => {
           setIsOCApproved(property.isOCApproved ? "true" : "false"); // Map API response to form data
           setPrice(property.price?.toString() || ""); // Convert price to string
           setArea(property.area?.toString() || ""); // Convert area to string
+          setAgeOfProperty(property.age?.toString() || "");
           setFormData({
             title: property.title || "",
             description: property.description || "",
@@ -217,6 +220,22 @@ const EditProperty = () => {
       return acc;
     }, {} as Record<string, boolean>)
   );
+
+  // Add validation for age of property (positive integer)
+  const handleAgeOfPropertyChange = (e) => {
+    // Only allow digits, no +, -, e, E, or symbols
+    let val = e.target.value;
+    // Remove any non-digit character
+    val = val.replace(/[^\d]/g, "");
+    setAgeOfProperty(val);
+    setAgeError("");
+  };
+  const handleKeyDown = (e) => {
+    // Prevent entering +, -, e, E, . and other non-numeric keys
+    if (["e", "E", "+", "-", "."].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
   // Helper for category logic
   const isPlot = formData.propertyType === "Plot";
   const isShop = formData.propertyType === "Shop";
@@ -391,6 +410,18 @@ const EditProperty = () => {
       });
       return;
     }
+    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+      setAgeError("Please enter a valid number (years only)");
+      toast({
+        title: "Invalid Age of Property",
+        description:
+          "Please enter a valid number for age of property (in years).",
+        variant: "destructive",
+      });
+      return;
+    } else {
+      setAgeError("");
+    }
     try {
       setSaving(true);
 
@@ -404,7 +435,7 @@ const EditProperty = () => {
       formDataObj.append("Balcony", formData.balcony);
       formDataObj.append("Address", formData.address);
       formDataObj.append("Locality", formData.locality);
-
+      formDataObj.append("Age", ageOfProperty);
       // Price handling - same approach as area
       if (price) {
         // Ensure price is treated as a number with 2 decimal places
@@ -749,6 +780,38 @@ const EditProperty = () => {
                     )}
                   </div>
                 </div>
+                {/* Age of Property */}
+                {!isPlot && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="ageOfProperty"
+                        className="text-gray-700 font-medium"
+                      >
+                        Age of Property (years){" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="ageOfProperty"
+                        placeholder="Enter age in years"
+                        value={ageOfProperty}
+                        onChange={handleAgeOfPropertyChange}
+                        onKeyDown={handleKeyDown}
+                        className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
+                          ageError ? "border-red-500" : ""
+                        }`}
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        step="1"
+                        required
+                      />
+                      {ageError && (
+                        <p className="text-red-500 text-xs mt-1">{ageError}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* RERA, OC, NA Approval */}
                 {(() => {
                   // Plot: Only NA Approved

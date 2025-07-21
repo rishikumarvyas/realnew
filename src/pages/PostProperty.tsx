@@ -75,6 +75,8 @@ const PostProperty = () => {
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
     undefined
   );
+  const [ageOfProperty, setAgeOfProperty] = useState("");
+  const [ageError, setAgeError] = useState("");
 
   useEffect(() => {
     if (selectedStateId) {
@@ -248,6 +250,21 @@ const PostProperty = () => {
     setArea(value);
   };
 
+  // Add validation for age of property (positive integer)
+  const handleAgeOfPropertyChange = (e) => {
+    // Only allow digits, no +, -, e, E, or symbols
+    let val = e.target.value;
+    // Remove any non-digit character
+    val = val.replace(/[^\d]/g, "");
+    setAgeOfProperty(val);
+    setAgeError("");
+  };
+  const handleKeyDown = (e) => {
+    // Prevent entering +, -, e, E, . and other non-numeric keys
+    if (["e", "E", "+", "-", "."].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
   // Helper functions to map UI selections to API IDs
   const mapCategoryToId = (type) => {
     const categoryMap = {
@@ -316,6 +333,19 @@ const PostProperty = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+      setAgeError("Please enter a valid number (years only)");
+      toast({
+        title: "Invalid Age of Property",
+        description:
+          "Please enter a valid number for age of property (in years).",
+        variant: "destructive",
+      });
+      return;
+    } else {
+      setAgeError("");
     }
 
     if (images.length === 0) {
@@ -401,6 +431,7 @@ const PostProperty = () => {
       formData.append("StateId", selectedStateId.toString());
       formData.append("Locality", locality.toString());
       formData.append("UserTypeId", userTypeId.toString());
+      formData.append("Age", ageOfProperty);
 
       // Add amenities
       amenityIds.forEach((id) => {
@@ -666,6 +697,38 @@ const PostProperty = () => {
                   )}
                 </div>
               </div>
+              {/* Age of Property */}
+              {!isPlot && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="ageOfProperty"
+                      className="text-gray-700 font-medium"
+                    >
+                      Age of Property (years){" "}
+                      <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="ageOfProperty"
+                      placeholder="Enter age in years"
+                      value={ageOfProperty}
+                      onChange={handleAgeOfPropertyChange}
+                      onKeyDown={handleKeyDown}
+                      className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
+                        ageError ? "border-red-500" : ""
+                      }`}
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      step="1"
+                      required
+                    />
+                    {ageError && (
+                      <p className="text-red-500 text-xs mt-1">{ageError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* RERA, OC, NA Approval */}
               {(() => {
                 // Plot: Only NA Approved
