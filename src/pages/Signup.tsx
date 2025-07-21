@@ -22,7 +22,7 @@ import axiosInstance from "../axiosCalls/axiosInstance";
 const USER_TYPES = [
   { id: 1, name: "Owner" },
   { id: 2, name: "Broker" },
-  { id: 4, name: "Normal" },
+  { id: 4, name: "Guest" },
 ];
 
 interface SignupProps {
