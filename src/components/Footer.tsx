@@ -11,7 +11,7 @@ export function Footer() {
   
   return (
     <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white">
-      <div className="max-w-7xl mx-auto pt-16 pb-8 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto pt-16 pb-8 px-4 sm:px-6 lg:px-8">
         {/* Top section with newsletter */}
         {/* <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg p-6 md:p-8 mb-12 shadow-lg">
           <div className="flex flex-col md:flex-row justify-between items-center">

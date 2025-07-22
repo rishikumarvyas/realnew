@@ -124,6 +124,34 @@ const AMENITY_MAP = {
 // For amenity filter options, use the mapping
 const amenityOptions = Object.entries(AMENITY_MAP).map(([id, label]) => ({ id, label }));
 
+// Price and Area step definitions
+const buyPriceSteps = [
+  { id: 'buy_1', label: '0-50L', min: 0, max: 5000000 },
+  { id: 'buy_2', label: '50L-1Cr', min: 5000000, max: 10000000 },
+  { id: 'buy_3', label: '1-1.5Cr', min: 10000000, max: 15000000 },
+  { id: 'buy_4', label: '1.5-2Cr', min: 15000000, max: 20000000 },
+  { id: 'buy_5', label: '2-3Cr', min: 20000000, max: 30000000 },
+  { id: 'buy_6', label: '3-5Cr', min: 30000000, max: 50000000 },
+  { id: 'buy_7', label: '5Cr+', min: 50000000, max: Number.MAX_SAFE_INTEGER },
+];
+
+const rentPriceSteps = [
+  { id: 'rent_1', label: '0-20k', min: 0, max: 20000 },
+  { id: 'rent_2', label: '20-40k', min: 20000, max: 40000 },
+  { id: 'rent_3', label: '40-60k', min: 40000, max: 60000 },
+  { id: 'rent_4', label: '60k-1L', min: 60000, max: 100000 },
+  { id: 'rent_5', label: '1L+', min: 100000, max: Number.MAX_SAFE_INTEGER },
+];
+
+const areaSteps = [
+  { id: 'area_1', label: '0-1000', min: 0, max: 1000 },
+  { id: 'area_2', label: '1000-2000', min: 1000, max: 2000 },
+  { id: 'area_3', label: '2000-3000', min: 2000, max: 3000 },
+  { id: 'area_4', label: '3000-5000', min: 3000, max: 5000 },
+  { id: 'area_5', label: '5000+', min: 5000, max: Number.MAX_SAFE_INTEGER },
+];
+
+
 // Property type mapping - Updated to merge shop and commercial, remove land/office
 const propertyTypeMapping = {
   "plot": { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
@@ -294,6 +322,8 @@ export const PropertyListing = () => {
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
   const [maxArea, setMaxArea] = useState(5000); // Added for area range slider
+  const [selectedPriceStep, setSelectedPriceStep] = useState<string | null>(null);
+  const [selectedAreaStep, setSelectedAreaStep] = useState<string | null>(null);
   
   // Search suggestions state
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -902,6 +932,39 @@ useEffect(() => {
     setSearchParams(searchParams);
   };
 
+  // Handle price step selection
+  const handlePriceStepChange = (stepId: string) => {
+    setSelectedPriceStep(stepId);
+
+    const priceSteps = activeTab === 'rent' || (activeTab === 'commercial' && commercialType === 'rent') ? rentPriceSteps : buyPriceSteps;
+    const step = priceSteps.find(s => s.id === stepId);
+
+    if (step) {
+      searchParams.set("minPrice", step.min.toString());
+      searchParams.set("maxPrice", step.max.toString());
+    } else {
+      searchParams.delete("minPrice");
+      searchParams.delete("maxPrice");
+    }
+    setSearchParams(searchParams);
+  };
+
+  // Handle area step selection
+  const handleAreaStepChange = (stepId: string) => {
+    setSelectedAreaStep(stepId);
+    const step = areaSteps.find(s => s.id === stepId);
+
+    if (step) {
+      searchParams.set("minArea", step.min.toString());
+      searchParams.set("maxArea", step.max.toString());
+    } else {
+      searchParams.delete("minArea");
+      searchParams.delete("maxArea");
+    }
+    setSearchParams(searchParams);
+  };
+
+
   // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -933,6 +996,8 @@ useEffect(() => {
     setFurnished("any");
     setSelectedAmenities([]);
     setActiveTab("all");
+    setSelectedPriceStep(null);
+    setSelectedAreaStep(null);
     setSearchParams(new URLSearchParams());
     
     // Remove toast notification for filters reset
@@ -1299,26 +1364,18 @@ useEffect(() => {
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
                       <div className="mb-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="font-semibold text-blue-700 text-sm">Price Range</div>
-                          <div className="text-sm text-blue-600">
-                            {activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent")
-                              ? `₹${priceRange[0].toLocaleString()}/month - ${priceRange[1] >= 100000 ? '₹1 Lakh/month' : `₹${priceRange[1].toLocaleString()}/month`}`
-                              : `₹${priceRange[0].toLocaleString()} - ${priceRange[1] >= 50000000 ? '₹5 Cr+' : `₹${priceRange[1].toLocaleString()}`}`
-                            }
-                          </div>
-                        </div>
-                        <Slider
-                          defaultValue={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? [0, 100000] : [0, 50000000]}
-                          max={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 100000 : 50000000}
-                          step={activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? 1000 : 100000}
-                          value={priceRange}
-                          onValueChange={handlePriceRangeChange}
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-xs text-blue-500 mt-1">
-                          <span>₹0</span>
-                          <span>{activeTab === "rent" || (activeTab === "commercial" && commercialType === "rent") ? "₹1 Lakh/month" : "₹5 Cr+"}</span>
+                        <div className="font-semibold text-blue-700 text-sm mb-2">Price Range</div>
+                        <div className="flex flex-wrap gap-2">
+                          {(activeTab === 'rent' || (activeTab === 'commercial' && commercialType === 'rent') ? rentPriceSteps : buyPriceSteps).map((step) => (
+                            <Button
+                              key={step.id}
+                              variant={selectedPriceStep === step.id ? "default" : "outline"}
+                              onClick={() => handlePriceStepChange(step.id)}
+                              className="flex-1"
+                            >
+                              {step.label}
+                            </Button>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -1397,23 +1454,18 @@ useEffect(() => {
                       {/* Area Range Section */}
                       {shouldShowFilter("showArea") && (
                         <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-semibold text-blue-700">Area (sq.ft)</label>
-                            <div className="text-sm text-blue-600">
-                              {minArea} - {maxArea >= 5000 ? '5000+' : maxArea} sq.ft
-                            </div>
-                          </div>
-                          <Slider
-                            defaultValue={[0, 5000]}
-                            max={5000}
-                            step={100}
-                            value={[minArea, maxArea]}
-                            onValueChange={handleAreaChange}
-                            className="w-full"
-                          />
-                          <div className="flex justify-between text-xs text-blue-500 mt-1">
-                            <span>0 sq.ft</span>
-                            <span>5000+ sq.ft</span>
+                          <label className="block text-xs font-semibold text-blue-700 mb-2">Area (sq.ft)</label>
+                          <div className="flex flex-wrap gap-2">
+                            {areaSteps.map((step) => (
+                              <Button
+                                key={step.id}
+                                variant={selectedAreaStep === step.id ? "default" : "outline"}
+                                onClick={() => handleAreaStepChange(step.id)}
+                                className="flex-1"
+                              >
+                                {step.label}
+                              </Button>
+                            ))}
                           </div>
                         </div>
                       )}

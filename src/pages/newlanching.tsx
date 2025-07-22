@@ -336,13 +336,13 @@ const NewLanching = () => {
       </div>
 
       {/* Project Grid Heading */}
-      <div className="w-full max-w-6xl mx-auto flex items-center my-8">
+      <div className="w-full mx-auto flex items-center my-8">
         <div className="flex-1 border-t border-gray-300"></div>
         <h2 className="mx-6 text-2xl md:text-3xl font-extrabold text-gray-800 text-center whitespace-nowrap">EXPLORE HOMES</h2>
         <div className="flex-1 border-t border-gray-300"></div>
       </div>
       {/* Project Grid */}
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {filteredProjects.map((project) => {
             const image = project.projectPlanImages && project.projectPlanImages.length > 0

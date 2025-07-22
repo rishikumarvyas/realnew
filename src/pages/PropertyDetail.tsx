@@ -532,7 +532,7 @@ const PropertyDetail = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header with back button and actions */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <Button
               variant="ghost"
@@ -573,7 +573,7 @@ const PropertyDetail = () => {
           </div>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+      <div className="mx-auto px-4 py-6 sm:py-8">
         {/* Property Title and Location Section */}
         <div className="mb-6 animate-fade-in">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
