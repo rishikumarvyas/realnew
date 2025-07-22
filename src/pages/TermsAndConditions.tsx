@@ -354,17 +354,18 @@ const TermsAndConditions = () => {
             </div>
           </div>
         )} */}
-
-        {/* Last Updated */}
-        <div className="text-center mt-8">
-          <p className="text-gray-500">
-            Last Updated:{" "}
-            {new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+        {/* Last Updated with Decorative Element */}
+        <div
+          id="updated-section"
+          className={`animation-trigger text-center mb-16 transition-all duration-1000 translate-y-0 opacity-100`}
+        >
+          <div className="inline-flex items-center">
+            <div className="h-px w-12 bg-blue-300"></div>
+            <p className="px-4 text-blue-600 font-medium">
+              Last Updated: April 30, 2025
+            </p>
+            <div className="h-px w-12 bg-blue-300"></div>
+          </div>
         </div>
       </div>
     </div>
