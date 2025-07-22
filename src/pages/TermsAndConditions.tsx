@@ -187,9 +187,9 @@ const TermsAndConditions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 font-sans transition-opacity duration-1000 overflow-hidden">
       {/* Hero Section with Property Images */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16 overflow-hidden">
+      <div className="relative overflow-hidden h-screen lg:h-96">
         {/* Property Images Background */}
         <div className="absolute inset-0 opacity-20">
           <div className="grid grid-cols-3 h-full gap-2">
@@ -212,19 +212,38 @@ const TermsAndConditions = () => {
         </div>
 
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-700/90"></div>
-
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-700/90 via-blue-600/90 to-blue-500/90 z-10"></div>
         {/* Content */}
-        <div className="relative max-w-4xl mx-auto px-4 text-center">
-          <div className="inline-block p-4 rounded-full bg-white/20 backdrop-blur-sm mb-6">
-            <FileText className="h-12 w-12" />
+        <div className="relative z-20 max-w-5xl mx-auto px-4 h-full flex flex-col justify-center text-white text-center">
+          <div
+            className={`inline-block mx-auto mb-6 p-3 rounded-full bg-blue-500/30 backdrop-blur-md transition-all duration-1000scale-100 opacity-100 `}
+          >
+            <FileText className="h-10 w-10 md:h-12 md:w-12" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1
+            className={`text-4xl md:text-6xl font-bold mb-4 transition-all duration-1000 translate-y-0 opacity-100`}
+          >
             Terms & Conditions
           </h1>
-          <p className="text-xl text-blue-100 max-w-2xl mx-auto">
+          <p
+            className={`text-lg md:text-xl max-w-2xl mx-auto transition-all duration-1000 delay-300 translate-y-0 opacity-100 `}
+          >
             Please read these terms carefully before using our property services
           </p>
+        </div>
+        {/* Animated wave divider */}
+        <div className="absolute bottom-0 left-0 right-0 z-20">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 1440 120"
+            className="w-full h-auto"
+          >
+            <path
+              fill="#fafafa"
+              fillOpacity="1"
+              d="M0,96L60,80C120,64,240,32,360,32C480,32,600,64,720,80C840,96,960,96,1080,80C1200,64,1320,32,1380,16L1440,0L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"
+            ></path>
+          </svg>
         </div>
       </div>
 
