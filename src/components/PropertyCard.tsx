@@ -42,6 +42,8 @@ export function PropertyCard({
   likes = 0,
   likeCount = 0,
   commercialType,
+  propertyType,
+  status,
 }: PropertyCardProps) {
   // Get badge color based on property type - Updated for all types
   const getBadgeStyle = () => {
@@ -64,8 +66,26 @@ export function PropertyCard({
   // Get badge text based on property type
   const getBadgeText = () => {
     if (type === "commercial") {
+      // If commercialType is set, use it
       if (commercialType === "buy") return "For Sale";
       if (commercialType === "rent") return "For Rent";
+      // If status or propertyType indicates rent, show For Rent
+      if (
+        status?.toLowerCase().includes("rent") ||
+        propertyType?.toLowerCase().includes("rent")
+      ) {
+        return "For Rent";
+      }
+      // If status or propertyType indicates sale/buy, show For Sale
+      if (
+        status?.toLowerCase().includes("buy") ||
+        status?.toLowerCase().includes("sale") ||
+        propertyType?.toLowerCase().includes("buy") ||
+        propertyType?.toLowerCase().includes("sale")
+      ) {
+        return "For Sale";
+      }
+      // Default fallback
       return "Commercial";
     }
     switch (type) {
