@@ -25,6 +25,7 @@ export interface PropertyCardProps {
   status?: string;
   formattedPrice?: string;
   likeCount?: number;
+  commercialType?: "buy" | "rent"; // Add this prop
 }
 
 export function PropertyCard({
@@ -40,6 +41,7 @@ export function PropertyCard({
   image,
   likes = 0,
   likeCount = 0,
+  commercialType,
 }: PropertyCardProps) {
   // Get badge color based on property type - Updated for all types
   const getBadgeStyle = () => {
@@ -61,6 +63,11 @@ export function PropertyCard({
 
   // Get badge text based on property type
   const getBadgeText = () => {
+    if (type === "commercial") {
+      if (commercialType === "buy") return "For Sale";
+      if (commercialType === "rent") return "For Rent";
+      return "Commercial";
+    }
     switch (type) {
       case "buy":
         return "For Sale";
@@ -70,8 +77,6 @@ export function PropertyCard({
         return "For Rent";
       case "plot":
         return "For Sale";
-      case "commercial":
-        return "Commercial";
       default:
         return "Property";
     }

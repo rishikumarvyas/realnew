@@ -2228,6 +2228,7 @@ export const PropertyListing = () => {
                                 property.price,
                                 property.type
                               )}
+                              commercialType="buy" // Pass prop
                             />
                           </div>
                         ))}
@@ -2255,6 +2256,7 @@ export const PropertyListing = () => {
                                 property.price,
                                 property.type
                               )}
+                              commercialType="rent" // Pass prop
                             />
                           </div>
                         ))}
