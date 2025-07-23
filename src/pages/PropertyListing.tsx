@@ -261,6 +261,11 @@ export const PropertyListing = () => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [sortOrder, setSortOrder] = useState<string>("desc");
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 6;
+  const totalPages = Math.ceil(filteredProperties.length / pageSize);
+
   // Define filter visibility types
   type FilterVisibility = {
     showPrice: boolean;
@@ -1379,6 +1384,30 @@ export const PropertyListing = () => {
     return propertyTypes.find((pt) => pt.key === activeTab)?.icon || "🏘️";
   };
 
+  // Slice filteredProperties for current page
+  const paginatedProperties = filteredProperties.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  useEffect(() => {
+    // Reset to first page when filters or tab change
+    setCurrentPage(1);
+  }, [
+    activeTab,
+    searchQuery,
+    priceRange,
+    minBedrooms,
+    minBathrooms,
+    minBalcony,
+    minArea,
+    maxArea,
+    availableFrom,
+    preferenceId,
+    furnished,
+    selectedAmenities,
+  ]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero section with search */}
@@ -2213,7 +2242,7 @@ export const PropertyListing = () => {
                       <h3 className="col-span-full text-lg font-semibold mb-4">
                         Commercial Properties for Buy
                       </h3>
-                      {filteredProperties
+                      {paginatedProperties
                         .filter(
                           (prop) =>
                             prop.type === "commercial" &&
@@ -2241,7 +2270,7 @@ export const PropertyListing = () => {
                       <h3 className="col-span-full text-lg font-semibold mb-4">
                         Commercial Properties for Rent
                       </h3>
-                      {filteredProperties
+                      {paginatedProperties
                         .filter(
                           (prop) =>
                             prop.type === "commercial" &&
@@ -2265,7 +2294,7 @@ export const PropertyListing = () => {
 
                   {/* Other Property Types */}
                   {activeTab !== "commercial" &&
-                    filteredProperties.map((property) => (
+                    paginatedProperties.map((property) => (
                       <div key={property.id} className="w-full">
                         <PropertyCard
                           {...property}
@@ -2282,41 +2311,35 @@ export const PropertyListing = () => {
             </div>
 
             {/* Pagination */}
-            {filteredProperties.length > 0 && (
+            {totalPages > 1 && (
               <div className="mt-8 flex justify-center">
                 <div className="inline-flex rounded-md space-x-2">
                   <Button
                     variant="outline"
                     size="default"
                     className="rounded-full"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
                   >
                     {"<"}
                   </Button>
-                  <Button
-                    variant="default"
-                    size="default"
-                    className="rounded-full"
-                  >
-                    1
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="rounded-full"
-                  >
-                    2
-                  </Button>
+                  {[...Array(totalPages)].map((_, idx) => (
+                    <Button
+                      key={idx + 1}
+                      variant={currentPage === idx + 1 ? "default" : "outline"}
+                      size="default"
+                      className="rounded-full"
+                      onClick={() => setCurrentPage(idx + 1)}
+                    >
+                      {idx + 1}
+                    </Button>
+                  ))}
                   <Button
                     variant="outline"
                     size="default"
                     className="rounded-full"
-                  >
-                    3
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="rounded-full"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(currentPage + 1)}
                   >
                     {">"}
                   </Button>
