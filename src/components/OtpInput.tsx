@@ -1,10 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface OtpInputProps {
   value: string;
   onChange: (value: string) => void;
   length?: number;
   className?: string;
+  verifyButtonRef?: React.RefObject<HTMLButtonElement>;
 }
 
 export const OtpInput: React.FC<OtpInputProps> = ({
@@ -12,6 +13,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   onChange,
   length = 6,
   className,
+  verifyButtonRef,
 }) => {
   const [activeInput, setActiveInput] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -20,6 +22,17 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   if (inputRefs.current.length === 0) {
     inputRefs.current = Array(length).fill(null);
   }
+
+  useEffect(() => {
+    // When OTP is fully entered, move focus to Verify button
+    if (
+      value.length === length &&
+      value.split("").every((d) => d) &&
+      verifyButtonRef?.current
+    ) {
+      verifyButtonRef.current.focus();
+    }
+  }, [value, length, verifyButtonRef]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>,

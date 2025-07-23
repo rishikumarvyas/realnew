@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { OtpInput } from "@/components/OtpInput";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,7 @@ export const OtpStep = ({
   const [timeLeft, setTimeLeft] = useState(60);
   const [isResending, setIsResending] = useState(false); // Separate loading state for resend
   const { toast } = useToast();
+  const verifyButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Effect for countdown timer
   useEffect(() => {
@@ -85,8 +86,14 @@ export const OtpStep = ({
         </p>
         <p className="font-medium">{phone}</p>
       </div>
-      <OtpInput value={otpValue} onChange={setOtpValue} className="mb-6" />
+      <OtpInput
+        value={otpValue}
+        onChange={setOtpValue}
+        className="mb-6"
+        verifyButtonRef={verifyButtonRef}
+      />
       <Button
+        ref={verifyButtonRef}
         onClick={handleOtpSubmit}
         className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
         disabled={loading || otpValue.length !== 6}
