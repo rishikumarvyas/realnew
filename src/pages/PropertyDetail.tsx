@@ -1052,7 +1052,8 @@ const PropertyDetail = () => {
                       <span className="text-gray-600">Location</span>
                       <span className="font-medium">
                         {property.city || ""}
-                        {property.state ? `, ${property.state}` : ""}
+                        {", "}
+                        {property.state ? property.state : ""}
                       </span>
                     </div>
                     <div className="flex justify-between py-3">
