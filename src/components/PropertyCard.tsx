@@ -69,7 +69,7 @@ export function PropertyCard({
       case "rent":
         return "For Rent";
       case "plot":
-        return "Plot";
+        return "For Sale";
       case "commercial":
         return "Commercial";
       default:
@@ -93,7 +93,7 @@ export function PropertyCard({
           <Badge className={`absolute top-3 right-3 z-20 ${getBadgeStyle()}`}>
             {getBadgeText()}
           </Badge>
-          
+
           {/* Likes counter */}
           <div className="absolute top-3 left-3 z-20 flex items-center bg-black/50 text-white px-2 py-1 rounded-md">
             <Heart size={16} className="mr-1 fill-white text-white" />
@@ -142,7 +142,7 @@ export function PropertyCard({
                 )}
               </>
             )}
-            
+
             {/* Always show area */}
             <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
               <Maximize2 size={18} />
