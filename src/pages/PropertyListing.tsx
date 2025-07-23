@@ -78,20 +78,28 @@ interface FilterOptions {
   amenities?: string[];
 }
 
+// Add sorting interface
+interface SortOptions {
+  sortBy: string;
+  sortOrder: string;
+}
+
 // Tenant preference mapping
 const preferenceOptions = [
-  { id: "0", label: "Any" },
-  { id: "1", label: "Family" },
-  { id: "2", label: "Bachelor" },
-  { id: "3", label: "Company" },
-  { id: "4", label: "Student" }
+  { id: "2", label: "Family" },
+  { id: "1", label: "Bachelors" },
+  { id: "3", label: "Girls" },
+  { id: "6", label: "Student" },
+  { id: "5", label: "Company" },
+  { id: "4", label: "Anyone" },
 ];
 
 // Furnished status options
 const furnishedOptions = [
   { id: "Fully", label: "Fully Furnished" },
   { id: "Semi", label: "Semi Furnished" },
-  { id: "Not", label: "Unfurnished" }
+  { id: "Not", label: "Unfurnished" },
+  { id: "any", label: "Any" }
 ];
 
 // Amenity options for commercial properties
@@ -230,6 +238,10 @@ export const PropertyListing = () => {
   // Add state for commercial type
   const [commercialType, setCommercialType] = useState<"buy" | "rent">("buy");
 
+  // Add sorting state
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [sortOrder, setSortOrder] = useState<string>("desc");
+
   // Define filter visibility types
   type FilterVisibility = {
     showPrice: boolean;
@@ -325,14 +337,18 @@ export const PropertyListing = () => {
   const [selectedPriceStep, setSelectedPriceStep] = useState<string | null>(null);
   const [selectedAreaStep, setSelectedAreaStep] = useState<string | null>(null);
   
+  // Multi-select states for price and area
+  const [selectedPriceSteps, setSelectedPriceSteps] = useState<string[]>([]);
+  const [selectedAreaSteps, setSelectedAreaSteps] = useState<string[]>([]);
+  
   // Search suggestions state
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
   // Advanced filter states
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(undefined);
-  const [preferenceId, setPreferenceId] = useState<string>("0"); // Default to "Any"
-  const [furnished, setFurnished] = useState<string>("any");
+  const [preferenceId, setPreferenceId] = useState<string>("4"); // Default to "Anyone"
+  const [furnished, setFurnished] = useState<string>("Fully"); // Default to "Fully Furnished"
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   
   // UI state for advanced filters visibility
@@ -410,6 +426,7 @@ export const PropertyListing = () => {
   const preferenceParam = searchParams.get("preference");
   const furnishedParam = searchParams.get("furnished");
   const amenitiesParam = searchParams.get("amenities");
+  const sortParam = searchParams.get("sort");
   
   // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
   const currentTab = typeParam || "all";
@@ -471,12 +488,37 @@ export const PropertyListing = () => {
 
   if (furnishedParam && furnishedParam !== furnished) {
     setFurnished(furnishedParam);
+  } else if (!furnishedParam) {
+    // If no furnished param in URL, set to default but don't add to URL
+    setFurnished("Fully");
   }
 
   if (amenitiesParam) {
     const amenities = amenitiesParam.split(',');
     if (JSON.stringify(amenities.sort()) !== JSON.stringify(selectedAmenities.sort())) {
       setSelectedAmenities(amenities);
+    }
+  }
+
+  if (sortParam && sortParam !== sortBy) {
+    setSortBy(sortParam);
+  }
+
+  // Initialize multi-select states from URL parameters
+  const priceStepsParam = searchParams.get("priceSteps");
+  const areaStepsParam = searchParams.get("areaSteps");
+  
+  if (priceStepsParam) {
+    const priceSteps = priceStepsParam.split(',');
+    if (JSON.stringify(priceSteps.sort()) !== JSON.stringify(selectedPriceSteps.sort())) {
+      setSelectedPriceSteps(priceSteps);
+    }
+  }
+  
+  if (areaStepsParam) {
+    const areaSteps = areaStepsParam.split(',');
+    if (JSON.stringify(areaSteps.sort()) !== JSON.stringify(selectedAreaSteps.sort())) {
+      setSelectedAreaSteps(areaSteps);
     }
   }
   
@@ -491,11 +533,11 @@ const fetchProperties = async () => {
     // Get the current type from URL, not from state
     const currentTypeParam = searchParams.get("type") || "all";
     
-    // Prepare filter options based on URL parameters - UPDATED: Use actual area values
+    // Prepare filter options based on URL parameters - UPDATED: Use actual price and area values
     const filterOptions: FilterOptions = {
       searchTerm: searchParams.get("search") || "",
-      minPrice: 0, // Set to 0 as requested
-      maxPrice: 0, // Set to 0 as requested
+      minPrice: parseInt(searchParams.get("minPrice") || "0"),
+      maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
       minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
       minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
       minBalcony: parseInt(searchParams.get("balcony") || "0"),
@@ -534,7 +576,34 @@ const fetchProperties = async () => {
       pageNumber = parseInt(searchParams.get("page") || "1") - 1;
     }
 
-    // Prepare request payload - UPDATED: Use actual area values from filterOptions
+    // Get sort parameters from URL or use defaults
+    const sortParam = searchParams.get("sort") || "newest";
+    let apiSortBy = "";
+    let apiSortOrder = "desc";
+
+    // Map sort options to API parameters
+    switch (sortParam) {
+      case "price-low":
+        apiSortBy = "price";
+        apiSortOrder = "asc";
+        break;
+      case "price-high":
+        apiSortBy = "price";
+        apiSortOrder = "desc";
+        break;
+      case "area-high":
+        apiSortBy = "area";
+        apiSortOrder = "desc";
+        break;
+      case "newest":
+      default:
+        // Default: Newest First (no specific sort parameters needed)
+        apiSortBy = "";
+        apiSortOrder = "desc";
+        break;
+    }
+
+    // Prepare request payload - UPDATED: Use actual price and area values from filterOptions
     const requestPayload = {
       superCategoryId,
       propertyTypeIds: propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
@@ -542,8 +611,8 @@ const fetchProperties = async () => {
       accountId: "string",
       searchTerm: filterOptions.searchTerm,
       StatusId: 2, // ADDED: StatusId set to 2 as requested
-      minPrice: 0, // UPDATED: Set to 0 as requested
-      maxPrice: 0, // UPDATED: Set to 0 as requested
+      minPrice: filterOptions.minPrice, // UPDATED: Use actual minPrice value
+      maxPrice: filterOptions.maxPrice, // UPDATED: Use actual maxPrice value
       bedroom: filterOptions.minBedrooms,
       bathroom: filterOptions.minBathrooms,
       balcony: filterOptions.minBalcony,
@@ -551,15 +620,21 @@ const fetchProperties = async () => {
       maxArea: filterOptions.maxArea, // UPDATED: Use actual maxArea value
       availableFrom: filterOptions.availableFrom,
       preferenceId: filterOptions.preferenceId ? parseInt(filterOptions.preferenceId) : undefined,
-      furnished: filterOptions.furnished === "any" ? undefined : filterOptions.furnished,
+      furnished: searchParams.get("furnished") || undefined,
       amenities: filterOptions.amenities,
       pageNumber,
       pageSize,
+      // Add sorting parameters
+      SortBy: apiSortBy,
+      SortOrder: apiSortOrder,
     };
     
     console.log('API Request Payload:', {
       type: currentTypeParam,
       furnished: filterOptions.furnished,
+      furnishedParam: searchParams.get("furnished"),
+      sortBy: apiSortBy,
+      sortOrder: apiSortOrder,
       payload: requestPayload
     });
     
@@ -621,6 +696,7 @@ const fetchProperties = async () => {
       };
     });
 
+    console.log('Transformed properties furnished values:', transformedData.map(p => ({ id: p.id, furnished: p.furnished })));
     setProperties(transformedData);
       
       // Apply client-side filtering based on current URL type
@@ -666,6 +742,12 @@ const fetchProperties = async () => {
         }
         
         if (property.area < currentMinArea) {
+          return false;
+        }
+        
+        // Apply furnished filter
+        const currentFurnished = searchParams.get("furnished");
+        if (currentFurnished && property.furnished !== currentFurnished) {
           return false;
         }
         
@@ -750,13 +832,14 @@ const applyFilters = (data: PropertyCardProps[]) => {
   }
 
   // Apply furnished filter
-  if (furnished !== "any") {
+  const currentFurnished = searchParams.get("furnished");
+  if (currentFurnished) {
     console.log('Applying furnished filter:', {
-      filterValue: furnished,
+      filterValue: currentFurnished,
       propertiesBefore: filtered.length,
       furnishedValues: filtered.map(p => p.furnished)
     });
-    filtered = filtered.filter(property => property.furnished === furnished);
+    filtered = filtered.filter(property => property.furnished === currentFurnished);
     console.log('After furnished filter:', {
       propertiesAfter: filtered.length,
       remainingFurnishedValues: filtered.map(p => p.furnished)
@@ -932,35 +1015,75 @@ useEffect(() => {
     setSearchParams(searchParams);
   };
 
-  // Handle price step selection
+  // Handle price step selection (multi-select)
   const handlePriceStepChange = (stepId: string) => {
-    setSelectedPriceStep(stepId);
-
     const priceSteps = activeTab === 'rent' || (activeTab === 'commercial' && commercialType === 'rent') ? rentPriceSteps : buyPriceSteps;
-    const step = priceSteps.find(s => s.id === stepId);
-
-    if (step) {
-      searchParams.set("minPrice", step.min.toString());
-      searchParams.set("maxPrice", step.max.toString());
+    
+    let newSelectedPriceSteps: string[];
+    
+    if (selectedPriceSteps.includes(stepId)) {
+      // Remove from selection
+      newSelectedPriceSteps = selectedPriceSteps.filter(id => id !== stepId);
+    } else {
+      // Add to selection
+      newSelectedPriceSteps = [...selectedPriceSteps, stepId];
+    }
+    
+    setSelectedPriceSteps(newSelectedPriceSteps);
+    
+    // Calculate min and max price from selected steps
+    if (newSelectedPriceSteps.length > 0) {
+      const selectedSteps = newSelectedPriceSteps.map(id => 
+        priceSteps.find(step => step.id === id)
+      ).filter(Boolean);
+      
+      const minPrice = Math.min(...selectedSteps.map(step => step!.min));
+      const maxPrice = Math.max(...selectedSteps.map(step => step!.max));
+      
+      searchParams.set("minPrice", minPrice.toString());
+      searchParams.set("maxPrice", maxPrice.toString());
+      searchParams.set("priceSteps", newSelectedPriceSteps.join(','));
     } else {
       searchParams.delete("minPrice");
       searchParams.delete("maxPrice");
+      searchParams.delete("priceSteps");
     }
+    
     setSearchParams(searchParams);
   };
 
-  // Handle area step selection
+  // Handle area step selection (multi-select)
   const handleAreaStepChange = (stepId: string) => {
-    setSelectedAreaStep(stepId);
-    const step = areaSteps.find(s => s.id === stepId);
-
-    if (step) {
-      searchParams.set("minArea", step.min.toString());
-      searchParams.set("maxArea", step.max.toString());
+    let newSelectedAreaSteps: string[];
+    
+    if (selectedAreaSteps.includes(stepId)) {
+      // Remove from selection
+      newSelectedAreaSteps = selectedAreaSteps.filter(id => id !== stepId);
+    } else {
+      // Add to selection
+      newSelectedAreaSteps = [...selectedAreaSteps, stepId];
+    }
+    
+    setSelectedAreaSteps(newSelectedAreaSteps);
+    
+    // Calculate min and max area from selected steps
+    if (newSelectedAreaSteps.length > 0) {
+      const selectedSteps = newSelectedAreaSteps.map(id => 
+        areaSteps.find(step => step.id === id)
+      ).filter(Boolean);
+      
+      const minArea = Math.min(...selectedSteps.map(step => step!.min));
+      const maxArea = Math.max(...selectedSteps.map(step => step!.max));
+      
+      searchParams.set("minArea", minArea.toString());
+      searchParams.set("maxArea", maxArea.toString());
+      searchParams.set("areaSteps", newSelectedAreaSteps.join(','));
     } else {
       searchParams.delete("minArea");
       searchParams.delete("maxArea");
+      searchParams.delete("areaSteps");
     }
+    
     setSearchParams(searchParams);
   };
 
@@ -992,12 +1115,15 @@ useEffect(() => {
     setSearchQuery("");
     setSearchTerm("");
     setAvailableFrom(undefined);
-    setPreferenceId("0");
-    setFurnished("any");
+    setPreferenceId("4");
+    setFurnished("Fully"); // Reset to default "Fully Furnished"
     setSelectedAmenities([]);
     setActiveTab("all");
     setSelectedPriceStep(null);
     setSelectedAreaStep(null);
+    setSelectedPriceSteps([]);
+    setSelectedAreaSteps([]);
+    setSortBy("newest");
     setSearchParams(new URLSearchParams());
     
     // Remove toast notification for filters reset
@@ -1071,7 +1197,7 @@ useEffect(() => {
   // Update URL when preference changes
   const handlePreferenceChange = (value: string) => {
     setPreferenceId(value);
-    if (value !== "0") {
+    if (value !== "4") {
       searchParams.set("preference", value);
     } else {
       searchParams.delete("preference");
@@ -1082,11 +1208,8 @@ useEffect(() => {
   // Update URL when furnished status changes
   const handleFurnishedChange = (value: string) => {
     setFurnished(value);
-    if (value !== "any") {
-      searchParams.set("furnished", value);
-    } else {
-      searchParams.delete("furnished");
-    }
+    // Always set furnished parameter since we have a default value
+    searchParams.set("furnished", value);
     setSearchParams(searchParams);
   };
 
@@ -1108,6 +1231,13 @@ useEffect(() => {
       searchParams.delete("amenities");
     }
     
+    setSearchParams(searchParams);
+  };
+
+  // Handle sort change
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    searchParams.set("sort", value);
     setSearchParams(searchParams);
   };
 
@@ -1169,10 +1299,10 @@ useEffect(() => {
         
         {/* Content */}
         <div className="relative py-20 px-4">
-          <div className="max-w-3xl mx-auto bg-transparent-600 bg-opacity-80 p-8 md:p-12 rounded-xl shadow-2xl backdrop-blur">
+          <div className="max-w-3xl mx-auto bg-white/60 p-8 md:p-12 rounded-xl shadow-2xl">
             <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">Find Your Dream Property</h1>
-              <p className="text-lg text-white/90 mb-8">Use our advanced filters to find the perfect property that matches your requirements</p>
+              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-black">Find Your Dream Property</h1>
+              <p className="text-lg text-gray-800 mb-8">Use our advanced filters to find the perfect property that matches your requirements</p>
               {/* Search Input Form (copied from Index.tsx) */}
               <form onSubmit={handleSearch} className="mt-4 sm:mt-6 relative mx-auto">
                 <div className="relative flex shadow-xl">
@@ -1214,7 +1344,7 @@ useEffect(() => {
         </div>
       </div>
 
-      <div className="w-full px-0 py-8">
+      <div className="w-full px-4 py-8">
         {/* Mobile filter toggle button - only visible on mobile */}
         <div className="md:hidden mb-4">
           <Button 
@@ -1235,11 +1365,11 @@ useEffect(() => {
         </div>
         
         {/* Main content area with sidebar and property listings using flex */}
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-4">
           {/* Collapsible Sidebar filters */}
           <div
-            className={`transition-all duration-300 mb-8 md:mb-0 shrink-0 overflow-hidden flex flex-col
-              ${sidebarVisible ? 'w-full md:w-[320px]' : 'w-12 md:w-12'}
+            className={`transition-all duration-300 mb-6 md:mb-0 shrink-0 overflow-hidden flex flex-col
+              ${sidebarVisible ? 'w-full md:w-[300px]' : 'w-12 md:w-12'}
               bg-gradient-to-br from-blue-50 via-indigo-50 to-white border-r border-blue-200 relative rounded-2xl shadow-xl
               ${!mobileFiltersVisible ? 'md:block hidden' : ''}`}
             style={{ minWidth: sidebarVisible ? undefined : '3rem', maxWidth: sidebarVisible ? undefined : '3rem' }}
@@ -1267,7 +1397,7 @@ useEffect(() => {
               {(sidebarVisible || mobileFiltersVisible) && (
                 <div className="p-0">
                   {/* Filter Card */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 flex flex-col gap-4">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-100 p-6 flex flex-col gap-4 hover:shadow-2xl transition-all duration-300">
                     {/* Property Type Tabs Section - Collapsible */}
                     <div className="mb-6">
                       <div 
@@ -1364,19 +1494,43 @@ useEffect(() => {
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
                       <div className="mb-6">
-                        <div className="font-semibold text-blue-700 text-sm mb-2">Price Range</div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+                            <IndianRupeeIcon className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-blue-800 text-sm">Price Range</div>
+                            <div className="text-xs text-gray-500">Select your budget</div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
                           {(activeTab === 'rent' || (activeTab === 'commercial' && commercialType === 'rent') ? rentPriceSteps : buyPriceSteps).map((step) => (
                             <Button
                               key={step.id}
-                              variant={selectedPriceStep === step.id ? "default" : "outline"}
+                              variant={selectedPriceSteps.includes(step.id) ? "default" : "outline"}
                               onClick={() => handlePriceStepChange(step.id)}
-                              className="flex-1"
+                              className={`h-12 text-xs font-semibold transition-all duration-200 ${
+                                selectedPriceSteps.includes(step.id)
+                                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transform scale-105'
+                                  : 'bg-white hover:bg-blue-50 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800'
+                              }`}
                             >
-                              {step.label}
+                              <div className="flex flex-col items-center">
+                                <span className="font-bold">{step.label}</span>
+                                {selectedPriceSteps.includes(step.id) && (
+                                  <span className="text-xs opacity-90">✓ Selected</span>
+                                )}
+                              </div>
                             </Button>
                           ))}
                         </div>
+                        {selectedPriceSteps.length > 0 && (
+                          <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                            <div className="text-xs text-blue-700 font-medium">
+                              Selected: {selectedPriceSteps.length} price range{selectedPriceSteps.length > 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1454,19 +1608,43 @@ useEffect(() => {
                       {/* Area Range Section */}
                       {shouldShowFilter("showArea") && (
                         <div className="mb-4">
-                          <label className="block text-xs font-semibold text-blue-700 mb-2">Area (sq.ft)</label>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
+                              <Ruler className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-blue-800 text-sm">Area (sq.ft)</div>
+                              <div className="text-xs text-gray-500">Choose property size</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
                             {areaSteps.map((step) => (
                               <Button
                                 key={step.id}
-                                variant={selectedAreaStep === step.id ? "default" : "outline"}
+                                variant={selectedAreaSteps.includes(step.id) ? "default" : "outline"}
                                 onClick={() => handleAreaStepChange(step.id)}
-                                className="flex-1"
+                                className={`h-12 text-xs font-semibold transition-all duration-200 ${
+                                  selectedAreaSteps.includes(step.id)
+                                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transform scale-105'
+                                    : 'bg-white hover:bg-blue-50 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800'
+                                }`}
                               >
-                                {step.label}
+                                <div className="flex flex-col items-center">
+                                  <span className="font-bold">{step.label}</span>
+                                  {selectedAreaSteps.includes(step.id) && (
+                                    <span className="text-xs opacity-90">✓ Selected</span>
+                                  )}
+                                </div>
                               </Button>
                             ))}
                           </div>
+                          {selectedAreaSteps.length > 0 && (
+                            <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                              <div className="text-xs text-blue-700 font-medium">
+                                Selected: {selectedAreaSteps.length} area range{selectedAreaSteps.length > 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1494,7 +1672,7 @@ useEffect(() => {
                         <label className="block text-xs font-semibold text-blue-700 mb-1">Furnished</label>
                         <Select value={furnished} onValueChange={handleFurnishedChange}>
                           <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
-                            <SelectValue placeholder="Any" />
+                            <SelectValue placeholder="Fully Furnished" />
                           </SelectTrigger>
                           <SelectContent className="bg-white border-blue-200">
                             {furnishedOptions.map((option) => (
@@ -1559,10 +1737,11 @@ useEffect(() => {
           </div>
 
           {/* Property listings - takes full remaining width */}
-          <div className="flex-1 min-w-0 w-full">
+          <div className="flex-1 min-w-0 w-full pr-4">
             {/* Applied filters display */}
             {(searchQuery || minBedrooms > 0 || minBathrooms > 0 || minBalcony > 0 || minArea > 0 || 
-              availableFrom || preferenceId !== "0" || furnished !== "any") && (
+              availableFrom || preferenceId !== "0" || furnished || 
+              selectedPriceSteps.length > 0 || selectedAreaSteps.length > 0) && (
               <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-medium mr-2">Active Filters:</h3>
@@ -1652,13 +1831,13 @@ useEffect(() => {
                     </Badge>
                   )}
                   
-                  {preferenceId !== "0" && (
+                  {preferenceId !== "4" && (
                     <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
                       {preferenceOptions.find(p => p.id === preferenceId)?.label}
                       <X 
                         className="h-3 w-3 ml-1 cursor-pointer" 
                         onClick={() => {
-                          setPreferenceId("0");
+                          setPreferenceId("4");
                           searchParams.delete("preference");
                           setSearchParams(searchParams);
                         }}
@@ -1666,14 +1845,48 @@ useEffect(() => {
                     </Badge>
                   )}
 
-                  {furnished !== "any" && (
+                  {furnished && furnished !== "Fully" && (
                     <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
                       {furnishedOptions.find(f => f.id === furnished)?.label}
                       <X 
                         className="h-3 w-3 ml-1 cursor-pointer" 
                         onClick={() => {
-                          setFurnished("any");
-                          searchParams.delete("furnished");
+                          setFurnished("Fully"); // Reset to default
+                          searchParams.delete("furnished"); // Remove from URL instead of setting
+                          setSearchParams(searchParams);
+                        }}
+                      />
+                    </Badge>
+                  )}
+
+                  {selectedPriceSteps.length > 0 && (
+                    <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
+                      <IndianRupeeIcon className="h-3 w-3" />
+                      Price: {selectedPriceSteps.length} selected
+                      <X 
+                        className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600" 
+                        onClick={() => {
+                          setSelectedPriceSteps([]);
+                          searchParams.delete("priceSteps");
+                          searchParams.delete("minPrice");
+                          searchParams.delete("maxPrice");
+                          setSearchParams(searchParams);
+                        }}
+                      />
+                    </Badge>
+                  )}
+
+                  {selectedAreaSteps.length > 0 && (
+                    <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
+                      <Ruler className="h-3 w-3" />
+                      Area: {selectedAreaSteps.length} selected
+                      <X 
+                        className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600" 
+                        onClick={() => {
+                          setSelectedAreaSteps([]);
+                          searchParams.delete("areaSteps");
+                          searchParams.delete("minArea");
+                          searchParams.delete("maxArea");
                           setSearchParams(searchParams);
                         }}
                       />
@@ -1694,9 +1907,16 @@ useEffect(() => {
 
             {/* Results count and sort */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-              {/* Removed loading spinner and message */}
+              {/* Results count */}
+              <div className="mb-4 sm:mb-0">
+                <p className="text-sm text-gray-600">
+                  Showing <span className="font-semibold">{filteredProperties.length}</span> properties
+                </p>
+              </div>
+              
+              {/* Sort dropdown */}
               <div className="mt-2 sm:mt-0">
-                <Select defaultValue="newest">
+                <Select value={sortBy} onValueChange={handleSortChange}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -1728,7 +1948,7 @@ useEffect(() => {
             )}
 
             {/* Results grid - modern card design, 3 per row on desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-10 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-10 w-full">
               {loading ? (
                 // Loading skeletons
                 Array(6).fill(0).map((_, index) => (

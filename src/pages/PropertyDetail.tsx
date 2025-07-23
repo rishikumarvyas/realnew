@@ -22,7 +22,7 @@ import {
   ArrowUpDown,
   Home,
   Heart,
-  Share2,
+  Copy,
   Calendar,
   Image,
   Eye,
@@ -41,6 +41,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ImageGalleryDialog } from "@/components/ImageGalleryDialog";
 import { useToast } from "@/hooks/use-toast";
 import PropertyMap from "@/components/PropertyMap";
+import { PropertyCard } from "@/components/PropertyCard";
 import axiosInstance from "../axiosCalls/axiosInstance";
 
 const PropertyDetail = () => {
@@ -140,10 +141,92 @@ const PropertyDetail = () => {
     setLoadingSimilar(true);
     try {
       console.log(`Fetching similar properties for city: ${city}, type: ${propertyType}`);
-      // For development/demo purposes, use mock data
-      getMockSimilarProperties(city, propertyType);
+      
+      // Fetch properties from the same city using API
+      const response = await axiosInstance.post('/api/Account/GetProperty', {
+        superCategoryId: 0, // Get all categories
+        propertyTypeIds: [], // Get all property types
+        propertyFor: 0, // Get both buy and rent
+        accountId: "string",
+        searchTerm: city, // Search by city name
+        StatusId: 2,
+        minPrice: 0,
+        maxPrice: 100000000, // High max price to get all properties
+        bedroom: 0,
+        bathroom: 0,
+        balcony: 0,
+        minArea: 0,
+        maxArea: 10000,
+        availableFrom: undefined,
+        preferenceId: undefined,
+        furnished: undefined,
+        amenities: undefined,
+        pageNumber: 0,
+        pageSize: 50, // Get more properties to filter from
+        SortBy: "",
+        SortOrder: "desc"
+      });
+      
+      if (response.data.statusCode === 200 && response.data.propertyInfo) {
+        // Filter properties from the same city and exclude current property
+        const currentPropertyId = property?.propertyId || id;
+        const cityProperties = response.data.propertyInfo.filter((prop: any) => 
+          prop.propertyId !== currentPropertyId
+        );
+        
+        // Transform the data to match PropertyCard format
+        const transformedProperties = cityProperties.slice(0, 6).map((prop: any) => {
+          let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
+          
+          const superCategoryLower = prop.superCategory?.toLowerCase() || "";
+          const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
+          
+          // Map based on API requirements - same logic as PropertyListing
+          if (prop.propertyType === "4" || propertyTypeLower.includes("plot")) {
+            type = "plot";
+          }
+          else if (prop.propertyType === "2" || prop.propertyType === "7" || 
+                   propertyTypeLower.includes("shop") || propertyTypeLower.includes("commercial")) {
+            type = "commercial";
+          }
+          else if (superCategoryLower.includes("rent") || prop.superCategory === "2") {
+            type = "rent";
+          } else if (superCategoryLower.includes("sell") || superCategoryLower.includes("buy") || prop.superCategory === "1") {
+            type = "buy";
+          }
+          
+          return {
+            id: prop.propertyId,
+            title: prop.title,
+            price: prop.price,
+            location: prop.city,
+            type: type,
+            bedrooms: prop.bedroom,
+            bathrooms: prop.bathroom,
+            balcony: prop.balcony,
+            area: prop.area,
+            image: prop.mainImageUrl || "https://via.placeholder.com/400x300?text=No+Image",
+            availableFrom: prop.availableFrom,
+            preferenceId: prop.preferenceId,
+            amenities: prop.amenities,
+            furnished: prop.furnished,
+            likeCount: prop.likeCount || 0,
+            isLike: prop.isLike ?? false,
+            propertyType: prop.propertyType,
+            status: prop.superCategory,
+          };
+        });
+        
+        console.log(`Found ${transformedProperties.length} similar properties in ${city}`);
+        setSimilarProperties(transformedProperties);
+      } else {
+        console.log('No properties found, using mock data');
+        getMockSimilarProperties(city, propertyType);
+      }
     } catch (err) {
       console.error('Error fetching similar properties:', err);
+      console.log('Using mock data due to API error');
+      getMockSimilarProperties(city, propertyType);
     } finally {
       setLoadingSimilar(false);
     }
@@ -151,22 +234,26 @@ const PropertyDetail = () => {
   
   // Mock similar properties (for development purposes)
   const getMockSimilarProperties = (city: string, propertyType: string) => {
-    const mockProperties = Array(3).fill(0).map((_, index) => ({
-      propertyId: `mock_similar_${index}`,
-      title: `${propertyType} in ${city} - Property ${index + 1}`,
-      propertyType: propertyType,
-      price: Math.floor(Math.random() * 50000) + 10000,
-      superCategory: Math.random() > 0.5 ? "Rent" : "Buy",
-      bedroom: Math.floor(Math.random() * 4) + 1,
-      bathroom: Math.floor(Math.random() * 3) + 1,
-      area: Math.floor(Math.random() * 1000) + 500,
-      address: `${Math.floor(Math.random() * 100) + 1} ${city} Road`,
-      city: city,
-      imageDetails: [{
-        imageUrl: `https://source.unsplash.com/random/300x200?apartment,house,${index}`,
-        isMainImage: true
-      }]
-    }));
+    const mockProperties = Array(3).fill(0).map((_, index) => {
+      const type = Math.random() > 0.5 ? "rent" : "buy";
+      
+      return {
+        id: `mock_similar_${index}`,
+        title: `${propertyType} in ${city} - Property ${index + 1}`,
+        price: Math.floor(Math.random() * 50000) + 10000,
+        location: city,
+        type: type,
+        bedrooms: Math.floor(Math.random() * 4) + 1,
+        bathrooms: Math.floor(Math.random() * 3) + 1,
+        balcony: Math.floor(Math.random() * 2),
+        area: Math.floor(Math.random() * 1000) + 500,
+        image: `https://source.unsplash.com/random/400x300?apartment,house,${index}`,
+        likeCount: Math.floor(Math.random() * 50),
+        isLike: false,
+        propertyType: propertyType,
+        status: type === "rent" ? "Rent" : "Buy"
+      };
+    });
     
     setSimilarProperties(mockProperties);
   };
@@ -464,6 +551,34 @@ const PropertyDetail = () => {
     }
   };
 
+  // Copy URL to clipboard function
+  const copyUrlToClipboard = async () => {
+    try {
+      const currentUrl = window.location.href;
+      await navigator.clipboard.writeText(currentUrl);
+      
+      toast({
+        title: "URL Copied!",
+        description: "Property link has been copied to your clipboard.",
+      });
+    } catch (error) {
+      console.error('Failed to copy URL:', error);
+      
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      toast({
+        title: "URL Copied!",
+        description: "Property link has been copied to your clipboard.",
+      });
+    }
+  };
+
   // Helper function to map preference ID to readable text
   const getPreferenceText = (prefId: string) => {
     const preferences: Record<string, string> = {
@@ -565,9 +680,9 @@ const PropertyDetail = () => {
                 {likingProperty && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white ml-1"></div>}
               </Button>
               
-              {/* Share Button */}
-              <Button variant="outline" size="sm">
-                <Share2 className="w-4 h-4" />
+              {/* Copy URL Button */}
+              <Button variant="outline" size="sm" onClick={copyUrlToClipboard}>
+                <Copy className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -1120,12 +1235,24 @@ const PropertyDetail = () => {
 </div>
         </div>
         
-        {/* Similar Properties Section - Moved to bottom and full width */}
+        {/* Similar Properties Section - Using PropertyCard Component */}
         <div className="mt-10 bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-          <h2 className="text-xl font-bold mb-6 flex items-center">
-            <Home className="text-blue-600 mr-2" size={20} />
-            Similar Properties in {property.city || "this area"}
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold flex items-center">
+              <Home className="text-blue-600 mr-2" size={20} />
+              Properties in {property.city || "this area"}
+            </h2>
+            {similarProperties.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate(`/properties?search=${encodeURIComponent(property.city || '')}`)}
+                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+              >
+                View All Properties in {property.city}
+              </Button>
+            )}
+          </div>
           
           {loadingSimilar ? (
             <div className="flex justify-center items-center py-12">
@@ -1134,59 +1261,27 @@ const PropertyDetail = () => {
           ) : similarProperties.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {similarProperties.map((prop: any) => (
-                <div 
-                  key={prop.propertyId} 
-                  className="rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all hover:-translate-y-1"
-                  onClick={() => navigate(`/property/${prop.propertyId}`)}
-                >
-                  <div className="relative h-48">
-                    {prop.imageDetails && prop.imageDetails.length > 0 ? (
-                      <img 
-                        src={prop.imageDetails[0].imageUrl} 
-                        alt={prop.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <Home className="h-10 w-10 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2">
-                      <Badge className={`${prop.superCategory?.toLowerCase() === 'rent' ? 'bg-blue-600' : 'bg-teal-600'}`}>
-                        {prop.superCategory?.toLowerCase() === 'rent' ? 'Rent' : 'Sale'}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium text-lg mb-1 line-clamp-1">{prop.title}</h3>
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <MapPin className="h-3 w-3 mr-1" /> 
-                      {prop.address} {prop.city ? `, ${prop.city}` : ''}
-                    </div>
-                    <div className="flex items-center justify-between text-sm mb-3">
-                      <div className="flex items-center">
-                        <div className="flex items-center mr-3">
-                          <Bed className="h-3 w-3 mr-1 text-gray-500" />
-                          <span>{prop.bedroom || 0}</span>
-                        </div>
-                        <div className="flex items-center mr-3">
-                          <Bath className="h-3 w-3 mr-1 text-gray-500" />
-                          <span>{prop.bathroom || 0}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Maximize2 className="h-3 w-3 mr-1 text-gray-500" />
-                          <span>{prop.area || 0} sq.ft</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-blue-600">₹{prop.price?.toLocaleString() || 0}</span>
-                      <Button size="sm" variant="outline" className="text-xs">
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <PropertyCard
+                  key={prop.id}
+                  id={prop.id}
+                  title={prop.title}
+                  price={prop.price}
+                  location={prop.location}
+                  type={prop.type}
+                  bedrooms={prop.bedrooms}
+                  bathrooms={prop.bathrooms}
+                  balcony={prop.balcony}
+                  area={prop.area}
+                  image={prop.image}
+                  likeCount={prop.likeCount}
+                  isLike={prop.isLike}
+                  propertyType={prop.propertyType}
+                  status={prop.status}
+                  availableFrom={prop.availableFrom}
+                  preferenceId={prop.preferenceId}
+                  amenities={prop.amenities}
+                  furnished={prop.furnished}
+                />
               ))}
             </div>
           ) : (
@@ -1195,7 +1290,7 @@ const PropertyDetail = () => {
               <Button 
                 className="mt-4" 
                 variant="outline"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/properties")}
               >
                 Browse All Properties
               </Button>
