@@ -93,7 +93,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   };
 
   return (
-    <div className={`flex gap-1 sm:gap-4 ${className || ""}`}>
+    <div className={`flex justify-center gap-2 ${className || ""}`}>
       {Array(length)
         .fill(0)
         .map((_, index) => (
@@ -110,7 +110,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             onPaste={handlePaste}
             onFocus={() => handleFocus(index)}
             onClick={() => handleFocus(index)}
-            className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded border border-input bg-background text-center text-sm sm:text-lg md:text-xl focus:border-primary focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/20"
+            className="h-12 w-12 rounded-md border border-input bg-background text-center text-lg shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         ))}
     </div>

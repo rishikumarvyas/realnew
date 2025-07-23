@@ -322,7 +322,7 @@ const BuilderPropertyDetail = () => {
         
         {/* Back Button and Navigation */}
         <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/70 to-transparent">
-          <div className="container mx-auto px-4 py-4">
+          <div className="mx-auto px-4 py-4">
             <button 
               onClick={() => window.history.back()} 
               className="text-white flex items-center gap-2 hover:bg-black/20 px-3 py-2 rounded-lg transition-colors"
@@ -337,7 +337,7 @@ const BuilderPropertyDetail = () => {
 
         {/* Property Info Overlay */}
         <div className="absolute bottom-0 left-0 right-0 text-white z-20 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6 md:p-8">
-          <div className="container mx-auto">
+          <div className="mx-auto">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 leading-tight">
               {propertyDetails.name}
             </h1>
@@ -357,7 +357,7 @@ const BuilderPropertyDetail = () => {
 
       {/* Navigation Tabs */}
       <div className="sticky top-0 bg-white shadow-md z-30">
-        <div className="container mx-auto px-4">
+        <div className="mx-auto px-4">
           <div className="flex overflow-x-auto hide-scrollbar">
             {['OVERVIEW', 'LOCATION', 'PRICE', 'AMENITIES'].map((tab) => (
               <button
@@ -380,10 +380,10 @@ const BuilderPropertyDetail = () => {
       </div>
 
       {/* Content Sections */}
-      <div className="container mx-auto px-4 py-6 sm:py-8 md:py-12">
+      <div className="mx-auto px-4 py-6 sm:py-8 md:py-12">
         {/* Overview Section */}
         {activeTab === 'OVERVIEW' && (
-          <div className="max-w-4xl mx-auto">
+          <div className="mx-auto">
             {/* Price Overview Card */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -512,7 +512,7 @@ const BuilderPropertyDetail = () => {
 
         {/* Location Section */}
         {activeTab === 'LOCATION' && (
-          <div className="max-w-4xl mx-auto">
+          <div className="mx-auto">
             <h2 className="text-2xl font-bold mb-6">NEIGHBOURHOOD</h2>
             <p className="text-gray-700 mb-8">
               Well-planned roads and diverse transport options make India's cleanest city easily accessible from every direction
@@ -555,7 +555,7 @@ const BuilderPropertyDetail = () => {
 
         {/* Price Section */}
         {activeTab === 'PRICE' && (
-          <div className="max-w-4xl mx-auto">
+          <div className="mx-auto">
             <div className="grid md:grid-cols-2 gap-8">
               <div>
                 <div className="bg-[#C5B483] p-4">
@@ -645,7 +645,7 @@ const BuilderPropertyDetail = () => {
 
         {/* Amenities Section */}
         {activeTab === 'AMENITIES' && (
-          <div className="max-w-5xl mx-auto">
+          <div className="mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">PROJECT HIGHLIGHTS</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">

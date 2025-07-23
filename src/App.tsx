@@ -61,13 +61,13 @@ const App = () => (
               <Route path="properties" element={<PropertyListing />} />               
               <Route path="properties/:id" element={<PropertyDetail />} />                              
               <Route path="builderpost" element={<BuilderProjectPost />} />
-              <Route path="newlanching" element={<NewLanching />} />
               <Route path="builder-property/:id" element={<BuilderPropertyDetail />} />
               
               <Route element={<ProtectedRoute />}>             
                 <Route path="/admin" element={<AdminPage />} />    
                 <Route path="dashboard" element={<Dashboard />} />                 
                 <Route path="post-property" element={<PostProperty />} />                 
+                <Route path="newlanching" element={<NewLanching />} />
                 <Route path="/edit-property/:propertyId" element={<EditProperty />} />               
               </Route>                              
               
