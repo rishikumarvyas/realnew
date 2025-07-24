@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ const Login = ({ onClose }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, login, openSignupModal } = useAuth(); // Added openSignupModal
+  const continueBtnRef = useRef(null);
 
   const handleClose = () => {
     // First hide the modal with animation
@@ -203,6 +204,11 @@ const Login = ({ onClose }) => {
                           onChange={(val) => setPhone(val.slice(0, 10))}
                           length={10}
                           className="h-9 gap-1 [&>input]:w-6 [&>input]:h-9 [&>input]:text-base"
+                          onComplete={() => {
+                            if (continueBtnRef.current) {
+                              continueBtnRef.current.focus();
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -211,6 +217,7 @@ const Login = ({ onClose }) => {
                     type="submit"
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
                     disabled={loading || phone.length !== 10}
+                    ref={continueBtnRef}
                   >
                     {loading ? "Sending OTP..." : "Continue"}
                   </Button>
