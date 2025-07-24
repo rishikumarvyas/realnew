@@ -25,6 +25,7 @@ export interface PropertyCardProps {
   status?: string;
   formattedPrice?: string;
   likeCount?: number;
+  commercialType?: "buy" | "rent"; // Add this prop
 }
 
 export function PropertyCard({
@@ -40,6 +41,9 @@ export function PropertyCard({
   image,
   likes = 0,
   likeCount = 0,
+  commercialType,
+  propertyType,
+  status,
 }: PropertyCardProps) {
   // Get badge color based on property type - Updated for all types
   const getBadgeStyle = () => {
@@ -61,6 +65,29 @@ export function PropertyCard({
 
   // Get badge text based on property type
   const getBadgeText = () => {
+    if (type === "commercial") {
+      // If commercialType is set, use it
+      if (commercialType === "buy") return "For Sale";
+      if (commercialType === "rent") return "For Rent";
+      // If status or propertyType indicates rent, show For Rent
+      if (
+        status?.toLowerCase().includes("rent") ||
+        propertyType?.toLowerCase().includes("rent")
+      ) {
+        return "For Rent";
+      }
+      // If status or propertyType indicates sale/buy, show For Sale
+      if (
+        status?.toLowerCase().includes("buy") ||
+        status?.toLowerCase().includes("sale") ||
+        propertyType?.toLowerCase().includes("buy") ||
+        propertyType?.toLowerCase().includes("sale")
+      ) {
+        return "For Sale";
+      }
+      // Default fallback
+      return "Commercial";
+    }
     switch (type) {
       case "buy":
         return "For Sale";
@@ -69,9 +96,7 @@ export function PropertyCard({
       case "rent":
         return "For Rent";
       case "plot":
-        return "Plot";
-      case "commercial":
-        return "Commercial";
+        return "For Sale";
       default:
         return "Property";
     }
@@ -93,7 +118,7 @@ export function PropertyCard({
           <Badge className={`absolute top-3 right-3 z-20 ${getBadgeStyle()}`}>
             {getBadgeText()}
           </Badge>
-          
+
           {/* Likes counter */}
           <div className="absolute top-3 left-3 z-20 flex items-center bg-black/50 text-white px-2 py-1 rounded-md">
             <Heart size={16} className="mr-1 fill-white text-white" />
@@ -142,7 +167,7 @@ export function PropertyCard({
                 )}
               </>
             )}
-            
+
             {/* Always show area */}
             <div className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
               <Maximize2 size={18} />

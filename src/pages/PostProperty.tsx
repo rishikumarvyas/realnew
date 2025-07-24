@@ -75,6 +75,8 @@ const PostProperty = () => {
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
     undefined
   );
+  const [ageOfProperty, setAgeOfProperty] = useState("");
+  const [ageError, setAgeError] = useState("");
 
   useEffect(() => {
     if (selectedStateId) {
@@ -157,7 +159,7 @@ const PostProperty = () => {
   const handleImageUpload = async (e) => {
     const imageFile = e.target.files[0];
     const options = {
-      maxSizeMB: 0.1, // Max size in MB
+      maxSizeMB: 0.2, // Max size in MB
       maxWidthOrHeight: 1920,
       useWebWorker: true,
     };
@@ -166,7 +168,7 @@ const PostProperty = () => {
       const compressedFile = await imageCompression(imageFile, options);
 
       //converting compressedFile blob type to FileList type
-      const convertedfile = new File([compressedFile], "example.txt", {
+      const convertedfile = new File([compressedFile], "example.jpg", {
         type: compressedFile.type,
       }); // Convert Blob to File
       const dataTransfer = new DataTransfer();
@@ -243,11 +245,26 @@ const PostProperty = () => {
   // Handle area change with validation
   const handleAreaChange = (e) => {
     const value = e.target.value;
-    const isValid = !value || parseFloat(value) > 0;
+    const isValid = validatePrice(value);
     setAreaValidation(isValid);
     setArea(value);
   };
 
+  // Add validation for age of property (positive integer)
+  const handleAgeOfPropertyChange = (e) => {
+    // Only allow digits, no +, -, e, E, or symbols
+    let val = e.target.value;
+    // Remove any non-digit character
+    val = val.replace(/[^\d]/g, "");
+    setAgeOfProperty(val);
+    setAgeError("");
+  };
+  const handleKeyDown = (e) => {
+    // Prevent entering +, -, e, E, . and other non-numeric keys
+    if (["e", "E", "+", "-", "."].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
   // Helper functions to map UI selections to API IDs
   const mapCategoryToId = (type) => {
     const categoryMap = {
@@ -286,6 +303,7 @@ const PostProperty = () => {
       !category ||
       !title ||
       !price ||
+      !area ||
       !address ||
       !cityId ||
       !selectedStateId ||
@@ -315,6 +333,19 @@ const PostProperty = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+      setAgeError("Please enter a valid number (years only)");
+      toast({
+        title: "Invalid Age of Property",
+        description:
+          "Please enter a valid number for age of property (in years).",
+        variant: "destructive",
+      });
+      return;
+    } else {
+      setAgeError("");
     }
 
     if (images.length === 0) {
@@ -400,6 +431,7 @@ const PostProperty = () => {
       formData.append("StateId", selectedStateId.toString());
       formData.append("Locality", locality.toString());
       formData.append("UserTypeId", userTypeId.toString());
+      formData.append("Age", ageOfProperty);
 
       // Add amenities
       amenityIds.forEach((id) => {
@@ -412,12 +444,18 @@ const PostProperty = () => {
       // Add preference and available from date for rental properties
       if (propertyType === "Rent") {
         // Use the first preference or a default if none selected
-        if (selectedPreferences.length > 0) {
-          formData.append("PreferenceId", selectedPreferences[0]);
-        } else {
-          formData.append("PreferenceId", "4"); // Default to "Anyone"
+        if (isFlatOrBunglowOrHouse) {
+          if (selectedPreferences.length > 0) {
+            selectedPreferences.forEach((prefId) => {
+              formData.append("PreferenceIds", prefId);
+            });
+          } else {
+            formData.append("PreferenceIds", "4"); // Default to "Anyone"
+          }
         }
-
+        if (isShop) {
+          formData.append("PreferenceIds", "");
+        }
         if (availableFrom) {
           formData.append("AvailableFrom", availableFrom.toISOString());
         }
@@ -430,11 +468,6 @@ const PostProperty = () => {
           index === mainImageIndex ? "true" : "false"
         );
       });
-
-      // For debugging - log the entire FormData
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
-      }
 
       // API call
       // API call using axios instance with automatic token handling
@@ -496,8 +529,8 @@ const PostProperty = () => {
 
       <div className="bg-blue-50 p-4 rounded-lg mb-8 border border-blue-100">
         <p className="text-blue-800 font-medium">
-          Complete the form below to list your property. Fields marked with *
-          are required.
+          Complete the form below to list your property. Fields marked with{" "}
+          <span className="text-red-500">*</span> are mandatory.
         </p>
       </div>
 
@@ -521,7 +554,7 @@ const PostProperty = () => {
                     htmlFor="category"
                     className="text-gray-700 font-medium"
                   >
-                    Category <span className="text-red-500">*</span>
+                    Property Type <span className="text-red-500">*</span>
                   </Label>
                   <Select value={category} onValueChange={setCategory} required>
                     <SelectTrigger
@@ -544,7 +577,7 @@ const PostProperty = () => {
                     htmlFor="propertyType"
                     className="text-gray-700 font-medium"
                   >
-                    Property Type <span className="text-red-500">*</span>
+                    Category <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={propertyType}
@@ -664,6 +697,38 @@ const PostProperty = () => {
                   )}
                 </div>
               </div>
+              {/* Age of Property */}
+              {!isPlot && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="ageOfProperty"
+                      className="text-gray-700 font-medium"
+                    >
+                      Age of Property (years){" "}
+                      <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="ageOfProperty"
+                      placeholder="Enter age in years"
+                      value={ageOfProperty}
+                      onChange={handleAgeOfPropertyChange}
+                      onKeyDown={handleKeyDown}
+                      className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
+                        ageError ? "border-red-500" : ""
+                      }`}
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      step="1"
+                      required
+                    />
+                    {ageError && (
+                      <p className="text-red-500 text-xs mt-1">{ageError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* RERA, OC, NA Approval */}
               {(() => {
                 // Plot: Only NA Approved
@@ -719,7 +784,7 @@ const PostProperty = () => {
                         </div>
                         <div>
                           <Label className="text-gray-700 font-medium mb-2 block">
-                            OC Approved
+                            Occupancy Certificate
                           </Label>
                           <RadioGroup
                             value={isOCApproved}
@@ -769,7 +834,7 @@ const PostProperty = () => {
                         </div>
                         <div>
                           <Label className="text-gray-700 font-medium mb-2 block">
-                            OC Approved
+                            Occupancy Certificate
                           </Label>
                           <RadioGroup
                             value={isOCApproved}
@@ -932,6 +997,77 @@ const PostProperty = () => {
               )}
             </CardContent>
           </Card>
+          {/* Amenities */}
+          {/* Show only if NOT Plot */}
+          {!isPlot && (
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+                <div className="flex items-center">
+                  <Check className="h-5 w-5 text-blue-600 mr-2" />
+                  <CardTitle>Amenities</CardTitle>
+                </div>
+                <CardDescription>
+                  Select the amenities available at your property
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {checkBoxAmenities.map(({ id, amenity }) => (
+                      <div
+                        key={id}
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                          amenities.includes(id)
+                            ? "bg-blue-100 border-2 border-blue-300"
+                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                        }`}
+                        onClick={() => handleAmenityCheckBox(id)}
+                      >
+                        <input
+                          type="checkbox"
+                          id={id}
+                          checked={amenities.includes(id)}
+                          onChange={() => {}}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                        />
+                        <Label
+                          htmlFor={amenity}
+                          className="cursor-pointer text-sm"
+                        >
+                          {amenity}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="my-6" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {radioButtonAmenities.map(({ id, amenity }) => (
+                      <div
+                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                          selectedOption.includes(id)
+                            ? "bg-blue-100 border-2 border-blue-300"
+                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
+                        }`}
+                      >
+                        <label key={id}>
+                          <input
+                            type="radio"
+                            name="furnishing"
+                            value={id}
+                            checked={selectedOption === id}
+                            onChange={handleAmenityRadioButton}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                          />
+                          {amenity}
+                          <br />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {/* Location Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -1049,77 +1185,6 @@ const PostProperty = () => {
               </div>
             </CardContent>
           </Card>
-          {/* Amenities */}
-          {/* Show only if NOT Plot */}
-          {!isPlot && (
-            <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-blue-600 mr-2" />
-                  <CardTitle>Amenities</CardTitle>
-                </div>
-                <CardDescription>
-                  Select the amenities available at your property
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {checkBoxAmenities.map(({ id, amenity }) => (
-                      <div
-                        key={id}
-                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                          amenities.includes(id)
-                            ? "bg-blue-100 border-2 border-blue-300"
-                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                        }`}
-                        onClick={() => handleAmenityCheckBox(id)}
-                      >
-                        <input
-                          type="checkbox"
-                          id={id}
-                          checked={amenities.includes(id)}
-                          onChange={() => {}}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                        />
-                        <Label
-                          htmlFor={amenity}
-                          className="cursor-pointer text-sm"
-                        >
-                          {amenity}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="my-6" />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {radioButtonAmenities.map(({ id, amenity }) => (
-                      <div
-                        className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                          selectedOption.includes(id)
-                            ? "bg-blue-100 border-2 border-blue-300"
-                            : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
-                        }`}
-                      >
-                        <label key={id}>
-                          <input
-                            type="radio"
-                            name="furnishing"
-                            value={id}
-                            checked={selectedOption === id}
-                            onChange={handleAmenityRadioButton}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                          />
-                          {amenity}
-                          <br />
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
           {/* Owner Details */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
@@ -1162,11 +1227,23 @@ const PostProperty = () => {
                 <Camera className="h-5 w-5 text-blue-600 mr-2" />
                 <CardTitle>Property Images</CardTitle>
               </div>
-              <CardDescription>
-                Upload up to 6 high-quality images of your property
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <div className="flex gap-3 text-sm text-blue-700">
+                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Image Guidelines:</p>
+                    <ul className="list-disc list-inside space-y-1 mt-1">
+                      <li>
+                        Upload up to 6 high-quality images of your property
+                      </li>
+                      <li>At least one image is required</li>
+                      <li>Maximum file size: 5MB per image</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                 {imageURLs.map((url, index) => (
                   <div
@@ -1227,21 +1304,6 @@ const PostProperty = () => {
                     </span>
                   </label>
                 )}
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="flex gap-3 text-sm text-blue-700">
-                  <Upload className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Image Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 mt-1">
-                      <li>Upload clear, well-lit photos</li>
-                      <li>Include all major areas of the property</li>
-                      <li>At least one image is required</li>
-                      <li>Maximum file size: 5MB per image</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

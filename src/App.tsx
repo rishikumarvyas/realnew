@@ -22,6 +22,9 @@ import ContactUs from "./pages/ContactUs";
 import AdminPage from "./pages/AdminPage";
 import ScrollToTop from "./components/ScrollToTop"; 
 import AuthModal from "./components/AuthModal"; // Import the AuthModal component  
+import BuilderProjectPost from "./pages/BuilderProjectPost";
+import NewLanching from "./pages/newlanching";
+import BuilderPropertyDetail from "./pages/BuilderPropertyDetail";
 
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({   
@@ -57,11 +60,14 @@ const App = () => (
               
               <Route path="properties" element={<PropertyListing />} />               
               <Route path="properties/:id" element={<PropertyDetail />} />                              
+              <Route path="builderpost" element={<BuilderProjectPost />} />
+              <Route path="builder-property/:id" element={<BuilderPropertyDetail />} />
               
               <Route element={<ProtectedRoute />}>             
                 <Route path="/admin" element={<AdminPage />} />    
                 <Route path="dashboard" element={<Dashboard />} />                 
                 <Route path="post-property" element={<PostProperty />} />                 
+                <Route path="newlanching" element={<NewLanching />} />
                 <Route path="/edit-property/:propertyId" element={<EditProperty />} />               
               </Route>                              
               
