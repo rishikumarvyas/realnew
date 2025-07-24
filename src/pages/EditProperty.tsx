@@ -26,6 +26,7 @@ import {
   X,
   Camera,
   Calendar,
+  Tag,
 } from "lucide-react";
 import { getAmenity } from "@/utils/UtilityFunctions";
 import imageCompression from "browser-image-compression";
@@ -46,7 +47,6 @@ const EditProperty = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    price: "",
     address: "",
     city: "",
     cityId: "", // Default value based on the curl example
@@ -61,7 +61,6 @@ const EditProperty = () => {
     bedroom: "",
     bathroom: "",
     balcony: "",
-    area: "",
     propertyId: "",
   });
   const [selectedCheckboxes, setSelectedCheckboxes] = useState([]);
@@ -75,6 +74,13 @@ const EditProperty = () => {
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
     undefined
   );
+  const [priceValidation, setPriceValidation] = useState(true);
+  const [price, setPrice] = useState("");
+  const [area, setArea] = useState("");
+  const [areaValidation, setAreaValidation] = useState(true);
+  const [ageOfProperty, setAgeOfProperty] = useState("");
+  const [ageError, setAgeError] = useState("");
+
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       if (!propertyId) {
@@ -155,11 +161,12 @@ const EditProperty = () => {
           setIsNA(property.isNA ? "true" : "false"); // Convert boolean to string
           setIsReraApproved(property.isReraApproved ? "true" : "false"); // Convert boolean to string
           setIsOCApproved(property.isOCApproved ? "true" : "false"); // Map API response to form data
-
+          setPrice(property.price?.toString() || ""); // Convert price to string
+          setArea(property.area?.toString() || ""); // Convert area to string
+          setAgeOfProperty(property.age?.toString() || "");
           setFormData({
             title: property.title || "",
             description: property.description || "",
-            price: property.price?.toString() || "",
             address: property.address || "",
             city: property.city || "",
             cityId: property.cityId?.toString() || "1",
@@ -174,7 +181,6 @@ const EditProperty = () => {
             bedroom: property.bedroom?.toString() || "",
             bathroom: property.bathroom?.toString() || "",
             balcony: property.balcony?.toString() || "",
-            area: property.area?.toString() || "",
             propertyId: property.propertyId || propertyId,
           });
         } else {
@@ -214,6 +220,22 @@ const EditProperty = () => {
       return acc;
     }, {} as Record<string, boolean>)
   );
+
+  // Add validation for age of property (positive integer)
+  const handleAgeOfPropertyChange = (e) => {
+    // Only allow digits, no +, -, e, E, or symbols
+    let val = e.target.value;
+    // Remove any non-digit character
+    val = val.replace(/[^\d]/g, "");
+    setAgeOfProperty(val);
+    setAgeError("");
+  };
+  const handleKeyDown = (e) => {
+    // Prevent entering +, -, e, E, . and other non-numeric keys
+    if (["e", "E", "+", "-", "."].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
   // Helper for category logic
   const isPlot = formData.propertyType === "Plot";
   const isShop = formData.propertyType === "Shop";
@@ -247,6 +269,32 @@ const EditProperty = () => {
       ...prev,
       [preferenceId]: !prev[preferenceId],
     }));
+  };
+
+  // Validate price as a number with two decimal places
+  const validatePrice = (value) => {
+    // Allow empty value during typing
+    if (!value) return true;
+
+    // Check if it's a valid number with up to 2 decimal places
+    const regex = /^\d+(\.\d{0,2})?$/;
+    return regex.test(value) && parseFloat(value) > 0;
+  };
+
+  // Handle price change with validation
+  const handlePriceChange = (e) => {
+    const value = e.target.value;
+    const isValid = validatePrice(value);
+    setPriceValidation(isValid);
+    setPrice(value);
+  };
+
+  // Handle area change with validation
+  const handleAreaChange = (e) => {
+    const value = e.target.value;
+    const isValid = validatePrice(value);
+    setAreaValidation(isValid);
+    setArea(value);
   };
 
   const handleInputChange = (
@@ -335,6 +383,45 @@ const EditProperty = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Basic validation
+    if (!price || !area) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!priceValidation) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid price.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!areaValidation) {
+      toast({
+        title: "Invalid Area",
+        description: "Please enter a valid area in sq.ft.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+      setAgeError("Please enter a valid number (years only)");
+      toast({
+        title: "Invalid Age of Property",
+        description:
+          "Please enter a valid number for age of property (in years).",
+        variant: "destructive",
+      });
+      return;
+    } else {
+      setAgeError("");
+    }
     try {
       setSaving(true);
 
@@ -343,14 +430,29 @@ const EditProperty = () => {
       formDataObj.append("PropertyId", formData.propertyId);
       formDataObj.append("Title", formData.title);
       formDataObj.append("Description", formData.description);
-      formDataObj.append("Price", formData.price);
-      formDataObj.append("Area", formData.area);
       formDataObj.append("Bedroom", formData.bedroom);
       formDataObj.append("Bathroom", formData.bathroom);
       formDataObj.append("Balcony", formData.balcony);
       formDataObj.append("Address", formData.address);
       formDataObj.append("Locality", formData.locality);
-
+      formDataObj.append("Age", ageOfProperty);
+      // Price handling - same approach as area
+      if (price) {
+        // Ensure price is treated as a number with 2 decimal places
+        const priceValue = parseFloat(price);
+        if (!isNaN(priceValue)) {
+          // Format with exactly 2 decimal places
+          const formattedPrice = priceValue.toFixed(2);
+          formDataObj.append("Price", formattedPrice);
+        }
+      }
+      // Area handling
+      if (area) {
+        const areaValue = parseFloat(area);
+        if (!isNaN(areaValue)) {
+          formDataObj.append("Area", areaValue.toString());
+        }
+      }
       // Add amenity IDs
       const finalAmenityIds =
         selectedRadio === ""
@@ -618,36 +720,52 @@ const EditProperty = () => {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="relative group">
-                    <Label htmlFor="price" className="text-sm font-medium">
-                      Price (₹)
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="price"
+                      className="text-gray-700 font-medium flex items-center"
+                    >
+                      <Tag className="h-4 w-4 mr-1 text-blue-600" />
+                      Price <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      id="price"
-                      name="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={handleInputChange}
-                      className="border-blue-200 focus:border-blue-500"
-                      onFocus={() => setActiveField("price")}
-                      onBlur={() => setActiveField(null)}
-                      required
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        ₹
+                      </span>
+                      <Input
+                        id="price"
+                        placeholder="Enter amount"
+                        value={price}
+                        onChange={handlePriceChange}
+                        className={`bg-white border-2 pl-8 focus:ring-2 focus:ring-blue-100 ${
+                          !priceValidation ? "border-red-500" : ""
+                        }`}
+                        type="text" // Changed to text to avoid browser-specific number input behavior
+                        inputMode="decimal" // Better for mobile decimal input
+                      />
+                    </div>
+                    {!priceValidation && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Please enter a valid price
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label
                       htmlFor="area"
                       className="text-gray-700 font-medium flex items-center"
                     >
-                      Area (sq.ft)
+                      Area <span className="text-red-500">*</span> (sq.ft)
                     </Label>
                     <div className="relative">
                       <Input
                         id="area"
                         placeholder="Enter area"
-                        value={formData.area}
-                        onChange={handleInputChange}
-                        className="border-blue-200 focus:border-blue-500"
+                        value={area}
+                        onChange={handleAreaChange}
+                        className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
+                          !areaValidation ? "border-red-500" : ""
+                        }`}
                         type="text" // Changed to text
                         inputMode="decimal" // Better for mobile decimal input
                       />
@@ -655,8 +773,45 @@ const EditProperty = () => {
                         sq.ft
                       </span>
                     </div>
+                    {!areaValidation && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Please enter a valid area
+                      </p>
+                    )}
                   </div>
                 </div>
+                {/* Age of Property */}
+                {!isPlot && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="ageOfProperty"
+                        className="text-gray-700 font-medium"
+                      >
+                        Age of Property (years){" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="ageOfProperty"
+                        placeholder="Enter age in years"
+                        value={ageOfProperty}
+                        onChange={handleAgeOfPropertyChange}
+                        onKeyDown={handleKeyDown}
+                        className={`bg-white border-2 focus:ring-2 focus:ring-blue-100 ${
+                          ageError ? "border-red-500" : ""
+                        }`}
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        step="1"
+                        required
+                      />
+                      {ageError && (
+                        <p className="text-red-500 text-xs mt-1">{ageError}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* RERA, OC, NA Approval */}
                 {(() => {
                   // Plot: Only NA Approved
@@ -712,7 +867,7 @@ const EditProperty = () => {
                           </div>
                           <div>
                             <Label className="text-gray-700 font-medium mb-2 block">
-                              OC Approved
+                              Occupancy Certificate
                             </Label>
                             <RadioGroup
                               value={isOCApproved}
@@ -762,7 +917,7 @@ const EditProperty = () => {
                           </div>
                           <div>
                             <Label className="text-gray-700 font-medium mb-2 block">
-                              OC Approved
+                              Occupancy Certificate
                             </Label>
                             <RadioGroup
                               value={isOCApproved}

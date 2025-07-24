@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +11,7 @@ interface Notification {
   isRead: boolean;
   createdDt: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
+  notificationType?: "user" | "property";
 }
 
 interface NotificationResponse {
@@ -36,7 +36,7 @@ interface CreateNotificationRequest {
   userId: string;
   message: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
+  notificationType?: "user" | "property";
 }
 
 const NotificationIcon: React.FC = () => {
@@ -48,21 +48,25 @@ const NotificationIcon: React.FC = () => {
 
   // Add effect to log notifications changes
   useEffect(() => {
-    console.log('NotificationIcon: notifications updated', {
+    console.log("NotificationIcon: notifications updated", {
       count: notifications.length,
-      unreadCount
+      unreadCount,
     });
   }, [notifications, unreadCount]);
 
   useEffect(() => {
     if (user) {
-      console.log('NotificationIcon: User available:', user);
+      console.log("NotificationIcon: User available:", user);
     }
   }, [user]);
 
-  const createNotification = async (message: string, notificationType: 'user' | 'property' = 'user', propertyId?: string) => {
+  const createNotification = async (
+    message: string,
+    notificationType: "user" | "property" = "user",
+    propertyId?: string
+  ) => {
     if (!user || !user.userId) {
-      console.warn('No user available for creating notification');
+      console.warn("No user available for creating notification");
       return false;
     }
 
@@ -70,57 +74,62 @@ const NotificationIcon: React.FC = () => {
       const payload: CreateNotificationRequest = {
         userId: user.userId,
         message: message,
-        notificationType: notificationType
+        notificationType: notificationType,
       };
 
       // Add propertyId for property notifications
-      if (notificationType === 'property' && propertyId) {
+      if (notificationType === "property" && propertyId) {
         payload.propertyId = propertyId;
       }
 
-      console.log('Creating notification with payload:', payload);
+      console.log("Creating notification with payload:", payload);
 
-      const response = await axiosInstance.post('/api/Notification/CreateNotification', payload);
+      const response = await axiosInstance.post(
+        "/api/Notification/CreateNotification",
+        payload
+      );
 
       if (response.status === 200 || response.status === 201) {
-        console.log('Notification created successfully');
-        
+        console.log("Notification created successfully");
+
         // Refresh notifications to show the new one
         await fetchNotifications();
-        
+
         toast({
           title: "Success",
           description: "Notification created successfully",
         });
-        
+
         return true;
       }
     } catch (error: any) {
       console.error("Error creating notification:", error);
-      
+
       if (error.response) {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
       }
-      
+
       toast({
         title: "Error",
         description: "Failed to create notification",
         variant: "destructive",
       });
-      
+
       return false;
     }
   };
 
   const toggleDropdown = async () => {
     if (!showDropdown) {
-      console.log('NotificationIcon: Opening dropdown, fetching notifications...');
+      console.log(
+        "NotificationIcon: Opening dropdown, fetching notifications..."
+      );
       setIsLoading(true);
       await fetchNotifications();
       setIsLoading(false);
     }
-    setShowDropdown(prev => !prev);
+    setShowDropdown((prev) => !prev);
   };
 
   const updateNotificationState = async (notificationId: string) => {
@@ -128,7 +137,11 @@ const NotificationIcon: React.FC = () => {
     await fetchNotifications();
   };
 
-  const markAsRead = async (notificationId: string, notificationType?: 'user' | 'property', propertyId?: string) => {
+  const markAsRead = async (
+    notificationId: string,
+    notificationType?: "user" | "property",
+    propertyId?: string
+  ) => {
     if (!user || !user.userId) {
       updateNotificationState(notificationId);
       return;
@@ -137,70 +150,77 @@ const NotificationIcon: React.FC = () => {
     try {
       // Create payload based on the API schema
       const payload: MarkAsReadRequest = {
-        type: notificationType || 'user', // Set the type field
+        type: notificationType || "user", // Set the type field
         userId: user.userId,
         notificationId: notificationId,
       };
-      
+
       // Add propertyId only for property notifications
-      if (notificationType === 'property' && propertyId) {
+      if (notificationType === "property" && propertyId) {
         payload.propertyId = propertyId;
       }
 
-      console.log('Sending payload:', payload); // Debug log
+      console.log("Sending payload:", payload); // Debug log
 
-      const response = await axiosInstance.put('/api/Notification/MarkAsRead', payload);
+      const response = await axiosInstance.put(
+        "/api/Notification/MarkAsRead",
+        payload
+      );
 
       if (response.status === 200) {
         await updateNotificationState(notificationId);
-        console.log('Notification marked as read successfully');
+        console.log("Notification marked as read successfully");
       }
     } catch (error: any) {
       console.error("Error marking notification as read:", error);
-      
+
       // Log the response data for debugging
       if (error.response) {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
         console.error("Response headers:", error.response.headers);
       }
-      
+
       // Still update UI by refreshing notifications
       await updateNotificationState(notificationId);
-      
+
       // Show error toast for API failures
       toast({
         title: "Warning",
-        description: "Notification marked as read locally, but failed to sync with server",
+        description:
+          "Notification marked as read locally, but failed to sync with server",
         variant: "destructive",
       });
     }
   };
 
   const markAllAsRead = async () => {
-    const unreadNotifications = notifications.filter(n => !n.isRead);
-    
+    const unreadNotifications = notifications.filter((n) => !n.isRead);
+
     if (unreadNotifications.length === 0) return;
 
     // Try to update on server
     if (user && user.userId) {
       try {
         await Promise.all(
-          unreadNotifications.map(notification => {
+          unreadNotifications.map((notification) => {
             const payload: MarkAsReadRequest = {
-              type: notification.notificationType || 'user',
+              type: notification.notificationType || "user",
               userId: user.userId!,
               notificationId: notification.notificationId,
             };
-            
-            if (notification.notificationType === 'property' && notification.propertyId) {
+
+            if (
+              notification.notificationType === "property" &&
+              notification.propertyId
+            ) {
               payload.propertyId = notification.propertyId;
             }
-            
-            return axiosInstance.put('/api/Notification/MarkAsRead', payload);
+
+            return axiosInstance.put("/api/Notification/MarkAsRead", payload);
           })
         );
-        
+
         // Refresh notifications after marking all as read
         await fetchNotifications();
       } catch (error) {
@@ -216,7 +236,10 @@ const NotificationIcon: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -229,10 +252,10 @@ const NotificationIcon: React.FC = () => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return "Unknown date";
-      
+
       const now = new Date();
       const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-      
+
       if (diffInHours < 1) {
         return "Just now";
       } else if (diffInHours < 24) {
@@ -249,7 +272,11 @@ const NotificationIcon: React.FC = () => {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
-      await markAsRead(notification.notificationId, notification.notificationType, notification.propertyId);
+      await markAsRead(
+        notification.notificationId,
+        notification.notificationType,
+        notification.propertyId
+      );
     }
 
     toast({
@@ -272,7 +299,7 @@ const NotificationIcon: React.FC = () => {
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-1.5 flex items-center justify-center min-w-[20px] h-5">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </Button>
@@ -287,10 +314,10 @@ const NotificationIcon: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   className="text-xs text-green-600 hover:text-green-800"
-                  onClick={() => createNotification("Test notification created", "user")}
-                >
-                  + Test
-                </Button>
+                  onClick={() =>
+                    createNotification("Test notification created", "user")
+                  }
+                ></Button>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
@@ -322,24 +349,36 @@ const NotificationIcon: React.FC = () => {
                   <div
                     key={notification.notificationId}
                     className={`p-3 border-b text-sm cursor-pointer transition-colors ${
-                      notification.isRead 
-                        ? 'bg-white hover:bg-gray-50' 
-                        : 'bg-blue-50 hover:bg-blue-100'
+                      notification.isRead
+                        ? "bg-white hover:bg-gray-50"
+                        : "bg-blue-50 hover:bg-blue-100"
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                   >
-                    <p className={notification.isRead ? 'text-gray-700' : 'font-medium text-gray-900'}>
+                    <p
+                      className={
+                        notification.isRead
+                          ? "text-gray-700"
+                          : "font-medium text-gray-900"
+                      }
+                    >
                       {notification.message}
                     </p>
                     <div className="flex justify-between items-center mt-2">
-                      <p className="text-xs text-gray-500">{formatDate(notification.createdDt)}</p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(notification.createdDt)}
+                      </p>
                       <div className="flex items-center space-x-1">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          notification.notificationType === 'property'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-purple-100 text-purple-800'
-                        }`}>
-                          {notification.notificationType === 'property' ? 'Property' : 'User'}
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            notification.notificationType === "property"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-purple-100 text-purple-800"
+                          }`}
+                        >
+                          {notification.notificationType === "property"
+                            ? "Property"
+                            : "User"}
                         </span>
                         {!notification.isRead && (
                           <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
@@ -351,8 +390,12 @@ const NotificationIcon: React.FC = () => {
               ) : (
                 <div className="p-8 text-center">
                   <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500 mb-1">No notifications yet</p>
-                  <p className="text-xs text-gray-400">When you have notifications, they'll appear here</p>
+                  <p className="text-sm text-gray-500 mb-1">
+                    No notifications yet
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    When you have notifications, they'll appear here
+                  </p>
                 </div>
               )}
             </div>
