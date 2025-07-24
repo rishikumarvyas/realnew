@@ -76,8 +76,7 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description:
-            "Your number is not registered. Please sign up first.",
+          description: "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }
@@ -110,8 +109,7 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Login Failed",
-          description:
-            "Your number is not registered. Please sign up first.",
+          description: "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }

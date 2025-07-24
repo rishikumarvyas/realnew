@@ -50,16 +50,16 @@ interface FormStepProps {
   phoneError?: string | null;
 }
 
-export const FormStep = ({ 
-  onSubmit, 
-  loading, 
-  userTypes = [], 
+export const FormStep = ({
+  onSubmit,
+  loading,
+  userTypes = [],
   states = [],
   initialUserType,
-  phoneError = null
+  phoneError = null,
 }: FormStepProps) => {
   const navigate = useNavigate();
-  
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,10 +72,11 @@ export const FormStep = ({
 
   // Watch form values to determine if button should be enabled
   const watchedValues = form.watch();
-  const isFormValid = watchedValues.name.trim() !== "" && 
-                     watchedValues.phone.trim() !== "" && 
-                     watchedValues.userType > 0 && 
-                     watchedValues.termsAccepted === true;
+  const isFormValid =
+    watchedValues.name.trim() !== "" &&
+    watchedValues.phone.trim() !== "" &&
+    watchedValues.userType > 0 &&
+    watchedValues.termsAccepted === true;
 
   const handleSubmit = (data: any) => {
     if (onSubmit) {
@@ -85,7 +86,7 @@ export const FormStep = ({
 
   const handleTermsClick = () => {
     // Open Terms & Conditions page in a new tab
-    window.open('/terms', '_blank');
+    window.open("/terms", "_blank");
   };
 
   return (
@@ -116,7 +117,9 @@ export const FormStep = ({
             name="phone"
             render={({ field }) => (
               <FormItem className="space-y-0.5">
-                <FormLabel className="text-xs font-medium">Phone Number</FormLabel>
+                <FormLabel className="text-xs font-medium">
+                  Phone Number
+                </FormLabel>
                 <div className="flex">
                   <div className="flex items-center px-3 bg-muted border border-r-0 rounded-l h-9">
                     <span className="text-muted-foreground text-sm">+91</span>
@@ -183,7 +186,7 @@ export const FormStep = ({
                 <div className="space-y-1 leading-none">
                   <FormLabel className="text-xs text-gray-700 cursor-pointer">
                     I have read and agree to the{" "}
-                    <span 
+                    <span
                       className="font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
                       onClick={handleTermsClick}
                     >
@@ -197,8 +200,8 @@ export const FormStep = ({
             )}
           />
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className={`w-full h-9 text-sm mt-2 ${
               isFormValid && !loading
                 ? "bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
