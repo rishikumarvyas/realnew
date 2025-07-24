@@ -131,6 +131,15 @@ export const FormStep = ({
                       {...field}
                       maxLength={10}
                       autoComplete="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        // Only allow numbers and max 10 digits
+                        const value = e.target.value
+                          .replace(/[^0-9]/g, "")
+                          .slice(0, 10);
+                        field.onChange(value);
+                      }}
                     />
                   </FormControl>
                 </div>
