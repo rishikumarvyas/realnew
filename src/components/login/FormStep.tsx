@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Form,
@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { OtpInput } from "@/components/OtpInput";
 
 // Phone number validation for Indian numbers
 const phoneRegex = /^[6-9]\d{9}$/;
@@ -50,16 +51,17 @@ interface FormStepProps {
   phoneError?: string | null;
 }
 
-export const FormStep = ({ 
-  onSubmit, 
-  loading, 
-  userTypes = [], 
+export const FormStep = ({
+  onSubmit,
+  loading,
+  userTypes = [],
   states = [],
   initialUserType,
-  phoneError = null
+  phoneError = null,
 }: FormStepProps) => {
   const navigate = useNavigate();
-  
+  const userTypeSelectRef = useRef(null);
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,10 +74,11 @@ export const FormStep = ({
 
   // Watch form values to determine if button should be enabled
   const watchedValues = form.watch();
-  const isFormValid = watchedValues.name.trim() !== "" && 
-                     watchedValues.phone.trim() !== "" && 
-                     watchedValues.userType > 0 && 
-                     watchedValues.termsAccepted === true;
+  const isFormValid =
+    watchedValues.name.trim() !== "" &&
+    watchedValues.phone.trim() !== "" &&
+    watchedValues.userType > 0 &&
+    watchedValues.termsAccepted === true;
 
   const handleSubmit = (data: any) => {
     if (onSubmit) {
@@ -85,7 +88,7 @@ export const FormStep = ({
 
   const handleTermsClick = () => {
     // Open Terms & Conditions page in a new tab
-    window.open('/terms', '_blank');
+    window.open("/terms", "_blank");
   };
 
   return (
@@ -116,19 +119,29 @@ export const FormStep = ({
             name="phone"
             render={({ field }) => (
               <FormItem className="space-y-0.5">
-                <FormLabel className="text-xs font-medium">Phone Number</FormLabel>
-                <div className="flex">
-                  <div className="flex items-center px-3 bg-muted border border-r-0 rounded-l h-9">
-                    <span className="text-muted-foreground text-sm">+91</span>
+                <FormLabel className="text-xs font-medium">
+                  Phone Number
+                </FormLabel>
+                <div className="flex items-center">
+                  <div>
+                    <span className="flex items-center px-2 text-blue-600 font-medium bg-blue-50 h-9 ">
+                      +91
+                    </span>
                   </div>
                   <FormControl>
-                    <Input
-                      className="rounded-l-none h-9"
-                      placeholder="10-digit number"
-                      {...field}
-                      maxLength={10}
-                      autoComplete="tel"
-                    />
+                    <div className="max-w-[1000px] w-full ml-[-1px]">
+                      <OtpInput
+                        value={field.value}
+                        onChange={(val) => field.onChange(val.slice(0, 10))}
+                        length={10}
+                        className="h-9 gap-1 [&>input]:w-6 [&>input]:h-9 [&>input]:text-base "
+                        onComplete={() => {
+                          if (userTypeSelectRef.current) {
+                            userTypeSelectRef.current.focus();
+                          }
+                        }}
+                      />
+                    </div>
                   </FormControl>
                 </div>
                 {phoneError ? (
@@ -151,7 +164,7 @@ export const FormStep = ({
                   value={field.value > 0 ? field.value.toString() : ""}
                 >
                   <FormControl>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9" ref={userTypeSelectRef}>
                       <SelectValue placeholder="Select your user type" />
                     </SelectTrigger>
                   </FormControl>
@@ -183,7 +196,7 @@ export const FormStep = ({
                 <div className="space-y-1 leading-none">
                   <FormLabel className="text-xs text-gray-700 cursor-pointer">
                     I have read and agree to the{" "}
-                    <span 
+                    <span
                       className="font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
                       onClick={handleTermsClick}
                     >
@@ -197,8 +210,8 @@ export const FormStep = ({
             )}
           />
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className={`w-full h-9 text-sm mt-2 ${
               isFormValid && !loading
                 ? "bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
