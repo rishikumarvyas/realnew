@@ -20,7 +20,7 @@ export function Footer() {
 
   const handleCityClick = (cityName: string) => {
     navigate(`/properties?search=${encodeURIComponent(cityName)}`);
-    window.scrollTo({ top: 0, behavior: "smooth" }); // Scroll to top after navigation
+    window.scrollTo({ top: 250, behavior: "smooth" }); // Scroll to top after navigation
   };
 
   return (
