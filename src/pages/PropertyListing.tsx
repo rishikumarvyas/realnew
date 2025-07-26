@@ -248,6 +248,9 @@ export const PropertyListing = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Flag to prevent duplicate API calls
+  const [apiCalled, setApiCalled] = useState(false);
+
   // Mobile filter visibility
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
 
@@ -443,6 +446,7 @@ export const PropertyListing = () => {
     setMobileFiltersVisible(!mobileFiltersVisible);
   };
 
+  
   // Initialize from URL params and fetch data
   useEffect(() => {
     // Get parameters from URL
@@ -460,10 +464,14 @@ export const PropertyListing = () => {
     const amenitiesParam = searchParams.get("amenities");
     const sortParam = searchParams.get("sort");
 
+    // Track changes in state
+    let stateChanged = false;
+
     // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
     const currentTab = typeParam || "all";
     if (currentTab !== activeTab) {
       setActiveTab(currentTab);
+      stateChanged = true;
     }
 
     // Set other state from URL params if they exist
@@ -567,7 +575,9 @@ export const PropertyListing = () => {
     }
 
     // IMPORTANT: Only fetch when activeTab changes or when component first loads
-    fetchProperties();
+    if (stateChanged) {
+  fetchProperties();
+    }
   }, [searchParams]); // Only depend on searchParams
 
   // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
