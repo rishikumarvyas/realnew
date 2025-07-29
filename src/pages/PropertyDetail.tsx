@@ -76,13 +76,11 @@ const PropertyDetail = () => {
     const fetchPropertyDetails = async () => {
       setLoading(true);
       try {
-        console.log("Fetching property with ID:", id);
         const response = await axiosInstance.get(
-          `/api/Account/GetPropertyDetails?propertyId=${id}`
+          `/api/Account/GetPropertyDetails?propertyId=${id}`,
         );
 
         const data = response.data;
-        console.log("Raw property data:", data);
 
         if (data.statusCode === 200 && data.propertyDetail) {
           const propertyData = data.propertyDetail;
@@ -93,15 +91,19 @@ const PropertyDetail = () => {
           // Use correct API field for like status
           const userLikeStatus = propertyData.isLikedByUser || false;
           setIsFavorite(userLikeStatus);
-          console.log("Setting initial like status:", userLikeStatus);
 
           setError(null);
 
-          // Fetch similar properties
-          fetchSimilarProperties(propertyData.city, propertyData.propertyType);
+          // OPTIMIZED: Fetch similar properties in background to avoid blocking UI
+          setTimeout(() => {
+            fetchSimilarProperties(
+              propertyData.city,
+              propertyData.propertyType,
+            );
+          }, 500);
         } else {
           throw new Error(
-            data.message || "Failed to retrieve property details"
+            data.message || "Failed to retrieve property details",
           );
         }
       } catch (err: any) {
@@ -112,21 +114,7 @@ const PropertyDetail = () => {
           "An unknown error occurred";
         setError(errorMessage);
 
-        // Only use mock data in development
-        if (process.env.NODE_ENV === "development") {
-          const mockPropertyDetail = getMockPropertyDetail(id || "");
-          if (mockPropertyDetail) {
-            console.log("Using mock data in development");
-            setProperty(mockPropertyDetail);
-            setIsFavorite(mockPropertyDetail.isLikedByUser || false);
-            setLikesCount(mockPropertyDetail.likeCount || 0);
-            setError(null);
-            getMockSimilarProperties(
-              mockPropertyDetail.city,
-              mockPropertyDetail.propertyType
-            );
-          }
-        }
+        // No fallback to mock data - only use actual API data
       } finally {
         setLoading(false);
       }
@@ -153,10 +141,6 @@ const PropertyDetail = () => {
 
     setLoadingSimilar(true);
     try {
-      console.log(
-        `Fetching similar properties for city: ${city}, type: ${propertyType}`
-      );
-
       // Fetch properties from the same city using API
       const response = await axiosInstance.post("/api/Account/GetProperty", {
         superCategoryId: 0, // Get all categories
@@ -186,7 +170,7 @@ const PropertyDetail = () => {
         // Filter properties from the same city and exclude current property
         const currentPropertyId = property?.propertyId || id;
         const cityProperties = response.data.propertyInfo.filter(
-          (prop: any) => prop.propertyId !== currentPropertyId
+          (prop: any) => prop.propertyId !== currentPropertyId,
         );
 
         // Transform the data to match PropertyCard format
@@ -247,116 +231,19 @@ const PropertyDetail = () => {
               status: prop.superCategory,
             };
           });
-
-        console.log(
-          `Found ${transformedProperties.length} similar properties in ${city}`
-        );
         setSimilarProperties(transformedProperties);
       } else {
-        console.log("No properties found, using mock data");
-        getMockSimilarProperties(city, propertyType);
+        setSimilarProperties([]);
       }
     } catch (err) {
       console.error("Error fetching similar properties:", err);
-      console.log("Using mock data due to API error");
-      getMockSimilarProperties(city, propertyType);
+      setSimilarProperties([]);
     } finally {
       setLoadingSimilar(false);
     }
   };
 
-  // Mock similar properties (for development purposes)
-  const getMockSimilarProperties = (city: string, propertyType: string) => {
-    const mockProperties = Array(3)
-      .fill(0)
-      .map((_, index) => {
-        const type = Math.random() > 0.5 ? "rent" : "buy";
-
-        return {
-          id: `mock_similar_${index}`,
-          title: `${propertyType} in ${city} - Property ${index + 1}`,
-          price: Math.floor(Math.random() * 50000) + 10000,
-          location: city,
-          type: type,
-          bedrooms: Math.floor(Math.random() * 4) + 1,
-          bathrooms: Math.floor(Math.random() * 3) + 1,
-          balcony: Math.floor(Math.random() * 2),
-          area: Math.floor(Math.random() * 1000) + 500,
-          image: `https://source.unsplash.com/random/400x300?apartment,house,${index}`,
-          likeCount: Math.floor(Math.random() * 50),
-          isLike: false,
-          propertyType: propertyType,
-          status: type === "rent" ? "Rent" : "Buy",
-        };
-      });
-
-    setSimilarProperties(mockProperties);
-  };
-
-  // Mock property data for development testing only
-  const getMockPropertyDetail = (propertyId: string) => {
-    console.log("Using mock data for propertyId:", propertyId);
-    return {
-      propertyId: propertyId,
-      superCategoryId: "123",
-      superCategory: "Rent",
-      propertyTypeId: "456",
-      propertyType: "Apartment",
-      title: "Modern 3BHK with Sea View",
-      description:
-        "Beautiful apartment with amazing sea views. Fully furnished with modern amenities. This luxurious property offers stunning panoramic views, modern interiors, and all essential amenities for comfortable living. Perfect for families looking for a premium lifestyle in a prime location.",
-      price: 25000,
-      area: 1500,
-      bedroom: 3,
-      bathroom: 2,
-      balcony: 1,
-      likeCount: 42,
-      isLikedByUser: false,
-      amenityDetails: [
-        { amenityId: "1", amenity: "Wifi" },
-        { amenityId: "2", amenity: "Parking" },
-        { amenityId: "3", amenity: "Swimming Pool" },
-        { amenityId: "4", amenity: "Lift" },
-        { amenityId: "5", amenity: "Security" },
-        { amenityId: "6", amenity: "Air Conditioning" },
-      ],
-      address: "Marine Drive",
-      cityId: "789",
-      city: "Mumbai",
-      stateId: "101",
-      state: "Maharashtra",
-      userTypeId: "112",
-      userType: "Owner",
-      postedBy: "Ram",
-      phone: "+919999999999",
-      imageDetails: [
-        {
-          imageId: "img1",
-          imageUrl:
-            "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-          isMainImage: true,
-        },
-        {
-          imageId: "img2",
-          imageUrl:
-            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80",
-          isMainImage: false,
-        },
-        {
-          imageId: "img3",
-          imageUrl:
-            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80",
-          isMainImage: false,
-        },
-      ],
-      ownerType: "Owner",
-      isReraApproved: true,
-      isOCApproved: false,
-      preferenceId: "2",
-      preference: "Family",
-      availableFrom: "2025-06-01",
-    };
-  };
+  // Removed mock data functions - only using actual API data
 
   const handleContactModal = (type: string) => {
     setContactType(type);
@@ -400,10 +287,8 @@ const PropertyDetail = () => {
               AccountId: userId,
               PropertyId: propertyId,
             },
-          }
+          },
         );
-
-        console.log("API Response:", response.data);
 
         if (response.data.statusCode === 200) {
           // Store the contact information from API response
@@ -430,7 +315,7 @@ const PropertyDetail = () => {
           });
         } else {
           throw new Error(
-            response.data.message || "Failed to get contact information"
+            response.data.message || "Failed to get contact information",
           );
         }
       } catch (error: any) {
@@ -524,7 +409,7 @@ const PropertyDetail = () => {
       // Optimistic update
       setIsFavorite(newLikeStatus);
       setLikesCount((prev) =>
-        newLikeStatus ? prev + 1 : Math.max(0, prev - 1)
+        newLikeStatus ? prev + 1 : Math.max(0, prev - 1),
       );
 
       const response = await axiosInstance.post("/api/Account/UpdateProperty", {
@@ -558,11 +443,9 @@ const PropertyDetail = () => {
             ? "This property has been added to your favorites."
             : "This property has been removed from your favorites.",
         });
-
-        console.log("Property like status updated successfully");
       } else {
         throw new Error(
-          response.data.message || "Failed to update like status"
+          response.data.message || "Failed to update like status",
         );
       }
     } catch (error: any) {
@@ -586,7 +469,6 @@ const PropertyDetail = () => {
 
   // FIXED: Enhanced handleImageClick function
   const handleImageClick = (index: number) => {
-    console.log("Thumbnail clicked, changing to index:", index);
     setActiveImageIndex(index);
   };
 
@@ -700,10 +582,10 @@ const PropertyDetail = () => {
     property.superCategory?.toLowerCase() === "rent"
       ? "For Rent"
       : property.superCategory?.toLowerCase() === "buy"
-      ? "For Sale"
-      : property.superCategory?.toLowerCase() === "sell"
-      ? "Selling"
-      : property.superCategory;
+        ? "For Sale"
+        : property.superCategory?.toLowerCase() === "sell"
+          ? "Selling"
+          : property.superCategory;
 
   // Get images directly
   const images =
@@ -778,8 +660,8 @@ const PropertyDetail = () => {
                     property.superCategory?.toLowerCase() === "buy"
                       ? "bg-blue-600"
                       : property.superCategory?.toLowerCase() === "sell"
-                      ? "bg-teal-600"
-                      : ""
+                        ? "bg-teal-600"
+                        : ""
                   }
                 `}
               >
@@ -910,7 +792,7 @@ const PropertyDetail = () => {
                 {/* Only show for non-Plot and non-Shop */}
                 {property.propertyType &&
                 !["plot", "shop"].includes(
-                  property.propertyType.toLowerCase()
+                  property.propertyType.toLowerCase(),
                 ) ? (
                   <>
                     {property.bedroom !== undefined && (
@@ -1063,7 +945,7 @@ const PropertyDetail = () => {
                     {/* Only show for non-Plot and non-Shop */}
                     {property.propertyType &&
                     !["plot", "shop"].includes(
-                      property.propertyType.toLowerCase()
+                      property.propertyType.toLowerCase(),
                     ) ? (
                       <>
                         <div className="flex justify-between py-3">
@@ -1106,7 +988,7 @@ const PropertyDetail = () => {
                           <span className="font-medium">
                             {property.availableFrom &&
                               new Date(
-                                property.availableFrom
+                                property.availableFrom,
                               ).toLocaleDateString()}
                           </span>
                         </div>
@@ -1231,7 +1113,7 @@ const PropertyDetail = () => {
                                   </span>
                                 </div>
                               );
-                            }
+                            },
                           )}
                         </div>
                       ) : (
@@ -1507,8 +1389,8 @@ const PropertyDetail = () => {
                   {ownerContactInfo?.publisherName
                     ? ownerContactInfo.publisherName.charAt(0).toUpperCase()
                     : property.postedBy
-                    ? property.postedBy.charAt(0).toUpperCase()
-                    : "O"}
+                      ? property.postedBy.charAt(0).toUpperCase()
+                      : "O"}
                 </div>
 
                 <div>
@@ -1565,8 +1447,8 @@ const PropertyDetail = () => {
                 onClick={() =>
                   navigate(
                     `/properties?search=${encodeURIComponent(
-                      property.city || ""
-                    )}`
+                      property.city || "",
+                    )}`,
                   )
                 }
                 className="text-blue-600 border-blue-600 hover:bg-blue-50"

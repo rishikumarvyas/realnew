@@ -78,9 +78,7 @@ const Signup = ({ onClose }: SignupProps) => {
         isTermsConditionsAccepted: true,
       };
 
-      console.log("Sending terms acceptance payload:", payload);
       await axiosInstance.post("/api/Message/Send", payload);
-      console.log("Terms acceptance sent successfully.");
     } catch (error) {
       console.error("Failed to send terms acceptance:", error);
       // We can show a toast here, but let's not block the signup flow
@@ -111,7 +109,7 @@ const Signup = ({ onClose }: SignupProps) => {
 
       if (existingUsers[fullPhoneNumber]) {
         setPhoneError(
-          "This number is already registered. Please login or use another number."
+          "This number is already registered. Please login or use another number.",
         );
         setLoading(false);
         return;
@@ -166,7 +164,7 @@ const Signup = ({ onClose }: SignupProps) => {
         "+91" + phone,
         name,
         otp,
-        userType.toString()
+        userType.toString(),
       );
 
       if (success) {

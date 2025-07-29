@@ -36,7 +36,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     const newValue = e.target.value.replace(/[^0-9]/g, "");
 
@@ -54,7 +54,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     if (e.key === "Backspace") {
       if (!value[index] && index > 0) {

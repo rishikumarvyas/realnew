@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "@/axiosCalls/axiosInstance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
@@ -113,7 +113,7 @@ const Index = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) =>
-        prev === sliderImages.length - 1 ? 0 : prev + 1
+        prev === sliderImages.length - 1 ? 0 : prev + 1,
       );
     }, 5000);
     return () => clearInterval(interval);
@@ -121,13 +121,13 @@ const Index = () => {
 
   const nextSlide = () => {
     setCurrentSlide((prev) =>
-      prev === sliderImages.length - 1 ? 0 : prev + 1
+      prev === sliderImages.length - 1 ? 0 : prev + 1,
     );
   };
 
   const prevSlide = () => {
     setCurrentSlide((prev) =>
-      prev === 0 ? sliderImages.length - 1 : prev - 1
+      prev === 0 ? sliderImages.length - 1 : prev - 1,
     );
   };
 
@@ -138,17 +138,31 @@ const Index = () => {
     }
   };
 
-  // Fetch suggestions
+  // OPTIMIZED: Fetch suggestions with better debouncing and caching
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      if (searchTerm.trim().length > 1) {
-        axios
+      if (searchTerm.trim().length > 2) {
+        // Increased minimum length to reduce calls
+        // Check if we have cached suggestions for this term
+        const cachedSuggestions = sessionStorage.getItem(
+          `suggestions_${searchTerm}`,
+        );
+        if (cachedSuggestions) {
+          setSuggestions(JSON.parse(cachedSuggestions));
+          setShowSuggestions(true);
+          return;
+        }
+
+        axiosInstance
           .get(
-            `https://homeyatraapi.azurewebsites.net/api/account/suggestions?term=${encodeURIComponent(
-              searchTerm
-            )}`
+            `/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`,
           )
           .then((res) => {
+            // Cache the suggestions for future use
+            sessionStorage.setItem(
+              `suggestions_${searchTerm}`,
+              JSON.stringify(res.data),
+            );
             setSuggestions(res.data);
             setShowSuggestions(true);
           })
@@ -160,7 +174,7 @@ const Index = () => {
         setSuggestions([]);
         setShowSuggestions(false);
       }
-    }, 300); // debounce 300ms
+    }, 500); // Increased debounce time to reduce API calls
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);

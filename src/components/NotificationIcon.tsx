@@ -47,23 +47,17 @@ const NotificationIcon: React.FC = () => {
   const { user, notifications, unreadCount, fetchNotifications } = useAuth();
 
   // Add effect to log notifications changes
-  useEffect(() => {
-    console.log("NotificationIcon: notifications updated", {
-      count: notifications.length,
-      unreadCount,
-    });
-  }, [notifications, unreadCount]);
+  useEffect(() => {}, [notifications, unreadCount]);
 
   useEffect(() => {
     if (user) {
-      console.log("NotificationIcon: User available:", user);
     }
   }, [user]);
 
   const createNotification = async (
     message: string,
     notificationType: "user" | "property" = "user",
-    propertyId?: string
+    propertyId?: string,
   ) => {
     if (!user || !user.userId) {
       console.warn("No user available for creating notification");
@@ -82,16 +76,12 @@ const NotificationIcon: React.FC = () => {
         payload.propertyId = propertyId;
       }
 
-      console.log("Creating notification with payload:", payload);
-
       const response = await axiosInstance.post(
         "/api/Notification/CreateNotification",
-        payload
+        payload,
       );
 
       if (response.status === 200 || response.status === 201) {
-        console.log("Notification created successfully");
-
         // Refresh notifications to show the new one
         await fetchNotifications();
 
@@ -122,9 +112,6 @@ const NotificationIcon: React.FC = () => {
 
   const toggleDropdown = async () => {
     if (!showDropdown) {
-      console.log(
-        "NotificationIcon: Opening dropdown, fetching notifications..."
-      );
       setIsLoading(true);
       await fetchNotifications();
       setIsLoading(false);
@@ -140,7 +127,7 @@ const NotificationIcon: React.FC = () => {
   const markAsRead = async (
     notificationId: string,
     notificationType?: "user" | "property",
-    propertyId?: string
+    propertyId?: string,
   ) => {
     if (!user || !user.userId) {
       updateNotificationState(notificationId);
@@ -160,16 +147,13 @@ const NotificationIcon: React.FC = () => {
         payload.propertyId = propertyId;
       }
 
-      console.log("Sending payload:", payload); // Debug log
-
       const response = await axiosInstance.put(
         "/api/Notification/MarkAsRead",
-        payload
+        payload,
       );
 
       if (response.status === 200) {
         await updateNotificationState(notificationId);
-        console.log("Notification marked as read successfully");
       }
     } catch (error: any) {
       console.error("Error marking notification as read:", error);
@@ -218,7 +202,7 @@ const NotificationIcon: React.FC = () => {
             }
 
             return axiosInstance.put("/api/Notification/MarkAsRead", payload);
-          })
+          }),
         );
 
         // Refresh notifications after marking all as read
@@ -275,7 +259,7 @@ const NotificationIcon: React.FC = () => {
       await markAsRead(
         notification.notificationId,
         notification.notificationType,
-        notification.propertyId
+        notification.propertyId,
       );
     }
 
@@ -288,12 +272,12 @@ const NotificationIcon: React.FC = () => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
       <Button
         onClick={toggleDropdown}
         variant="outline"
         size="icon"
-        className="relative rounded-full h-10 w-10 flex items-center justify-center border border-gray-200 hover:bg-blue-50 hover:text-blue-600"
+        className="relative rounded-full h-10 w-10 sm:h-10 sm:w-10 flex items-center justify-center border border-gray-200 hover:bg-blue-50 hover:text-blue-600 mx-auto sm:mx-0"
         aria-label="Notifications"
       >
         <Bell className="h-5 w-5" />
@@ -305,7 +289,7 @@ const NotificationIcon: React.FC = () => {
       </Button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border rounded-md shadow-xl z-50">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border rounded-md shadow-xl z-50 sm:right-0 sm:left-auto left-1/2 transform -translate-x-1/2 sm:transform-none sm:w-80 max-h-[calc(100vh-8rem)] overflow-hidden">
           <div className="p-3 border-b bg-gradient-to-r from-blue-50 to-blue-100">
             <div className="flex justify-between items-center">
               <h3 className="font-medium text-blue-800">All Notifications</h3>
@@ -343,7 +327,7 @@ const NotificationIcon: React.FC = () => {
               <p className="text-sm text-gray-500">Loading notifications...</p>
             </div>
           ) : (
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
               {notifications.length > 0 ? (
                 notifications.map((notification) => (
                   <div

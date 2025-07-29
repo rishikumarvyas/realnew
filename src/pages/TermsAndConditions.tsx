@@ -40,7 +40,7 @@ const TermsAndConditions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,10 +50,9 @@ const TermsAndConditions = () => {
   const fetchTermsAndConditions = async () => {
     try {
       setLoading(true);
-      console.log("🔄 Fetching terms and conditions...");
 
       const response = await fetch(
-        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=termsconditions"
+        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=termsconditions",
       );
 
       if (!response.ok) {
@@ -61,19 +60,16 @@ const TermsAndConditions = () => {
       }
 
       const data: ApiResponse = await response.json();
-      console.log("📥 Terms and conditions response:", data);
 
       if (data && data.data && data.data.length > 0) {
         setTermsData(data.data);
         setError(null);
-        console.log("✅ Terms data loaded successfully");
 
         toast({
           title: "Terms & Conditions Loaded",
           description: `Loaded ${data.data.length} terms section(s).`,
         });
       } else {
-        console.log("⚠️ No data found in API response");
         setError("No terms and conditions data found");
         toast({
           variant: "destructive",
@@ -98,7 +94,6 @@ const TermsAndConditions = () => {
   const sendTermsAcceptance = async () => {
     try {
       setIsSubmitting(true);
-      console.log("🔄 Sending terms acceptance...");
 
       const payload: MessagePayload = {
         phone: "user_phone_number", // You might want to get this from user input or context
@@ -118,7 +113,7 @@ const TermsAndConditions = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -126,7 +121,6 @@ const TermsAndConditions = () => {
       }
 
       const result = await response.json();
-      console.log("📤 Terms acceptance sent successfully:", result);
 
       toast({
         title: "Terms Accepted",

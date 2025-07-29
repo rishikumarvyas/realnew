@@ -19,7 +19,7 @@ interface Notification {
   isRead: boolean;
   createdDt: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
+  notificationType?: "user" | "property";
 }
 
 interface AuthContextType {
@@ -41,7 +41,7 @@ interface AuthContextType {
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userTypeId: string
+    userTypeId: string,
   ) => Promise<boolean>;
   logout: () => void;
   fetchNotifications: () => Promise<void>;
@@ -61,7 +61,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Add effect to fetch notifications when user is available
   useEffect(() => {
     if (user?.userId) {
-      console.log('User available in AuthContext, fetching notifications...');
       fetchNotifications();
     }
   }, [user?.userId]);
@@ -102,7 +101,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             token,
             userType: decodedToken?.userType || decodedToken?.userTypeId,
             role: decodedToken?.Role,
-            userTypeId: decodedToken?.userTypeId
+            userTypeId: decodedToken?.userTypeId,
           };
           if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
             setUser(userData);
@@ -123,17 +122,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const responseOtp = await axiosInstance.post(
-        `/api/Message/Send`,
-        {
-          phone: formattedPhone,
-          templateId: 3,
-          message: "Your OTP for Home Yatra login is: {{otp}}",
-          action: "HomeYatra",
-          name: "HomeYatra",
-          userTypeId: "0",
-        }
-      );
+      const responseOtp = await axiosInstance.post(`/api/Message/Send`, {
+        phone: formattedPhone,
+        templateId: 3,
+        message: "Your OTP for Home Yatra login is: {{otp}}",
+        action: "HomeYatra",
+        name: "HomeYatra",
+        userTypeId: "0",
+      });
 
       if (
         responseOtp?.data?.statusCode === 200 &&
@@ -155,21 +151,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userTypeId: string
+    userTypeId: string,
   ): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const signupResponse = await axiosInstance.post(
-        `/api/Auth/SignUp`,
-        {
-          name: fullName,
-          phone: formattedPhone,
-          otp,
-          userTypeId,
-        }
-      );
+      const signupResponse = await axiosInstance.post(`/api/Auth/SignUp`, {
+        name: fullName,
+        phone: formattedPhone,
+        otp,
+        userTypeId,
+      });
 
       if (
         signupResponse?.data?.statusCode === 200 &&
@@ -183,7 +176,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (!token) {
           return false;
         }
-        
+
         localStorage.setItem("token", token);
         const decodedToken = jwtDecode<decodedToken>(token);
 
@@ -193,9 +186,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken.Phone,
           name: decodedToken.UserName,
           token,
-          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          userType:
+            decodedToken.userType ||
+            decodedToken.userTypeId ||
+            data?.userType ||
+            data?.userTypeId,
           role: decodedToken.Role,
-          userTypeId: decodedToken.userTypeId || data?.userTypeId
+          userTypeId: decodedToken.userTypeId || data?.userTypeId,
         };
 
         // Store user data for immediate use
@@ -215,37 +212,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const fetchNotifications = async () => {
     if (!user?.userId) {
-      console.log('No user ID available for fetching notifications');
       return;
     }
 
     try {
-      console.log('Fetching notifications for user:', user.userId);
-      const response = await axiosInstance.get(`/api/Notification/GetNotifications?userId=${user.userId}`);
-
-      console.log('Notifications API response:', response.data);
+      const response = await axiosInstance.get(
+        `/api/Notification/GetNotifications?userId=${user.userId}`,
+      );
 
       if (response.status === 200 && response.data.notifications) {
         const allNotifications: Notification[] = response.data.notifications;
-        
-        // Sort notifications by date (newest first)
-        allNotifications.sort((a, b) => new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime());
 
-        console.log('Setting notifications:', allNotifications.length, 'items');
+        // Sort notifications by date (newest first)
+        allNotifications.sort(
+          (a, b) =>
+            new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime(),
+        );
+
         setNotifications(allNotifications);
-        const newUnreadCount = allNotifications.filter(n => !n.isRead).length;
-        console.log('Setting unread count:', newUnreadCount);
+        const newUnreadCount = allNotifications.filter((n) => !n.isRead).length;
+
         setUnreadCount(newUnreadCount);
       } else {
-        console.warn('No notifications found in response or unexpected response format:', response.data);
+        console.warn(
+          "No notifications found in response or unexpected response format:",
+          response.data,
+        );
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error("Error fetching notifications:", error);
       if (axios.isAxiosError(error)) {
-        console.error('API Error details:', {
+        console.error("API Error details:", {
           status: error.response?.status,
           data: error.response?.data,
-          headers: error.response?.headers
+          headers: error.response?.headers,
         });
       }
     }
@@ -256,18 +256,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const loginResponse = await axiosInstance.post(
-        `/api/Auth/Login`,
-        {
-          phone: formattedPhone,
-          otp,
-        }
-      );
+      const loginResponse = await axiosInstance.post(`/api/Auth/Login`, {
+        phone: formattedPhone,
+        otp,
+      });
 
       if (!(loginResponse?.data?.statusCode === 200)) {
         console.error(
           "Login failed with status:",
-          loginResponse.data.statusCode
+          loginResponse.data.statusCode,
         );
         return false;
       }
@@ -279,7 +276,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (!token) {
           return false;
         }
-        
+
         const decodedToken = jwtDecode<decodedToken>(token);
         localStorage.setItem("token", token);
 
@@ -289,21 +286,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken.Phone,
           token,
           name: decodedToken.UserName,
-          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          userType:
+            decodedToken.userType ||
+            decodedToken.userTypeId ||
+            data?.userType ||
+            data?.userTypeId,
           role: decodedToken.Role,
-          userTypeId: decodedToken.userTypeId || data?.userTypeId
+          userTypeId: decodedToken.userTypeId || data?.userTypeId,
         };
 
         setUser(userData);
 
-        // Fetch all required data in parallel
+        // OPTIMIZED: Fetch only essential data on login, cache the rest
         await Promise.all([
-          fetchNotifications(),
-          fetchAmenities(),
-          fetchAllStates(),
-          fetchUserTypes(),
-          fetchSuperCategory()
+          fetchNotifications(), // Essential for user experience
+          fetchAmenities(), // Essential for property forms
         ]);
+
+        // OPTIMIZED: Fetch other data in background to avoid blocking login
+        setTimeout(() => {
+          Promise.all([
+            fetchAllStates(),
+            fetchUserTypes(),
+            fetchSuperCategory(),
+          ]).catch((error) => {
+            console.warn("Background data fetch failed:", error);
+          });
+        }, 1000);
 
         // Close the auth modal after successful login
         closeAuthModal();
@@ -322,7 +331,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchAmenities = async () => {
     try {
       const amenityRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=Amenity"
+        "/api/Generic/GetActiveRecords?tableName=Amenity",
       );
       if (
         amenityRes?.data?.statusCode === 200 &&
@@ -330,7 +339,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "amenities",
-          JSON.stringify(amenityRes?.data?.data)
+          JSON.stringify(amenityRes?.data?.data),
         );
       } else {
         console.error("Failed to fetch amenities:", amenityRes.status);
@@ -343,7 +352,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchAllStates = async () => {
     try {
       const allStatesRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=State"
+        "/api/Generic/GetActiveRecords?tableName=State",
       );
       if (
         allStatesRes?.data?.statusCode === 200 &&
@@ -351,7 +360,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "allStates",
-          JSON.stringify(allStatesRes?.data?.data)
+          JSON.stringify(allStatesRes?.data?.data),
         );
       } else {
         console.error("Failed to fetch allStates:", allStatesRes.status);
@@ -364,7 +373,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchUserTypes = async () => {
     try {
       const UserTypesRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=userType"
+        "/api/Generic/GetActiveRecords?tableName=userType",
       );
       if (
         UserTypesRes?.data?.statusCode === 200 &&
@@ -372,7 +381,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "userType",
-          JSON.stringify(UserTypesRes?.data?.data)
+          JSON.stringify(UserTypesRes?.data?.data),
         );
       } else {
         console.error("Failed to fetch userType:", UserTypesRes.status);
@@ -385,7 +394,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const fetchSuperCategory = async () => {
     try {
       const superCategoryRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=superCategory"
+        "/api/Generic/GetActiveRecords?tableName=superCategory",
       );
       if (
         superCategoryRes?.data?.statusCode === 200 &&
@@ -393,12 +402,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "superCategory",
-          JSON.stringify(superCategoryRes?.data?.data)
+          JSON.stringify(superCategoryRes?.data?.data),
         );
       } else {
         console.error(
           "Failed to fetch superCategory:",
-          superCategoryRes.status
+          superCategoryRes.status,
         );
       }
     } catch (err) {

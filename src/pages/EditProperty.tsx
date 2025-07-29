@@ -72,7 +72,7 @@ const EditProperty = () => {
   const [isReraApproved, setIsReraApproved] = useState<string>("");
   const [isOCApproved, setIsOCApproved] = useState<string>("");
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined
+    undefined,
   );
   const [priceValidation, setPriceValidation] = useState(true);
   const [price, setPrice] = useState("");
@@ -98,7 +98,7 @@ const EditProperty = () => {
 
         // Use axiosInstance instead of direct axios call
         const response = await axiosInstance.get(
-          `/api/Account/GetPropertyDetails?propertyId=${propertyId}`
+          `/api/Account/GetPropertyDetails?propertyId=${propertyId}`,
         );
         if (
           response?.data?.statusCode === 200 &&
@@ -112,17 +112,17 @@ const EditProperty = () => {
             property?.amenityDetails.length > 0
           ) {
             const prevSelectedIds = property?.amenityDetails?.map(
-              (item) => item?.amenityId
+              (item) => item?.amenityId,
             );
             setSelectedCheckboxes(
               prevSelectedIds?.filter((id) =>
-                checkBoxAmenities?.some((amenity) => amenity?.id === id)
-              )
+                checkBoxAmenities?.some((amenity) => amenity?.id === id),
+              ),
             );
             setSelectedRadio(
               prevSelectedIds?.find((id) =>
-                radioAmenities?.some((amenity) => amenity?.id === id)
-              ) || ""
+                radioAmenities?.some((amenity) => amenity?.id === id),
+              ) || "",
             );
           }
           // Set initial images and image URLs
@@ -134,12 +134,12 @@ const EditProperty = () => {
                 return new File([blob], "example.jpg", {
                   type: "image/jpeg",
                 });
-              })
+              }),
             );
             setOldImageURLs(property?.imageDetails.map((img) => img.imageUrl));
             setImageURLs(property?.imageDetails.map((img) => img.imageUrl));
             setMainImageIndex(
-              property?.imageDetails.findIndex((img) => img.isMainImage)
+              property?.imageDetails.findIndex((img) => img.isMainImage),
             );
           }
 
@@ -154,7 +154,7 @@ const EditProperty = () => {
           setAvailableFrom(
             property.availableFrom
               ? new Date(property.availableFrom)
-              : undefined
+              : undefined,
           ); // Convert string date to Date object
 
           // Set initial form data
@@ -215,10 +215,13 @@ const EditProperty = () => {
   const [preferenceStates, setPreferenceStates] = useState<
     Record<string, boolean>
   >(
-    preferenceOptions.reduce((acc, option) => {
-      acc[option.id] = false;
-      return acc;
-    }, {} as Record<string, boolean>)
+    preferenceOptions.reduce(
+      (acc, option) => {
+        acc[option.id] = false;
+        return acc;
+      },
+      {} as Record<string, boolean>,
+    ),
   );
 
   // Add validation for age of property (positive integer)
@@ -248,14 +251,14 @@ const EditProperty = () => {
 
   const checkBoxAmenities: Amenity[] = isShop
     ? getAmenity().checkBoxAmenities.filter((item) =>
-        new Set(["1", "6", "7", "8"]).has(item.id)
+        new Set(["1", "6", "7", "8"]).has(item.id),
       )
     : getAmenity().checkBoxAmenities;
   const radioAmenities: Amenity[] = getAmenity().radioButtonAmenities;
   // Handle checkbox Amenity selection
   const handleCheckboxChange = (id) => {
     setSelectedCheckboxes((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
   // Handle radio button Amenity selection
@@ -298,7 +301,7 @@ const EditProperty = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -477,14 +480,14 @@ const EditProperty = () => {
 
           formDataObj.append(
             `Images[${idx}].IsMain`,
-            isMain ? "true" : "false"
+            isMain ? "true" : "false",
           );
         }
         if (isOld) {
           formDataObj.append(`Images[${idx}].ImageUrl`, url);
           formDataObj.append(
             `Images[${idx}].IsMain`,
-            isMain ? "true" : "false"
+            isMain ? "true" : "false",
           );
         }
       });
@@ -532,7 +535,7 @@ const EditProperty = () => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       if (response.status === 200) {
@@ -641,14 +644,14 @@ const EditProperty = () => {
                       formData.propertyTypeId === "1"
                         ? "Flat"
                         : formData.propertyTypeId === "2"
-                        ? "Shop"
-                        : formData.propertyTypeId === "3"
-                        ? "House"
-                        : formData.propertyTypeId === "4"
-                        ? "Plot"
-                        : formData.propertyTypeId === "5"
-                        ? "Bunglow"
-                        : formData.propertyType
+                          ? "Shop"
+                          : formData.propertyTypeId === "3"
+                            ? "House"
+                            : formData.propertyTypeId === "4"
+                              ? "Plot"
+                              : formData.propertyTypeId === "5"
+                                ? "Bunglow"
+                                : formData.propertyType
                     }
                     className="border-blue-200 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
                     readOnly
@@ -669,8 +672,8 @@ const EditProperty = () => {
                       formData.superCategoryId === "2"
                         ? "Rent"
                         : formData.superCategoryId === "1"
-                        ? "Sell"
-                        : ""
+                          ? "Sell"
+                          : ""
                     }
                     className="border-blue-200 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
                     readOnly

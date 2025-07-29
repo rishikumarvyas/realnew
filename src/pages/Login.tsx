@@ -76,8 +76,7 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description:
-            "Your number is not registered. Please sign up first.",
+          description: "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }
@@ -96,8 +95,6 @@ const Login = ({ onClose }) => {
     setLoading(true);
 
     try {
-      console.log(`Submitting login with phone: ${phone}, OTP: ${otpValue}`);
-
       // Call the login function
       const success = await login(phone, otpValue);
 
@@ -110,8 +107,7 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Login Failed",
-          description:
-            "Your number is not registered. Please sign up first.",
+          description: "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }

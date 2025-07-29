@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "@/axiosCalls/axiosInstance";
 import { PropertyCard } from "@/components/PropertyCard";
 import type { PropertyCardProps } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,9 @@ import {
   Plus,
   Minus,
   X,
+  Key,
+  MapPin as Map,
+  Store,
 } from "lucide-react";
 import {
   Select,
@@ -44,6 +47,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import debounce from "lodash/debounce";
 
 // API interfaces
 interface ApiResponse {
@@ -359,7 +363,7 @@ export const PropertyListing = () => {
   const [minArea, setMinArea] = useState(0);
   const [maxArea, setMaxArea] = useState(5000); // Added for area range slider
   const [selectedPriceStep, setSelectedPriceStep] = useState<string | null>(
-    null
+    null,
   );
   const [selectedAreaStep, setSelectedAreaStep] = useState<string | null>(null);
 
@@ -373,7 +377,7 @@ export const PropertyListing = () => {
 
   // Advanced filter states
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined
+    undefined,
   );
   const [preferenceId, setPreferenceId] = useState<string>("4"); // Default to "Anyone"
   const [furnished, setFurnished] = useState<string>("Fully"); // Default to "Fully Furnished"
@@ -393,11 +397,9 @@ export const PropertyListing = () => {
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchTerm.trim().length > 1) {
-        axios
+        axiosInstance
           .get(
-            `https://homeyatraapi.azurewebsites.net/api/account/suggestions?term=${encodeURIComponent(
-              searchTerm
-            )}`
+            `/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`,
           )
           .then((res) => {
             setSuggestions(res.data);
@@ -443,7 +445,7 @@ export const PropertyListing = () => {
     setMobileFiltersVisible(!mobileFiltersVisible);
   };
 
-  // Initialize from URL params and fetch data
+  // Initialize from URL params and fetch data - OPTIMIZED
   useEffect(() => {
     // Get parameters from URL
     const typeParam = searchParams.get("type");
@@ -504,74 +506,58 @@ export const PropertyListing = () => {
     }
 
     if (minAreaParam) {
-      const area = parseInt(minAreaParam);
-      if (area !== minArea) {
-        setMinArea(area);
+      const minArea = parseInt(minAreaParam);
+      if (minArea !== minArea) {
+        setMinArea(minArea);
       }
     }
 
     if (availableFromParam) {
       const date = new Date(availableFromParam);
-      if (!availableFrom || date.getTime() !== availableFrom.getTime()) {
+      if (date.getTime() !== availableFrom?.getTime()) {
         setAvailableFrom(date);
       }
     }
 
-    if (preferenceParam && preferenceParam !== preferenceId) {
-      setPreferenceId(preferenceParam);
+    if (preferenceParam) {
+      if (preferenceParam !== preferenceId) {
+        setPreferenceId(preferenceParam);
+      }
     }
 
-    if (furnishedParam && furnishedParam !== furnished) {
-      setFurnished(furnishedParam);
-    } else if (!furnishedParam) {
-      // If no furnished param in URL, set to default but don't add to URL
-      setFurnished("Fully");
+    if (furnishedParam) {
+      if (furnishedParam !== furnished) {
+        setFurnished(furnishedParam);
+      }
     }
 
     if (amenitiesParam) {
-      const amenities = amenitiesParam.split(",");
-      if (
-        JSON.stringify(amenities.sort()) !==
-        JSON.stringify(selectedAmenities.sort())
-      ) {
+      const amenities = amenitiesParam.split(",").filter(Boolean);
+      if (JSON.stringify(amenities) !== JSON.stringify(selectedAmenities)) {
         setSelectedAmenities(amenities);
       }
     }
 
-    if (sortParam && sortParam !== sortBy) {
-      setSortBy(sortParam);
-    }
-
-    // Initialize multi-select states from URL parameters
-    const priceStepsParam = searchParams.get("priceSteps");
-    const areaStepsParam = searchParams.get("areaSteps");
-
-    if (priceStepsParam) {
-      const priceSteps = priceStepsParam.split(",");
-      if (
-        JSON.stringify(priceSteps.sort()) !==
-        JSON.stringify(selectedPriceSteps.sort())
-      ) {
-        setSelectedPriceSteps(priceSteps);
+    if (sortParam) {
+      if (sortParam !== sortBy) {
+        setSortBy(sortParam);
       }
     }
 
-    if (areaStepsParam) {
-      const areaSteps = areaStepsParam.split(",");
-      if (
-        JSON.stringify(areaSteps.sort()) !==
-        JSON.stringify(selectedAreaSteps.sort())
-      ) {
-        setSelectedAreaSteps(areaSteps);
-      }
-    }
+    // Fetch properties only once after all state updates
+    // fetchProperties(); // Moved to after function definition
+  }, [searchParams]); // Remove fetchProperties from dependencies
 
-    // IMPORTANT: Only fetch when activeTab changes or when component first loads
-    fetchProperties();
-  }, [searchParams]); // Only depend on searchParams
+  // OPTIMIZED: Debounced fetch properties to prevent multiple calls
+  const debouncedFetchProperties = useCallback(
+    debounce(() => {
+      fetchProperties();
+    }, 500),
+    [],
+  );
 
   // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     setLoading(true);
     try {
       // Get the current type from URL, not from state
@@ -656,7 +642,6 @@ export const PropertyListing = () => {
         propertyFor,
         accountId: "string",
         searchTerm: filterOptions.searchTerm,
-        StatusId: 2, // ADDED: StatusId set to 2 as requested
         minPrice: filterOptions.minPrice, // UPDATED: Use actual minPrice value
         maxPrice: filterOptions.maxPrice, // UPDATED: Use actual maxPrice value
         bedroom: filterOptions.minBedrooms,
@@ -677,32 +662,24 @@ export const PropertyListing = () => {
         SortOrder: apiSortOrder,
       };
 
-      console.log("API Request Payload:", {
-        type: currentTypeParam,
-        furnished: filterOptions.furnished,
-        furnishedParam: searchParams.get("furnished"),
-        sortBy: apiSortBy,
-        sortOrder: apiSortOrder,
-        payload: requestPayload,
-      });
-
-      console.log(
-        `Fetching properties for type: ${currentTypeParam}`,
-        requestPayload
-      );
       setApiDebug((prev) => ({ ...prev, request: requestPayload }));
 
-      const response = await axios.post<ApiResponse>(
-        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+      const response = await axiosInstance.post<ApiResponse>(
+        "/api/Account/GetProperty",
         requestPayload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
       );
 
       setApiDebug((prev) => ({ ...prev, response: response.data }));
+
+      // Check if we have properties in the response
+      if (
+        !response.data.propertyInfo ||
+        response.data.propertyInfo.length === 0
+      ) {
+        setProperties([]);
+        setFilteredProperties([]);
+        return;
+      }
 
       // Transform API data with proper type mapping - Updated to merge shop/commercial
       const transformedData = response.data.propertyInfo.map(
@@ -757,82 +734,19 @@ export const PropertyListing = () => {
             propertyType: prop.propertyType,
             status: prop.superCategory,
           };
-        }
+        },
       );
-
-      console.log(
-        "Transformed properties furnished values:",
-        transformedData.map((p) => ({ id: p.id, furnished: p.furnished }))
-      );
-      setProperties(transformedData);
-
-      // Apply client-side filtering based on current URL type
-      let filtered = transformedData;
-
-      if (currentTypeParam === "plot") {
-        filtered = transformedData.filter(
-          (prop) =>
-            prop.type === "plot" ||
-            prop.propertyType === "4" ||
-            (prop.propertyType?.toLowerCase() || "").includes("plot")
-        );
-      } else if (currentTypeParam === "commercial") {
-        filtered = transformedData.filter(
-          (prop) =>
-            prop.type === "commercial" ||
-            prop.propertyType === "2" ||
-            prop.propertyType === "7" ||
-            (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-            (prop.propertyType?.toLowerCase() || "").includes("shop")
-        );
-      } else if (currentTypeParam !== "all") {
-        filtered = transformedData.filter(
-          (property) => property.type === currentTypeParam
-        );
+      // Debug: Show superCategory and propertyType values for rent properties
+      const rentProperties = transformedData.filter((p) => p.type === "rent");
+      if (rentProperties.length > 0) {
+      } else {
+        // Show all properties to see what types they have
       }
 
-      // Apply other filters
-      const currentSearchQuery = searchParams.get("search") || "";
-      const currentPriceRange = [
-        parseInt(searchParams.get("minPrice") || "0"),
-        parseInt(searchParams.get("maxPrice") || "20000000"),
-      ];
-      const currentMinArea = parseInt(searchParams.get("minArea") || "0");
+      setProperties(transformedData);
 
-      filtered = filtered.filter((property) => {
-        if (
-          currentSearchQuery &&
-          !property.title
-            .toLowerCase()
-            .includes(currentSearchQuery.toLowerCase()) &&
-          !property.location
-            .toLowerCase()
-            .includes(currentSearchQuery.toLowerCase())
-        ) {
-          return false;
-        }
-
-        if (
-          property.price < currentPriceRange[0] ||
-          property.price > currentPriceRange[1]
-        ) {
-          return false;
-        }
-
-        if (property.area < currentMinArea) {
-          return false;
-        }
-
-        // Apply furnished filter
-        const currentFurnished = searchParams.get("furnished");
-        if (currentFurnished && property.furnished !== currentFurnished) {
-          return false;
-        }
-
-        return true;
-      });
-
-      setFilteredProperties(filtered);
+      // REMOVED: Duplicate filtering logic - let applyFilters handle all filtering
+      // The applyFilters useEffect will automatically run when properties state changes
 
       // Remove toast notification for properties loaded
       // toast({
@@ -840,9 +754,19 @@ export const PropertyListing = () => {
       //   description: `Found ${filtered.length} ${currentTypeParam === 'all' ? '' : currentTypeParam} properties.`,
       // });
     } catch (err) {
-      console.error("Failed to fetch properties:", err);
+      console.error("❌ Failed to fetch properties:", err);
+      console.error("❌ Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+      });
       setError("Unable to load properties. Please try again later.");
       setApiDebug((prev) => ({ ...prev, error: err }));
+
+      // Set empty arrays to show no properties
+      setProperties([]);
+      setFilteredProperties([]);
 
       // Remove toast notification for error loading properties
       // toast({
@@ -851,228 +775,157 @@ export const PropertyListing = () => {
       //   description: "We're having trouble fetching properties. Using sample data instead.",
       // });
 
-      // useMockData(); // You may need to implement this function
+      // No fallback to mock data - only use actual API data
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchParams]); // Add dependency array for useCallback
 
   // Apply filters to the property list
-  const applyFilters = (data: PropertyCardProps[]) => {
-    let filtered = data;
+  const applyFilters = useCallback(
+    (data: PropertyCardProps[]) => {
+      let filtered = data;
 
-    // Apply search filter
-    if (searchQuery) {
+      // Get current type from URL
+      const currentTypeParam = searchParams.get("type") || "all";
+
+      // Debug: Show sample property structure
+      if (data.length > 0) {
+        // Show all preferenceId values in the data
+        const preferenceIds = data
+          .map((p) => p.preferenceId)
+          .filter((id) => id !== undefined);
+      }
+
+      // Apply property type filtering first
+      if (currentTypeParam === "plot") {
+        filtered = filtered.filter(
+          (prop) =>
+            prop.type === "plot" ||
+            prop.propertyType === "4" ||
+            (prop.propertyType?.toLowerCase() || "").includes("plot"),
+        );
+      } else if (currentTypeParam === "commercial") {
+        filtered = filtered.filter(
+          (prop) =>
+            prop.type === "commercial" ||
+            prop.propertyType === "2" ||
+            prop.propertyType === "7" ||
+            (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
+            (prop.propertyType?.toLowerCase() || "").includes("shop"),
+        );
+      } else if (currentTypeParam !== "all") {
+        filtered = filtered.filter(
+          (property) => property.type === currentTypeParam,
+        );
+      }
+
+      // Apply search filter
+      if (searchQuery) {
+        filtered = filtered.filter(
+          (property) =>
+            property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            property.location.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
+      }
+
+      // Apply price range filter
       filtered = filtered.filter(
         (property) =>
-          property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          property.location.toLowerCase().includes(searchQuery.toLowerCase())
+          property.price >= priceRange[0] && property.price <= priceRange[1],
       );
-    }
 
-    // Apply price range filter
-    filtered = filtered.filter(
-      (property) =>
-        property.price >= priceRange[0] && property.price <= priceRange[1]
-    );
-
-    // Apply area range filter
-    filtered = filtered.filter(
-      (property) => property.area >= minArea && property.area <= maxArea
-    );
-
-    // Apply bedroom filter
-    if (minBedrooms > 0) {
+      // Apply area range filter
       filtered = filtered.filter(
-        (property) => property.bedrooms >= minBedrooms
+        (property) => property.area >= minArea && property.area <= maxArea,
       );
-    }
 
-    // Apply bathroom filter
-    if (minBathrooms > 0) {
-      filtered = filtered.filter(
-        (property) => property.bathrooms >= minBathrooms
-      );
-    }
+      // Apply bedroom filter
+      if (minBedrooms > 0) {
+        filtered = filtered.filter(
+          (property) => property.bedrooms >= minBedrooms,
+        );
+      }
 
-    // Apply balcony filter
-    if (minBalcony > 0) {
-      filtered = filtered.filter((property) => property.balcony >= minBalcony);
-    }
+      // Apply bathroom filter
+      if (minBathrooms > 0) {
+        filtered = filtered.filter(
+          (property) => property.bathrooms >= minBathrooms,
+        );
+      }
 
-    // Apply availability filter
-    if (availableFrom) {
-      filtered = filtered.filter((property) => {
-        if (!property.availableFrom) return false;
-        const propertyDate = new Date(property.availableFrom);
-        return propertyDate >= availableFrom;
-      });
-    }
+      // Apply balcony filter
+      if (minBalcony > 0) {
+        filtered = filtered.filter(
+          (property) => property.balcony >= minBalcony,
+        );
+      }
 
-    // Apply tenant preference filter
-    if (preferenceId !== "0") {
-      filtered = filtered.filter(
-        (property) => property.preferenceId === parseInt(preferenceId)
-      );
-    }
+      // Apply availability filter
+      if (availableFrom) {
+        filtered = filtered.filter((property) => {
+          if (!property.availableFrom) return false;
+          const propertyDate = new Date(property.availableFrom);
+          return propertyDate >= availableFrom;
+        });
+      }
 
-    // Apply furnished filter
-    const currentFurnished = searchParams.get("furnished");
-    if (currentFurnished) {
-      console.log("Applying furnished filter:", {
-        filterValue: currentFurnished,
-        propertiesBefore: filtered.length,
-        furnishedValues: filtered.map((p) => p.furnished),
-      });
-      filtered = filtered.filter(
-        (property) => property.furnished === currentFurnished
-      );
-      console.log("After furnished filter:", {
-        propertiesAfter: filtered.length,
-        remainingFurnishedValues: filtered.map((p) => p.furnished),
-      });
-    }
+      // Apply tenant preference filter - ONLY for rent properties and when a specific preference is selected
+      if (preferenceId !== "0" && currentTypeParam === "rent") {
+        // FIXED: Handle properties without preferenceId (show them) and properties with matching preferenceId
+        filtered = filtered.filter(
+          (property) =>
+            !property.preferenceId ||
+            property.preferenceId === parseInt(preferenceId),
+        );
+      } else {
+      }
 
-    // Apply amenities filter
-    if (selectedAmenities.length > 0) {
-      filtered = filtered.filter((property) =>
-        selectedAmenities.every((amenity) =>
-          property.amenities?.includes(amenity)
-        )
-      );
-    }
+      // Apply furnished filter
+      const currentFurnished = searchParams.get("furnished");
+      if (currentFurnished) {
+        filtered = filtered.filter(
+          (property) => property.furnished === currentFurnished,
+        );
+      }
 
-    setFilteredProperties(filtered);
-  };
+      // Apply amenities filter
+      if (selectedAmenities.length > 0) {
+        filtered = filtered.filter((property) =>
+          selectedAmenities.every((amenity) =>
+            property.amenities?.includes(amenity),
+          ),
+        );
+      }
 
-  // Enhanced mock data for fallback or development
-  const useMockData = () => {
-    const mockProperties: PropertyCardProps[] = [
-      {
-        id: "prop1",
-        title: "Modern 3BHK with Sea View",
-        price: 7500000,
-        location: "Bandra West, Mumbai",
-        type: "buy",
-        bedrooms: 3,
-        bathrooms: 3,
-        balcony: 1,
-        area: 1450,
-        image:
-          "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-        amenities: ["Parking", "Security", "Power Backup"],
-        furnished: "Fully",
-        likeCount: 0,
-      },
-      {
-        id: "prop2",
-        title: "Luxury 4BHK Penthouse",
-        price: 12500000,
-        location: "Worli, Mumbai",
-        type: "buy",
-        bedrooms: 4,
-        bathrooms: 4,
-        balcony: 2,
-        area: 2100,
-        image:
-          "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
-        amenities: ["Swimming Pool", "Gym", "Club House", "Parking"],
-        furnished: "Fully",
-        likeCount: 0,
-      },
-      {
-        id: "prop3",
-        title: "Studio Apartment with Balcony",
-        price: 35000,
-        location: "Koramangala, Bangalore",
-        type: "rent",
-        bedrooms: 1,
-        bathrooms: 1,
-        balcony: 1,
-        area: 650,
-        image:
-          "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80",
-        availableFrom: "2025-05-15T00:00:00",
-        preferenceId: 2, // Bachelor
-        amenities: ["WiFi", "Power Backup"],
-        furnished: "Semi",
-        likeCount: 0,
-      },
-      {
-        id: "prop9",
-        title: "Residential Plot in Prime Location",
-        price: 3500000,
-        location: "Electronic City, Bangalore",
-        type: "plot",
-        bedrooms: 0,
-        bathrooms: 0,
-        balcony: 0,
-        area: 2400,
-        image:
-          "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup"],
-        propertyType: "Plot",
-        likeCount: 0,
-      },
-      {
-        id: "prop10",
-        title: "Commercial Space in Business District",
-        price: 85000,
-        location: "Connaught Place, Delhi",
-        type: "commercial",
-        bedrooms: 0,
-        bathrooms: 2,
-        balcony: 0,
-        area: 1800,
-        image:
-          "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
-        amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully",
-        propertyType: "Commercial",
-        likeCount: 0,
-      },
-      {
-        id: "prop11",
-        title: "Retail Shop in Prime Location",
-        price: 120000,
-        location: "Saket, Delhi",
-        type: "commercial",
-        bedrooms: 0,
-        bathrooms: 1,
-        balcony: 0,
-        area: 850,
-        image:
-          "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
-        amenities: ["Security", "Power Backup"],
-        furnished: "Not",
-        propertyType: "Commercial",
-        likeCount: 0,
-      },
-    ];
+      setFilteredProperties(filtered);
+    },
+    [
+      searchParams,
+      searchQuery,
+      priceRange,
+      minBedrooms,
+      minBathrooms,
+      minBalcony,
+      minArea,
+      maxArea,
+      availableFrom,
+      preferenceId,
+      selectedAmenities,
+    ],
+  );
 
-    setProperties(mockProperties);
-    applyFilters(mockProperties);
-  };
-
-  // Update filters when any filter state changes
+  // OPTIMIZED: Apply filters without triggering new API calls
   useEffect(() => {
     if (properties.length > 0) {
       applyFilters(properties);
     }
-  }, [
-    activeTab,
-    searchQuery,
-    priceRange,
-    minBedrooms,
-    minBathrooms,
-    minBalcony,
-    minArea,
-    maxArea,
-    availableFrom,
-    preferenceId,
-    furnished,
-    selectedAmenities,
-  ]);
+  }, [properties, applyFilters]); // Only depend on properties, not individual filter states
+
+  // INITIAL LOAD: Fetch properties when component mounts or searchParams change
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
 
   // Handle tab change and update URL
   const handleTabChange = (value: string) => {
@@ -1387,7 +1240,7 @@ export const PropertyListing = () => {
   // Slice filteredProperties for current page
   const paginatedProperties = filteredProperties.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
 
   useEffect(() => {
@@ -1409,36 +1262,36 @@ export const PropertyListing = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero section with search */}
-      <div className="relative">
-        {/* Background Image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
-          }}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Hero Section with Slider - Compact */}
+      <section className="relative h-96 sm:h-[500px] overflow-hidden">
+        {/* Slider with clearer images */}
+        <div className="absolute inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-100"
+            style={{
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+            }}
+          />
+          {/* Light overlay for text readability */}
+          <div className="absolute inset-0 bg-black/10"></div>
+        </div>
 
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-black opacity-50"></div>
+        {/* Hero Content - Responsive padding and sizing */}
+        <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 z-10 h-full flex flex-col justify-center items-center">
+          <div className="animate-fade-in text-center w-full">
+            <div className="bg-white/70 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg mx-4 sm:mx-auto">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight text-black">
+                <span>Find Your </span>
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
+                  Dream Property
+                </span>
+              </h2>
 
-        {/* Content */}
-        <div className="relative py-20 px-4">
-          <div className="max-w-3xl mx-auto bg-white/60 p-8 md:p-12 rounded-xl shadow-2xl">
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-black">
-                Find Your Dream Property
-              </h1>
-              <p className="text-lg text-gray-800 mb-8">
-                Use our advanced filters to find the perfect property that
-                matches your requirements
-              </p>
-              {/* Search Input Form (copied from Index.tsx) */}
               <form
                 onSubmit={handleSearch}
-                className="mt-4 sm:mt-6 relative mx-auto"
+                className="mt-3 sm:mt-4 relative mx-auto"
               >
                 <div className="relative flex shadow-xl">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
@@ -1462,6 +1315,7 @@ export const PropertyListing = () => {
                     Search
                   </Button>
                 </div>
+
                 {showSuggestions && suggestions.length > 0 && (
                   <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
                     {suggestions.map((suggestion, index) => (
@@ -1479,7 +1333,7 @@ export const PropertyListing = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="w-full px-4 py-8">
         {/* Mobile filter toggle button - only visible on mobile */}
@@ -1506,8 +1360,8 @@ export const PropertyListing = () => {
           {/* Collapsible Sidebar filters */}
           <div
             className={`transition-all duration-300 mb-6 md:mb-0 shrink-0 overflow-hidden flex flex-col
-              ${sidebarVisible ? "w-full md:w-[300px]" : "w-12 md:w-12"}
-              bg-gradient-to-br from-blue-50 via-indigo-50 to-white border-r border-blue-200 relative rounded-2xl shadow-xl
+              ${sidebarVisible ? "w-full md:w-[320px]" : "w-12 md:w-12"}
+              bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 border-r border-slate-200 relative rounded-2xl shadow-2xl backdrop-blur-sm
               ${!mobileFiltersVisible ? "md:block hidden" : ""}`}
             style={{
               minWidth: sidebarVisible ? undefined : "3rem",
@@ -1516,14 +1370,14 @@ export const PropertyListing = () => {
           >
             {/* Sidebar toggle button - only visible on desktop */}
             <div
-              className="hidden md:flex items-center justify-end h-10 w-full"
-              style={{ minHeight: "2.5rem" }}
+              className="hidden md:flex items-center justify-end h-12 w-full p-2"
+              style={{ minHeight: "3rem" }}
             >
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setSidebarVisible(!sidebarVisible)}
-                className="mb-2"
+                className="mb-2 bg-white/80 backdrop-blur-sm border-slate-300 hover:bg-white hover:border-slate-400 shadow-md"
               >
                 {sidebarVisible ? (
                   <>
@@ -1544,18 +1398,24 @@ export const PropertyListing = () => {
               }`}
             >
               {(sidebarVisible || mobileFiltersVisible) && (
-                <div className="p-0">
+                <div className="p-4">
                   {/* Filter Card */}
-                  <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-100 p-6 flex flex-col gap-4 hover:shadow-2xl transition-all duration-300">
+                  <div className="bg-gradient-to-br from-white/95 via-white/90 to-white/85 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-6 flex flex-col gap-6 hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
+                    {/* Decorative background elements */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full -translate-y-10 translate-x-10 blur-xl"></div>
+                    <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-indigo-400/8 to-blue-400/8 rounded-full translate-y-8 -translate-x-8 blur-lg"></div>
                     {/* Property Type Tabs Section - Collapsible */}
-                    <div className="mb-6">
+                    <div className="mb-6 relative">
                       <div
-                        className="font-semibold text-blue-700 text-sm mb-2 flex items-center justify-between cursor-pointer"
+                        className="font-bold text-slate-800 text-sm mb-3 flex items-center justify-between cursor-pointer bg-gradient-to-r from-slate-100 to-blue-50 p-3 rounded-xl border border-slate-200/50"
                         onClick={() =>
                           setPropertyTypeCollapsed(!propertyTypeCollapsed)
                         }
                       >
                         <span className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <Home className="h-3 w-3 text-white" />
+                          </div>
                           <span>Property Type</span>
                           {propertyTypeCollapsed && (
                             <span className="text-lg">
@@ -1564,9 +1424,9 @@ export const PropertyListing = () => {
                           )}
                         </span>
                         {propertyTypeCollapsed ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4 text-slate-600" />
                         ) : (
-                          <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4 text-slate-600" />
                         )}
                       </div>
                       {!propertyTypeCollapsed && (
@@ -1585,11 +1445,11 @@ export const PropertyListing = () => {
                             <button
                               key={tab.key}
                               onClick={() => handleTabChange(tab.key)}
-                              className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200
+                              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 border
                                 ${
                                   activeTab === tab.key
-                                    ? "bg-blue-600 text-white shadow-lg border border-blue-200"
-                                    : "bg-white text-blue-700 hover:bg-blue-100 border border-blue-100"
+                                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg border-blue-300 transform scale-105"
+                                    : "bg-white/80 text-slate-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-slate-200 hover:border-blue-300 hover:shadow-md"
                                 }
                               `}
                             >
@@ -1641,18 +1501,20 @@ export const PropertyListing = () => {
                     )}
 
                     {/* Sidebar Header */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FilterX className="h-5 w-5 text-blue-600" />
-                        <span className="text-lg font-bold text-blue-700">
-                          Filters
+                    <div className="flex items-center justify-between mb-4 p-3 bg-gradient-to-r from-slate-100 to-blue-50 rounded-xl border border-slate-200/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          <FilterX className="h-4 w-4 text-white" />
+                        </div>
+                        <span className="text-lg font-bold text-slate-800">
+                          Smart Filters
                         </span>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={resetFilters}
-                        className="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-2"
+                        className="text-xs text-slate-600 hover:text-slate-800 hover:bg-white/60 px-3 py-1 rounded-lg transition-all duration-200"
                       >
                         Clear All
                       </Button>
@@ -1718,13 +1580,16 @@ export const PropertyListing = () => {
                     )}
 
                     {/* Rooms & Features Section */}
-                    <div className="bg-blue-100 rounded-xl p-4 flex flex-col gap-4">
-                      <div className="font-semibold text-blue-700 text-sm mb-2">
+                    <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl p-4 flex flex-col gap-4 border border-slate-200/50">
+                      <div className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                        <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
+                          <Bed className="h-3 w-3 text-white" />
+                        </div>
                         {activeTab === "plot"
                           ? "Features"
                           : activeTab === "commercial"
-                          ? "Features"
-                          : "Rooms & Features"}
+                            ? "Features"
+                            : "Rooms & Features"}
                       </div>
 
                       {/* Residential Features */}
@@ -1733,7 +1598,7 @@ export const PropertyListing = () => {
                           {/* Bedrooms Dropdown */}
                           {shouldShowFilter("showBedrooms") && (
                             <div>
-                              <label className="block text-xs font-semibold text-blue-700 mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                 Bedrooms
                               </label>
                               <Select
@@ -1742,10 +1607,10 @@ export const PropertyListing = () => {
                                   handleBedroomChange(Number(v))
                                 }
                               >
-                                <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                                <SelectTrigger className="rounded-lg border-slate-300 bg-white/80 text-slate-900 font-medium focus:ring-2 focus:ring-blue-400 hover:bg-white">
                                   <SelectValue placeholder="Any" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-white border-blue-200">
+                                <SelectContent className="bg-white border-slate-200">
                                   <SelectItem value="0">Any</SelectItem>
                                   <SelectItem value="1">1</SelectItem>
                                   <SelectItem value="2">2</SelectItem>
@@ -1759,7 +1624,7 @@ export const PropertyListing = () => {
                           {/* Bathrooms Dropdown */}
                           {shouldShowFilter("showBathrooms") && (
                             <div>
-                              <label className="block text-xs font-semibold text-blue-700 mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                 Bathrooms
                               </label>
                               <Select
@@ -1787,7 +1652,7 @@ export const PropertyListing = () => {
                           {/* Balconies Dropdown */}
                           {shouldShowFilter("showBalcony") && (
                             <div>
-                              <label className="block text-xs font-semibold text-blue-700 mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                 Balconies
                               </label>
                               <Select
@@ -2246,7 +2111,7 @@ export const PropertyListing = () => {
                         .filter(
                           (prop) =>
                             prop.type === "commercial" &&
-                            !prop.status?.toLowerCase().includes("rent")
+                            !prop.status?.toLowerCase().includes("rent"),
                         )
                         .map((property) => (
                           <div key={property.id} className="w-full">
@@ -2255,7 +2120,7 @@ export const PropertyListing = () => {
                               likeCount={property.likeCount}
                               formattedPrice={formatPrice(
                                 property.price,
-                                property.type
+                                property.type,
                               )}
                               commercialType="buy" // Pass prop
                             />
@@ -2274,7 +2139,7 @@ export const PropertyListing = () => {
                         .filter(
                           (prop) =>
                             prop.type === "commercial" &&
-                            prop.status?.toLowerCase().includes("rent")
+                            prop.status?.toLowerCase().includes("rent"),
                         )
                         .map((property) => (
                           <div key={property.id} className="w-full">
@@ -2283,7 +2148,7 @@ export const PropertyListing = () => {
                               likeCount={property.likeCount}
                               formattedPrice={formatPrice(
                                 property.price,
-                                property.type
+                                property.type,
                               )}
                               commercialType="rent" // Pass prop
                             />
@@ -2301,7 +2166,7 @@ export const PropertyListing = () => {
                           likeCount={property.likeCount}
                           formattedPrice={formatPrice(
                             property.price,
-                            property.type
+                            property.type,
                           )}
                         />
                       </div>
