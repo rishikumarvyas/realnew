@@ -276,8 +276,14 @@ export const PropertyListing = () => {
   // NEW: Track the last property type that was fetched
   const [lastFetchedType, setLastFetchedType] = useState<string>("all");
   
-  // NEW: Use ref to track the current type to avoid dependency issues
-  const currentTypeRef = useRef<string>("all");
+  // NEW: Use state to track the current type to avoid dependency issues
+  const [currentType, setCurrentType] = useState<string>("all");
+  
+  // Use ref to store fetchProperties function to avoid dependency issues
+  const fetchPropertiesRef = useRef<((typeParam: string) => Promise<void>) | null>(null);
+  
+  // Add flag to prevent multiple API calls
+  const isFetchingRef = useRef<boolean>(false);
 
   // Define filter visibility types
   type FilterVisibility = {
@@ -462,36 +468,46 @@ export const PropertyListing = () => {
     return false;
   };
 
-  // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
-  const fetchProperties = useCallback(async () => {
+    // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
+  const fetchProperties = useCallback(async (typeParam: string = "all") => {
+    // Prevent multiple simultaneous API calls
+    if (isFetchingRef.current) {
+      console.log("🔍 Already fetching, skipping duplicate call");
+      return;
+    }
+    
+    console.log("🔍 fetchProperties called with type:", typeParam, "at:", new Date().toISOString());
+    isFetchingRef.current = true;
     setLoading(true);
-    try {
-      // Get the current type from URL, not from state
-      const currentTypeParam = searchParams.get("type") || "all";
+      try {
+        // Get the current type from parameter only, not from searchParams
+        const currentTypeParam = typeParam;
 
-      // MODIFIED: Don't read filter values from URL, use default values for API call
-      const filterOptions: FilterOptions = {
-        searchTerm: "", // Don't use URL search term
-        minPrice: 0, // Don't use URL price range
-        maxPrice: 0, // Don't use URL price range
-        minBedrooms: 0, // Don't use URL bedrooms
-        minBathrooms: 0, // Don't use URL bathrooms
-        minBalcony: 0, // Don't use URL balcony
-        minArea: 0, // Don't use URL area
-        maxArea: 5000, // Don't use URL area
-        availableFrom: undefined, // Don't use URL date
-        preferenceId: undefined, // Don't use URL preference
-        furnished: undefined, // Don't use URL furnished
-        amenities: undefined, // Don't use URL amenities
-      };
+        // MODIFIED: Don't read filter values from URL, use default values for API call
+        const filterOptions: FilterOptions = {
+          searchTerm: "", // Don't use URL search term
+          minPrice: 0, // Don't use URL price range
+          maxPrice: 0, // Don't use URL price range
+          minBedrooms: 0, // Don't use URL bedrooms
+          minBathrooms: 0, // Don't use URL bathrooms
+          minBalcony: 0, // Don't use URL balcony
+          minArea: 0, // Don't use URL area
+          maxArea: 5000, // Don't use URL area
+          availableFrom: undefined, // Don't use URL date
+          preferenceId: undefined, // Don't use URL preference
+          furnished: undefined, // Don't use URL furnished
+          amenities: undefined, // Don't use URL amenities
+        };
 
-      // FIXED: Use current URL type parameter instead of state
-      const typeConfig =
-        propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+        // FIXED: Use current URL type parameter instead of state
+        const typeConfig =
+          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
 
-      let superCategoryId = typeConfig.superCategoryId;
-      let propertyTypeIds = typeConfig.propertyTypeIds || [];
-      let propertyFor = typeConfig.propertyFor;
+        let superCategoryId = typeConfig.superCategoryId;
+        let propertyTypeIds = typeConfig.propertyTypeIds || [];
+        let propertyFor = typeConfig.propertyFor;
+
+        console.log("🔍 Type config for", currentTypeParam, ":", typeConfig);
 
       // Special handling for different property types
       if (currentTypeParam === "plot") {
@@ -504,48 +520,22 @@ export const PropertyListing = () => {
         propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
       }
 
-      // Pagination params
+      // Pagination params - Use defaults to avoid searchParams dependency
       let pageSize = -1;
       let pageNumber = 0;
 
       if (currentTypeParam !== "all") {
         pageSize = 10;
-        pageNumber = parseInt(searchParams.get("page") || "1") - 1;
+        pageNumber = 0; // Always start from page 1
       }
 
-      // Get sort parameters from URL or use defaults
-      const sortParam = searchParams.get("sort") || "newest";
-      let apiSortBy = "";
-      let apiSortOrder = "desc";
-
-      // Map sort options to API parameters
-      switch (sortParam) {
-        case "price-low":
-          apiSortBy = "price";
-          apiSortOrder = "asc";
-          break;
-        case "price-high":
-          apiSortBy = "price";
-          apiSortOrder = "desc";
-          break;
-        case "area-high":
-          apiSortBy = "area";
-          apiSortOrder = "desc";
-          break;
-        case "newest":
-        default:
-          // Default: Newest First (no specific sort parameters needed)
-          apiSortBy = "";
-          apiSortOrder = "desc";
-          break;
-      }
+      // Use default sort parameters to avoid searchParams dependency
+      const apiSortBy = "";
+      const apiSortOrder = "desc";
 
       // Prepare request payload - MODIFIED: Use default values, not URL filter values
-      const requestPayload = {
+      const requestPayload: any = {
         superCategoryId,
-        propertyTypeIds:
-          propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
-        propertyFor,
         accountId: "string",
         searchTerm: filterOptions.searchTerm,
         minPrice: filterOptions.minPrice, // Use default 0
@@ -555,10 +545,6 @@ export const PropertyListing = () => {
         balcony: filterOptions.minBalcony, // Use default 0
         minArea: filterOptions.minArea, // Use default 0
         maxArea: filterOptions.maxArea, // Use default 5000
-        availableFrom: filterOptions.availableFrom, // Use undefined
-        preferenceId: filterOptions.preferenceId, // Use undefined
-        furnished: filterOptions.furnished, // Use undefined
-        amenities: filterOptions.amenities, // Use undefined
         pageNumber,
         pageSize,
         // Add sorting parameters
@@ -566,6 +552,31 @@ export const PropertyListing = () => {
         SortOrder: apiSortOrder,
       };
 
+      // Only add propertyTypeIds if it's not empty
+      if (propertyTypeIds.length > 0) {
+        requestPayload.propertyTypeIds = propertyTypeIds;
+      }
+
+      // Only add propertyFor if it's defined
+      if (propertyFor !== undefined) {
+        requestPayload.propertyFor = propertyFor;
+      }
+
+      // Only add optional parameters if they have values
+      if (filterOptions.availableFrom) {
+        requestPayload.availableFrom = filterOptions.availableFrom;
+      }
+      if (filterOptions.preferenceId) {
+        requestPayload.preferenceId = filterOptions.preferenceId;
+      }
+      if (filterOptions.furnished) {
+        requestPayload.furnished = filterOptions.furnished;
+      }
+      if (filterOptions.amenities && filterOptions.amenities.length > 0) {
+        requestPayload.amenities = filterOptions.amenities;
+      }
+
+      console.log("🔍 API Request Payload:", requestPayload);
       setApiDebug((prev) => ({ ...prev, request: requestPayload }));
 
       const response = await axiosInstance.post<ApiResponse>(
@@ -573,6 +584,7 @@ export const PropertyListing = () => {
         requestPayload,
       );
 
+      console.log("🔍 API Response:", response.data);
       setApiDebug((prev) => ({ ...prev, response: response.data }));
 
       // Check if we have properties in the response
@@ -651,7 +663,16 @@ export const PropertyListing = () => {
         status: err.response?.status,
         statusText: err.response?.statusText,
       });
-      setError("Unable to load properties. Please try again later.");
+      
+      // Handle 404 error specifically
+      if (err.response?.status === 404) {
+        console.log("🔍 404 Error - No properties found with current parameters");
+        console.log("🔍 This might be normal if no properties match the criteria");
+        setError("No properties found with the current filters. Try adjusting your search criteria.");
+      } else {
+        setError("Unable to load properties. Please try again later.");
+      }
+      
       setApiDebug((prev) => ({ ...prev, error: err }));
 
       // Set empty arrays to show no properties
@@ -659,8 +680,20 @@ export const PropertyListing = () => {
       setFilteredProperties([]);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, []); // Removed searchParams dependency to prevent double API calls
+
+  // Store fetchProperties in ref to avoid dependency issues
+  fetchPropertiesRef.current = fetchProperties;
+
+  // Handle retry button click
+  const handleRetry = useCallback(() => {
+    const currentType = searchParams.get("type") || "all";
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentType);
+    }
+  }, [searchParams]); // Remove fetchProperties dependency
 
   // MODIFIED: Initialize from URL params and fetch data - ONLY on property type changes
   useEffect(() => {
@@ -674,16 +707,16 @@ export const PropertyListing = () => {
     }
 
     // NEW: Only fetch properties if property type changed or initial load
-    const currentType = typeParam || "all";
-    if (currentType !== currentTypeRef.current) {
-      currentTypeRef.current = currentType;
-      if (shouldFetchNewData(currentType)) {
-        fetchProperties();
-        setLastFetchedType(currentType);
+    const newType = typeParam || "all";
+    if (newType !== currentType) {
+      setCurrentType(newType);
+      if (shouldFetchNewData(newType) && fetchPropertiesRef.current) {
+        fetchPropertiesRef.current(newType);
+        setLastFetchedType(newType);
         setIsInitialLoad(false);
       }
     }
-  }, [searchParams]); // Keep searchParams dependency but use ref to prevent double calls
+  }, [currentType, shouldFetchNewData]); // Remove fetchProperties from dependencies
 
   // Apply filters to the property list - MODIFIED: This now handles ALL filtering client-side
   const applyFilters = useCallback(
@@ -1868,7 +1901,7 @@ export const PropertyListing = () => {
                   <X className="h-10 w-10 text-red-500 mx-auto mb-4" />
                   <p className="text-red-600 mb-4">{error}</p>
                   <Button
-                    onClick={fetchProperties}
+                    onClick={handleRetry}
                     variant="outline"
                     className="bg-white border-red-200 hover:bg-red-50"
                   >
