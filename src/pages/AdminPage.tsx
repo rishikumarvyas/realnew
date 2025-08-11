@@ -53,28 +53,46 @@ interface Property {
   submittedBy?: string;
 }
 
+// API Response interface for GetProperty
+interface GetPropertyResponse {
+  statusCode: number;
+  message: string;
+  count: number;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  propertyInfo: Property[];
+}
+
 const AdminPage = () => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState("all");
+  const [counts, setCounts] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
   const { toast } = useToast();
   const { cachedApiCall, clearCache } = useApiCache();
 
-  // OPTIMIZED: Debounced fetch to prevent multiple rapid calls
-  const debouncedFetchAllProperties = useCallback(
-    debounce(async () => {
-      await fetchAllProperties();
-    }, 300),
-    [],
-  );
 
-  // OPTIMIZED: Fetch properties by status with caching
-  const fetchPropertiesByStatus = useCallback(
-    async (statusId: number) => {
-      const cacheKey = `admin_properties_status_${statusId}_date_${dateFilter}`;
 
-      return await cachedApiCall(cacheKey, async () => {
+
+
+  // OPTIMIZED: Single API call to get all properties and counts from GetProperty API
+  // Uses StatusId=0 to get all properties and extracts count data from API response
+  // This eliminates the need for separate API calls for counting
+  const fetchAllProperties = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      // Make single API call to get all properties and counts
+      const cacheKey = `admin_all_properties_date_${dateFilter}`;
+      
+      const result = await cachedApiCall(cacheKey, async () => {
         // Convert dateFilter to lastMonth value for API
         const getLastMonthValue = () => {
           switch (dateFilter) {
@@ -95,7 +113,7 @@ const AdminPage = () => {
           propertyTypeIds: [],
           accountId: "",
           searchTerm: "",
-          StatusId: statusId, // Changed from statusId to StatusId to match API
+          StatusId: 0, // Get all properties regardless of status
           lastMonth: getLastMonthValue(),
           minPrice: 0,
           maxPrice: 0,
@@ -104,66 +122,44 @@ const AdminPage = () => {
           minArea: 0,
           maxArea: 0,
           pageNumber: 1,
-          pageSize: -1,
+          pageSize: -1, // Get all properties
         };
 
         try {
-          const response = await axiosInstance.post(
+          const response = await axiosInstance.post<GetPropertyResponse>(
             "/api/Account/GetProperty",
             baseBody,
           );
 
           const properties = response.data?.propertyInfo || [];
-          if (properties.length > 0) {
-          }
-
-          return properties.map((property) => ({
-            ...property,
-            statusId: String(property.statusId),
-          }));
+          
+          return {
+            properties: properties.map((property) => ({
+              ...property,
+              statusId: String(property.statusId),
+            })),
+            counts: {
+              total: response.data?.count || 0,
+              pending: response.data?.pendingCount || 0,
+              approved: response.data?.approvedCount || 0,
+              rejected: response.data?.rejectedCount || 0,
+            }
+          };
         } catch (error) {
-          console.error(
-            `❌ Error fetching properties for status ${statusId}:`,
-            error,
-          );
-          console.error("❌ Error details:", {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status,
-          });
-          return [];
+          console.error("❌ Error fetching all properties:", error);
+          return { properties: [], counts: { total: 0, pending: 0, approved: 0, rejected: 0 } };
         }
       });
-    },
-    [dateFilter],
-  ); // Removed cachedApiCall from dependencies
 
-  // OPTIMIZED: Fetch all properties with better error handling
-  const fetchAllProperties = useCallback(async () => {
-    setLoading(true);
+      setProperties(result.properties);
+      setCounts(result.counts);
 
-    try {
-      // Fetch properties for all statuses in parallel
-      const [pendingProps, approvedProps, rejectedProps] = await Promise.all([
-        fetchPropertiesByStatus(1), // Pending
-        fetchPropertiesByStatus(2), // Approved
-        fetchPropertiesByStatus(3), // Rejected
-      ]);
-      // Combine all properties
-      const allProperties = [
-        ...pendingProps,
-        ...approvedProps,
-        ...rejectedProps,
-      ];
-      setProperties(allProperties);
-
-      if (allProperties.length === 0) {
+      if (result.properties.length === 0) {
         toast({
           title: "No Properties Found",
           description: "There are no properties available at the moment.",
           variant: "default",
         });
-      } else {
       }
     } catch (error) {
       console.error("❌ Error fetching properties:", error);
@@ -175,17 +171,11 @@ const AdminPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchPropertiesByStatus]); // Removed toast from dependencies
+  }, [dateFilter, cachedApiCall]); // Added dateFilter and cachedApiCall dependencies
 
-  // OPTIMIZED: Debounced effect to prevent multiple calls
+  // Effect to fetch properties when date filter changes
   useEffect(() => {
-    // Temporarily remove debouncing to debug
     fetchAllProperties();
-
-    // Cleanup function
-    return () => {
-      // debouncedFetchAllProperties.cancel();
-    };
   }, [dateFilter, fetchAllProperties]);
 
   // TEST: Simple API test function
@@ -196,7 +186,7 @@ const AdminPage = () => {
         propertyTypeIds: [],
         accountId: "",
         searchTerm: "",
-        StatusId: 2, // Approved properties
+        StatusId: 0, // All properties
         lastMonth: 0,
         minPrice: 0,
         maxPrice: 0,
@@ -205,14 +195,26 @@ const AdminPage = () => {
         minArea: 0,
         maxArea: 0,
         pageNumber: 1,
-        pageSize: 10,
+        pageSize: -1, // Get all properties for count
       };
 
-      const response = await axiosInstance.post(
+      const response = await axiosInstance.post<GetPropertyResponse>(
         "/api/Account/GetProperty",
         testBody,
       );
+      
+      console.log("🧪 Test API Response:", {
+        statusCode: response.data?.statusCode,
+        message: response.data?.message,
+        count: response.data?.count,
+        pendingCount: response.data?.pendingCount,
+        approvedCount: response.data?.approvedCount,
+        rejectedCount: response.data?.rejectedCount,
+        propertyCount: response.data?.propertyInfo?.length || 0,
+      });
+      
       if (response.data?.propertyInfo?.length > 0) {
+        console.log("🧪 Properties found:", response.data.propertyInfo.length);
       }
     } catch (error) {
       console.error("🧪 Test API Error:", error);
@@ -254,8 +256,11 @@ const AdminPage = () => {
             });
           });
 
-          // Clear cache for the affected status to ensure fresh data
-          clearCache(`admin_properties_status_${newStatus}_date_${dateFilter}`);
+          // Clear cache to ensure fresh data
+          clearCache(`admin_all_properties_date_${dateFilter}`);
+
+          // Refresh the data to get updated counts
+          await fetchAllProperties();
 
           // Switch to appropriate tab based on new status
           switch (newStatus) {
@@ -296,13 +301,13 @@ const AdminPage = () => {
         });
       }
     },
-    [clearCache, dateFilter],
-  ); // Removed toast from dependencies
+    [clearCache, dateFilter, fetchAllProperties],
+  ); // Added fetchAllProperties dependency
 
   // OPTIMIZED: Manual refresh function
   const handleManualRefresh = useCallback(async () => {
-    // Clear all admin-related cache
-    clearCache();
+    // Clear admin-related cache
+    clearCache(`admin_all_properties_date_${dateFilter}`);
 
     // Fetch fresh data
     await fetchAllProperties();
@@ -312,7 +317,7 @@ const AdminPage = () => {
       description: "Property data has been refreshed successfully.",
       className: "bg-blue-50 border-blue-200 text-blue-800",
     });
-  }, [clearCache, fetchAllProperties]); // Removed toast from dependencies
+  }, [clearCache, fetchAllProperties, dateFilter]); // Added dateFilter dependency
 
   // Filter properties based on status (no date filtering needed as API handles it)
   const getFilteredProperties = useCallback(
@@ -345,33 +350,8 @@ const AdminPage = () => {
     [properties],
   );
 
-  // Get status counts for badges
-  const getStatusCounts = useCallback(() => {
-    const counts = {
-      pending: 0,
-      approved: 0,
-      rejected: 0,
-      total: properties.length,
-    };
-
-    properties.forEach((property) => {
-      switch (property.statusId) {
-        case "1":
-          counts.pending++;
-          break;
-        case "2":
-          counts.approved++;
-          break;
-        case "3":
-          counts.rejected++;
-          break;
-      }
-    });
-
-    return counts;
-  }, [properties]);
-
-  const statusCounts = getStatusCounts();
+  // Use counts from API response instead of calculating locally
+  const statusCounts = counts;
   const filteredProperties = getFilteredProperties(activeTab);
 
   if (loading) {
