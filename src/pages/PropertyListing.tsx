@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import axiosInstance from "@/axiosCalls/axiosInstance";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -275,6 +275,9 @@ export const PropertyListing = () => {
   
   // NEW: Track the last property type that was fetched
   const [lastFetchedType, setLastFetchedType] = useState<string>("all");
+  
+  // NEW: Use ref to track the current type to avoid dependency issues
+  const currentTypeRef = useRef<string>("all");
 
   // Define filter visibility types
   type FilterVisibility = {
@@ -458,34 +461,6 @@ export const PropertyListing = () => {
     
     return false;
   };
-
-  // MODIFIED: Initialize from URL params and fetch data - ONLY on property type changes
-  useEffect(() => {
-    // Get parameters from URL - ONLY read property type
-    const typeParam = searchParams.get("type") || "all";
-    
-    // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
-    const currentTab = typeParam || "all";
-    if (currentTab !== activeTab) {
-      setActiveTab(currentTab);
-    }
-
-    // NEW: Only fetch properties if property type changed or initial load
-    const currentType = typeParam || "all";
-    if (shouldFetchNewData(currentType)) {
-      fetchProperties();
-      setLastFetchedType(currentType);
-      setIsInitialLoad(false);
-    }
-  }, [searchParams]); // Keep searchParams dependency but control API calls inside
-
-  // MODIFIED: Debounced fetch properties - REMOVED as we don't need it anymore
-  // const debouncedFetchProperties = useCallback(
-  //   debounce(() => {
-  //     fetchProperties();
-  //   }, 500),
-  //   [],
-  // );
 
   // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
   const fetchProperties = useCallback(async () => {
@@ -685,7 +660,30 @@ export const PropertyListing = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchParams]); // Keep searchParams dependency but control when to call
+  }, []); // Removed searchParams dependency to prevent double API calls
+
+  // MODIFIED: Initialize from URL params and fetch data - ONLY on property type changes
+  useEffect(() => {
+    // Get parameters from URL - ONLY read property type
+    const typeParam = searchParams.get("type") || "all";
+    
+    // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
+    const currentTab = typeParam || "all";
+    if (currentTab !== activeTab) {
+      setActiveTab(currentTab);
+    }
+
+    // NEW: Only fetch properties if property type changed or initial load
+    const currentType = typeParam || "all";
+    if (currentType !== currentTypeRef.current) {
+      currentTypeRef.current = currentType;
+      if (shouldFetchNewData(currentType)) {
+        fetchProperties();
+        setLastFetchedType(currentType);
+        setIsInitialLoad(false);
+      }
+    }
+  }, [searchParams]); // Keep searchParams dependency but use ref to prevent double calls
 
   // Apply filters to the property list - MODIFIED: This now handles ALL filtering client-side
   const applyFilters = useCallback(
