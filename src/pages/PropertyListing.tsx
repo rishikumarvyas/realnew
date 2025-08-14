@@ -265,6 +265,22 @@ export const PropertyListing = () => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [sortOrder, setSortOrder] = useState<string>("desc");
 
+  // Map UI sort option to API sort parameters
+  const getApiSort = (uiSort: string): { apiSortBy: string; apiSortOrder: string } => {
+    switch (uiSort) {
+      case "price-low":
+        return { apiSortBy: "price", apiSortOrder: "asc" };
+      case "price-high":
+        return { apiSortBy: "price", apiSortOrder: "desc" };
+      case "area-high":
+        return { apiSortBy: "area", apiSortOrder: "desc" };
+      case "newest":
+      default:
+        // Backend returns newest first by default
+        return { apiSortBy: "", apiSortOrder: "desc" };
+    }
+  };
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
@@ -376,7 +392,7 @@ export const PropertyListing = () => {
   const [minBathrooms, setMinBathrooms] = useState(0);
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
-  const [maxArea, setMaxArea] = useState(5000); // Added for area range slider
+  const [maxArea, setMaxArea] = useState(0); // Default to 0 (no limit)
   const [selectedPriceStep, setSelectedPriceStep] = useState<string | null>(
     null,
   );
@@ -492,7 +508,7 @@ export const PropertyListing = () => {
           minBathrooms: 0, // Don't use URL bathrooms
           minBalcony: 0, // Don't use URL balcony
           minArea: 0, // Don't use URL area
-          maxArea: 5000, // Don't use URL area
+          maxArea: 0, // No max-area limit
           availableFrom: undefined, // Don't use URL date
           preferenceId: undefined, // Don't use URL preference
           furnished: undefined, // Don't use URL furnished
@@ -529,9 +545,8 @@ export const PropertyListing = () => {
         pageNumber = 0; // Always start from page 1
       }
 
-      // Use default sort parameters to avoid searchParams dependency
-      const apiSortBy = "";
-      const apiSortOrder = "desc";
+      // Derive API sort parameters from UI state
+      const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
 
       // Prepare request payload - MODIFIED: Use default values, not URL filter values
       const requestPayload: any = {
@@ -682,7 +697,7 @@ export const PropertyListing = () => {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, []); // Removed searchParams dependency to prevent double API calls
+  }, [sortBy]); // Depend on sortBy so API receives latest SortBy/SortOrder
 
   // Store fetchProperties in ref to avoid dependency issues
   fetchPropertiesRef.current = fetchProperties;
@@ -695,28 +710,33 @@ export const PropertyListing = () => {
     }
   }, [searchParams]); // Remove fetchProperties dependency
 
-  // MODIFIED: Initialize from URL params and fetch data - ONLY on property type changes
+  // Ensure initial data fetch and subsequent fetches on type changes
   useEffect(() => {
-    // Get parameters from URL - ONLY read property type
     const typeParam = searchParams.get("type") || "all";
-    
-    // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
-    const currentTab = typeParam || "all";
-    if (currentTab !== activeTab) {
-      setActiveTab(currentTab);
+
+    // Sync tab with URL
+    if (typeParam !== activeTab) {
+      setActiveTab(typeParam);
     }
 
-    // NEW: Only fetch properties if property type changed or initial load
-    const newType = typeParam || "all";
-    if (newType !== currentType) {
-      setCurrentType(newType);
-      if (shouldFetchNewData(newType) && fetchPropertiesRef.current) {
-        fetchPropertiesRef.current(newType);
-        setLastFetchedType(newType);
-        setIsInitialLoad(false);
-      }
+    // Always fetch on first mount, even if URL type equals default
+    if (isInitialLoad && fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(typeParam);
+      setLastFetchedType(typeParam);
+      setCurrentType(typeParam);
+      setIsInitialLoad(false);
+      return;
     }
-  }, [currentType, shouldFetchNewData]); // Remove fetchProperties from dependencies
+
+    // Fetch when the URL type actually changes thereafter
+    if (typeParam !== currentType && fetchPropertiesRef.current) {
+      if (shouldFetchNewData(typeParam)) {
+        fetchPropertiesRef.current(typeParam);
+        setLastFetchedType(typeParam);
+      }
+      setCurrentType(typeParam);
+    }
+  }, [searchParams, isInitialLoad, currentType, shouldFetchNewData]);
 
   // Sync `search` URL param into local search state so external links (e.g., Footer cities)
   // immediately filter the listings by city/locality/society.
@@ -783,9 +803,10 @@ export const PropertyListing = () => {
           property.price >= priceRange[0] && property.price <= priceRange[1],
       );
 
-      // Apply area range filter
+      // Apply area range filter (treat maxArea=0 as no upper limit)
+      const effectiveMaxArea = maxArea && maxArea > 0 ? maxArea : Number.MAX_SAFE_INTEGER;
       filtered = filtered.filter(
-        (property) => property.area >= minArea && property.area <= maxArea,
+        (property) => property.area >= minArea && property.area <= effectiveMaxArea,
       );
 
       // Apply bedroom filter
@@ -845,6 +866,15 @@ export const PropertyListing = () => {
         );
       }
 
+      // Apply sorting (client-side) to ensure correct order even if API ignores SortBy
+      if (sortBy === "price-low") {
+        filtered = [...filtered].sort((a, b) => (a.price || 0) - (b.price || 0));
+      } else if (sortBy === "price-high") {
+        filtered = [...filtered].sort((a, b) => (b.price || 0) - (a.price || 0));
+      } else if (sortBy === "area-high") {
+        filtered = [...filtered].sort((a, b) => (b.area || 0) - (a.area || 0));
+      } // "newest" defaults to API order
+
       setFilteredProperties(filtered);
     },
     [
@@ -859,6 +889,7 @@ export const PropertyListing = () => {
       availableFrom,
       preferenceId,
       selectedAmenities,
+      sortBy,
     ],
   );
 
@@ -1062,10 +1093,21 @@ export const PropertyListing = () => {
     setSelectedAmenities(newAmenities);
   };
 
-  // MODIFIED: Handle sort change - NO API call, NO URL update
+  // Handle sort change: update state and reset pagination
   const handleSortChange = (value: string) => {
     setSortBy(value);
+    const { apiSortOrder } = getApiSort(value);
+    setSortOrder(apiSortOrder);
+    setCurrentPage(1);
   };
+
+  // Refetch from server when sort changes (skip first mount to avoid duplicate)
+  useEffect(() => {
+    if (isInitialLoad) return;
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentType);
+    }
+  }, [sortBy]);
 
   // Format price display based on property type
   const formatPrice = (price: number, type: string) => {
