@@ -537,7 +537,7 @@ export const PropertyListing = () => {
       const requestPayload: any = {
         superCategoryId,
         accountId: "string",
-        searchTerm: filterOptions.searchTerm,
+        searchTerm: searchQuery,
         minPrice: filterOptions.minPrice, // Use default 0
         maxPrice: filterOptions.maxPrice, // Use default 0
         bedroom: filterOptions.minBedrooms, // Use default 0
@@ -717,6 +717,25 @@ export const PropertyListing = () => {
       }
     }
   }, [currentType, shouldFetchNewData]); // Remove fetchProperties from dependencies
+
+  // Sync `search` URL param into local search state so external links (e.g., Footer cities)
+  // immediately filter the listings by city/locality/society.
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+      setSearchTerm(urlSearch);
+      setCurrentPage(1);
+    }
+    // Intentionally depends on searchParams to react to URL changes from outside
+  }, [searchParams]);
+
+  // Refetch server data when search term changes (e.g., clicking a footer city)
+  useEffect(() => {
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentType);
+    }
+  }, [searchQuery]);
 
   // Apply filters to the property list - MODIFIED: This now handles ALL filtering client-side
   const applyFilters = useCallback(
