@@ -36,7 +36,7 @@ interface AuthContextType {
   closeAuthModal: () => void;
   // Auth functions
   requestOtp: (phoneNumber: string) => Promise<boolean>;
-  login: (phoneNumber: string, otp: string) => Promise<boolean>;
+  login: (phoneNumber: string, otp: string) => Promise<{ success: boolean; message?: string }>;
   signup: (
     phoneNumber: string,
     fullName: string,
@@ -257,10 +257,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const login = async (phoneNumber: string, otp: string): Promise<boolean> => {
+  // Change login return type to Promise<{ success: boolean; message?: string }>
+  const login = async (phoneNumber: string, otp: string): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone) return { success: false, message: "Invalid phone number" };
 
       const loginResponse = await axiosInstance.post(`/api/Auth/Login`, {
         phone: formattedPhone,
@@ -268,11 +269,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       });
 
       if (!(loginResponse?.data?.statusCode === 200)) {
-        console.error(
-          "Login failed with status:",
-          loginResponse.data.statusCode
-        );
-        return false;
+        // Return API error message if present
+        return {
+          success: false,
+          message: loginResponse?.data?.message || "Login failed. Please try again.",
+        };
       }
 
       try {
@@ -280,7 +281,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token = data?.token;
 
         if (!token) {
-          return false;
+          return { success: false, message: "No token received from server." };
         }
 
         const decodedToken = jwtDecode<decodedToken>(token);
@@ -315,14 +316,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Close the auth modal after successful login
         closeAuthModal();
 
-        return true;
+        return { success: true };
       } catch (e) {
         console.error("Error parsing login response:", e);
-        return false;
+        return { success: false, message: "Error parsing login response." };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during login:", error);
-      return false;
+      // Try to extract error message from API response
+      let message = "An unexpected error occurred.";
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      return { success: false, message };
     }
   };
 

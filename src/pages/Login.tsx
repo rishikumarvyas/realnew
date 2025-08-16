@@ -99,9 +99,9 @@ const Login = ({ onClose }) => {
       console.log(`Submitting login with phone: ${phone}, OTP: ${otpValue}`);
 
       // Call the login function
-      const success = await login(phone, otpValue);
+      const result = await login(phone, otpValue);
 
-      if (success) {
+      if (result.success) {
         toast({
           title: "Login Successful",
           description: "You have been logged in successfully.",
@@ -110,7 +110,9 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Login Failed",
-          description: "Your number is not registered. Please sign up first.",
+          description:
+            result.message ||
+            "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }
