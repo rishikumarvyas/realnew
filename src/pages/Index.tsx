@@ -167,7 +167,7 @@ const Index = () => {
             setShowSuggestions(true);
           })
           .catch((err) => {
-            console.error("Suggestion error:", err);
+      
             setSuggestions([]);
           });
       } else {

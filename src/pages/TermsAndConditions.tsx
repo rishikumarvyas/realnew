@@ -78,7 +78,7 @@ const TermsAndConditions = () => {
         });
       }
     } catch (err) {
-      console.error("❌ Error fetching terms and conditions:", err);
+
       setError("Failed to load terms and conditions");
       toast({
         variant: "destructive",
@@ -127,7 +127,7 @@ const TermsAndConditions = () => {
         description: "Your acceptance has been recorded successfully.",
       });
     } catch (err) {
-      console.error("❌ Error sending terms acceptance:", err);
+
       toast({
         variant: "destructive",
         title: "Error",

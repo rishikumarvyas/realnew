@@ -187,7 +187,7 @@ const EditProperty = () => {
           throw new Error("Property data not found or invalid");
         }
       } catch (error) {
-        console.error("Error fetching property details:", error);
+  
         toast({
           title: "Error",
           description:
@@ -356,7 +356,7 @@ const EditProperty = () => {
         }
       }
     } catch (error) {
-      console.error(error);
+      
     }
   };
 
@@ -548,7 +548,7 @@ const EditProperty = () => {
         throw new Error(response.data.message || "Failed to update property");
       }
     } catch (error) {
-      console.error("Error updating property:", error);
+
       toast({
         title: "Update Error",
         description: "Failed to update property. Please try again later.",

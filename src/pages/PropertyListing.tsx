@@ -417,12 +417,7 @@ export const PropertyListing = () => {
   // UI state for advanced filters visibility
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Debug state to show API request/response
-  const [apiDebug, setApiDebug] = useState({
-    request: null,
-    response: null,
-    error: null,
-  });
+
 
   // Fetch suggestions from API with debounce
   useEffect(() => {
@@ -437,7 +432,7 @@ export const PropertyListing = () => {
             setShowSuggestions(true);
           })
           .catch((err) => {
-            console.error("Suggestion error:", err);
+      
             setSuggestions([]);
           });
       } else {
@@ -488,11 +483,11 @@ export const PropertyListing = () => {
   const fetchProperties = useCallback(async (typeParam: string = "all") => {
     // Prevent multiple simultaneous API calls
     if (isFetchingRef.current) {
-      console.log("🔍 Already fetching, skipping duplicate call");
+      
       return;
     }
     
-    console.log("🔍 fetchProperties called with type:", typeParam, "at:", new Date().toISOString());
+    
     isFetchingRef.current = true;
     setLoading(true);
       try {
@@ -523,7 +518,7 @@ export const PropertyListing = () => {
         let propertyTypeIds = typeConfig.propertyTypeIds || [];
         let propertyFor = typeConfig.propertyFor;
 
-        console.log("🔍 Type config for", currentTypeParam, ":", typeConfig);
+  
 
       // Special handling for different property types
       if (currentTypeParam === "plot") {
@@ -591,16 +586,16 @@ export const PropertyListing = () => {
         requestPayload.amenities = filterOptions.amenities;
       }
 
-      console.log("🔍 API Request Payload:", requestPayload);
-      setApiDebug((prev) => ({ ...prev, request: requestPayload }));
+      
+      
 
       const response = await axiosInstance.post<ApiResponse>(
         "/api/Account/GetProperty",
         requestPayload,
       );
 
-      console.log("🔍 API Response:", response.data);
-      setApiDebug((prev) => ({ ...prev, response: response.data }));
+      
+      
 
       // Check if we have properties in the response
       if (
@@ -671,24 +666,18 @@ export const PropertyListing = () => {
       setProperties(transformedData);
 
     } catch (err) {
-      console.error("❌ Failed to fetch properties:", err);
-      console.error("❌ Error details:", {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-      });
+      
+
       
       // Handle 404 error specifically
       if (err.response?.status === 404) {
-        console.log("🔍 404 Error - No properties found with current parameters");
-        console.log("🔍 This might be normal if no properties match the criteria");
+
         setError("No properties found with the current filters. Try adjusting your search criteria.");
       } else {
         setError("Unable to load properties. Please try again later.");
       }
       
-      setApiDebug((prev) => ({ ...prev, error: err }));
+      
 
       // Set empty arrays to show no properties
       setProperties([]);
@@ -713,7 +702,7 @@ export const PropertyListing = () => {
   // Ensure initial data fetch and subsequent fetches on type changes
   useEffect(() => {
     const typeParam = searchParams.get("type") || "all";
-
+    
     // Sync tab with URL
     if (typeParam !== activeTab) {
       setActiveTab(typeParam);
@@ -724,7 +713,7 @@ export const PropertyListing = () => {
       fetchPropertiesRef.current(typeParam);
       setLastFetchedType(typeParam);
       setCurrentType(typeParam);
-      setIsInitialLoad(false);
+        setIsInitialLoad(false);
       return;
     }
 

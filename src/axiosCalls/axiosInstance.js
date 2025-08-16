@@ -19,7 +19,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("Request error:", error);
+    
     return Promise.reject(error);
   },
 );
@@ -30,11 +30,7 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error("Response error:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    // Handle response errors
 
     // Check if error is due to token expiry or unauthorized access
     if (error.response?.status === 401 || error.response?.status === 403) {

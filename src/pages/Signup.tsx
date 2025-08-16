@@ -80,7 +80,7 @@ const Signup = ({ onClose }: SignupProps) => {
 
       await axiosInstance.post("/api/Message/Send", payload);
     } catch (error) {
-      console.error("Failed to send terms acceptance:", error);
+
       // We can show a toast here, but let's not block the signup flow
       toast({
         title: "Terms Acceptance Failed",
@@ -150,7 +150,7 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("Form submission error:", error);
+
     } finally {
       setLoading(false);
     }
@@ -188,7 +188,7 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("OTP verification error:", error);
+
     } finally {
       setLoading(false);
     }
@@ -217,7 +217,7 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("Resend OTP error:", error);
+
     }
 
     return Promise.resolve();
@@ -237,7 +237,7 @@ const Signup = ({ onClose }: SignupProps) => {
 
   return (
     <>
-      <div className="fixed inset-0 flex items-center justify-center z-50">
+      <div className="fixed inset-0 flex items-center justify-center z-[60]">
         {/* Backdrop */}
         <div
           className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
@@ -246,13 +246,13 @@ const Signup = ({ onClose }: SignupProps) => {
 
         {/* Popup card */}
         <div
-          className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform mt-8 md:mt-12 ${popupClasses}`}
+          className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
         >
-          <Card className="w-full shadow-xl border-none overflow-hidden">
+          <Card className="w-full shadow-xl border-none overflow-hidden mt-8 sm:mt-12">
             {/* House icon at the top */}
-            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-5 shadow-lg">
-                <Home className="h-8 w-8 text-white" />
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-3 shadow-lg">
+                <Home className="h-5 w-5 text-white" />
               </div>
             </div>
 
@@ -264,7 +264,7 @@ const Signup = ({ onClose }: SignupProps) => {
               <X className="h-5 w-5" />
             </button>
 
-            <CardHeader className="relative pt-14 pb-3">
+            <CardHeader className="relative pt-14 pb-3 px-6 sm:px-8">
               {step === "otp" && (
                 <Button
                   variant="ghost"
@@ -284,7 +284,7 @@ const Signup = ({ onClose }: SignupProps) => {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="px-6 py-2">
+            <CardContent className="px-6 sm:px-8 py-2 pb-6">
               {step === "form" ? (
                 <FormStep
                   onSubmit={handleFormSubmit}
@@ -304,7 +304,7 @@ const Signup = ({ onClose }: SignupProps) => {
               )}
             </CardContent>
 
-            <CardFooter className="flex justify-center border-t p-3">
+            <CardFooter className="flex justify-center border-t p-3 px-6 sm:px-8">
               <div className="text-sm text-gray-500">
                 Already have an account?{" "}
                 <button

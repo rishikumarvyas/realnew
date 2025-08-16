@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useRef,
 } from "react";
 import { BASE_URL } from "@/constants/api";
 import { formatPhoneNumber } from "@/utils/auth";
@@ -45,6 +46,10 @@ interface AuthContextType {
   ) => Promise<boolean>;
   logout: () => void;
   fetchNotifications: () => Promise<void>;
+  // NEW: Add notification creation functions
+  createNotification: (message: string, type?: "user" | "property", propertyId?: string) => Promise<boolean>;
+  refreshNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string, type?: "user" | "property", propertyId?: string) => Promise<boolean>;
 }
 
 // Create context with default values
@@ -57,6 +62,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  // NEW: Add refs to prevent multiple API calls
+  const isFetchingNotifications = useRef(false);
+  const isCreatingNotification = useRef(false);
+  const isMarkingAsRead = useRef(false);
 
   // Add effect to fetch notifications when user is available
   useEffect(() => {
@@ -107,7 +117,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             setUser(userData);
           }
         } catch (error) {
-          console.error("Error parsing stored token:", error);
+    
           localStorage.removeItem("token");
         }
       }
@@ -142,7 +152,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return false;
       }
     } catch (error) {
-      console.error("Error requesting OTP:", error);
+
       return false;
     }
   };
@@ -205,16 +215,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return false;
       }
     } catch (error) {
-      console.error("Error signing up:", error);
+
       return false;
     }
   };
 
   const fetchNotifications = async () => {
-    if (!user?.userId) {
+    if (!user?.userId || isFetchingNotifications.current) {
       return;
     }
 
+    isFetchingNotifications.current = true;
     try {
       const response = await axiosInstance.get(
         `/api/Notification/GetNotifications?userId=${user.userId}`,
@@ -231,23 +242,146 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         setNotifications(allNotifications);
         const newUnreadCount = allNotifications.filter((n) => !n.isRead).length;
-
         setUnreadCount(newUnreadCount);
       } else {
-        console.warn(
-          "No notifications found in response or unexpected response format:",
-          response.data,
-        );
+
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+
       if (axios.isAxiosError(error)) {
-        console.error("API Error details:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-        });
+
       }
+    } finally {
+      isFetchingNotifications.current = false;
+    }
+  };
+
+  // NEW: Create notification function
+  const createNotification = async (
+    message: string, 
+    type: "user" | "property" = "user", 
+    propertyId?: string
+  ): Promise<boolean> => {
+    if (!user?.userId || isCreatingNotification.current) {
+      return false;
+    }
+
+    isCreatingNotification.current = true;
+    try {
+      const payload: any = {
+        userId: user.userId,
+        message: message,
+        notificationType: type,
+      };
+
+      if (type === "property" && propertyId) {
+        payload.propertyId = propertyId;
+      }
+
+      const response = await axiosInstance.post(
+        "/api/Notification/CreateNotification",
+        payload,
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        // Immediately add to local state for instant UI update
+        const newNotification: Notification = {
+          notificationId: response.data.messageId || Date.now().toString(),
+          message: message,
+          isRead: false,
+          createdDt: new Date().toISOString(),
+          propertyId: propertyId,
+          notificationType: type,
+        };
+
+        setNotifications(prev => [newNotification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+
+      return false;
+    } finally {
+      isCreatingNotification.current = false;
+    }
+  };
+
+  // NEW: Refresh notifications after backend actions (like, post, etc.)
+  const refreshNotifications = async (): Promise<void> => {
+    if (!user?.userId || isFetchingNotifications.current) {
+      return;
+    }
+
+    isFetchingNotifications.current = true;
+    try {
+      const response = await axiosInstance.get(
+        `/api/Notification/GetNotifications?userId=${user.userId}`,
+      );
+
+      if (response.data.statusCode === 200 && response.data.notifications) {
+        const notificationsData = response.data.notifications;
+        setNotifications(notificationsData);
+        
+        // Calculate unread count
+        const unreadCount = notificationsData.filter(
+          (notification: Notification) => !notification.isRead
+        ).length;
+        setUnreadCount(unreadCount);
+      }
+    } catch (error) {
+
+    } finally {
+      isFetchingNotifications.current = false;
+    }
+  };
+
+  // NEW: Mark notification as read function
+  const markNotificationAsRead = async (
+    notificationId: string,
+    type: "user" | "property" = "user",
+    propertyId?: string
+  ): Promise<boolean> => {
+    if (!user?.userId || isMarkingAsRead.current) {
+      return false;
+    }
+
+    isMarkingAsRead.current = true;
+    try {
+      const payload: any = {
+        type: type,
+        userId: user.userId,
+        notificationId: notificationId,
+      };
+
+      if (type === "property" && propertyId) {
+        payload.propertyId = propertyId;
+      }
+
+      const response = await axiosInstance.put(
+        "/api/Notification/MarkAsRead",
+        payload,
+      );
+
+      if (response.status === 200) {
+        // Immediately update local state
+        setNotifications(prev => 
+          prev.map(notification => 
+            notification.notificationId === notificationId 
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        return true;
+      }
+      return false;
+    } catch (error) {
+
+      return false;
+    } finally {
+      isMarkingAsRead.current = false;
     }
   };
 
@@ -262,10 +396,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       });
 
       if (!(loginResponse?.data?.statusCode === 200)) {
-        console.error(
-          "Login failed with status:",
-          loginResponse.data.statusCode,
-        );
+
         return false;
       }
 
@@ -310,7 +441,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             fetchUserTypes(),
             fetchSuperCategory(),
           ]).catch((error) => {
-            console.warn("Background data fetch failed:", error);
+  
           });
         }, 1000);
 
@@ -319,11 +450,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         return true;
       } catch (e) {
-        console.error("Error parsing login response:", e);
+
         return false;
       }
     } catch (error) {
-      console.error("Error during login:", error);
+
       return false;
     }
   };
@@ -342,10 +473,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           JSON.stringify(amenityRes?.data?.data),
         );
       } else {
-        console.error("Failed to fetch amenities:", amenityRes.status);
+
       }
     } catch (err) {
-      console.error("Error fetching amenities:", err);
+      
     }
   };
 
@@ -363,10 +494,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           JSON.stringify(allStatesRes?.data?.data),
         );
       } else {
-        console.error("Failed to fetch allStates:", allStatesRes.status);
+
       }
     } catch (err) {
-      console.error("Error fetching allStates:", err);
+
     }
   };
 
@@ -384,10 +515,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           JSON.stringify(UserTypesRes?.data?.data),
         );
       } else {
-        console.error("Failed to fetch userType:", UserTypesRes.status);
+
       }
     } catch (err) {
-      console.error("Error fetching userType:", err);
+
     }
   };
 
@@ -405,13 +536,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           JSON.stringify(superCategoryRes?.data?.data),
         );
       } else {
-        console.error(
-          "Failed to fetch superCategory:",
-          superCategoryRes.status,
-        );
+
       }
     } catch (err) {
-      console.error("Error fetching superCategory:", err);
+
     }
   };
 
@@ -445,6 +573,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     signup,
     logout,
     fetchNotifications,
+    // NEW: Add notification functions
+    createNotification,
+    refreshNotifications,
+    markNotificationAsRead,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

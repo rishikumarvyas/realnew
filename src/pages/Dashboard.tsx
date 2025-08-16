@@ -114,11 +114,11 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
 
     // Extra check to ensure image URL is valid
     if (mainImage && !mainImage.match(/^(https?:\/\/)/)) {
-      console.warn(`Invalid image URL format: ${mainImage}, using fallback`);
+
       mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
     }
   } catch (error) {
-    console.error("Error processing image for property:", error);
+
     mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
   }
 
@@ -145,65 +145,12 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
   };
 };
 
-const mockMessages = [
-  {
-    id: "msg1",
-    propertyId: "prop1",
-    propertyTitle: "Modern 3BHK with Sea View",
-    sender: "Priya Sharma",
-    message:
-      "Hello, I'm interested in your property. Is it still available? I would like to schedule a visit this weekend.",
-    date: "2025-01-15T14:30:00",
-    read: false,
-  },
-  {
-    id: "msg2",
-    propertyId: "prop1",
-    propertyTitle: "Modern 3BHK with Sea View",
-    sender: "Vikram Singh",
-    message:
-      "Hi, I have some questions about the amenities in your property. Could you please provide more details?",
-    date: "2025-01-14T10:15:00",
-    read: true,
-  },
-];
 
-// Mock properties for fallback when API fails
-const mockProperties = [
-  {
-    propertyId: "prop1",
-    title: "Modern 3BHK with Sea View",
-    price: 25000,
-    address: "Marine Drive",
-    city: "Mumbai",
-    superCategory: "Rent",
-    bedroom: 3,
-    bathroom: 2,
-    area: 1500,
-    mainImageDetail: {
-      url: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-    },
-  },
-  {
-    propertyId: "prop2",
-    title: "Spacious Bungalow",
-    price: 9500000,
-    address: "Koregaon Park",
-    city: "Pune",
-    superCategory: "Buy",
-    bedroom: 4,
-    bathroom: 3,
-    area: 2800,
-    mainImageDetail: {
-      url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80",
-    },
-  },
-];
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("properties");
   const [properties, setProperties] = useState<DashboardProperty[]>([]);
-  const [messages, setMessages] = useState<typeof mockMessages>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
   const [likeCount, setLikeCount] = useState<number>(0);
@@ -307,12 +254,10 @@ const Dashboard = () => {
             throw new Error("No property data received from API");
           }
         } catch (apiError) {
-          console.error("API error, using mock data:", apiError);
-          // Mock data for testing when API is unavailable
-          const formattedProperties = mockProperties.map(convertToPropertyCard);
-          setProperties(formattedProperties);
-          setLikeCount(1); // Default like count for mock data
-          setLikedPropertiesFromAll([]); // Reset liked properties on error
+  
+          setProperties([]);
+          setLikeCount(0);
+          setLikedPropertiesFromAll([]);
         }
 
         if (newPropertyId) {
@@ -322,21 +267,19 @@ const Dashboard = () => {
           });
         }
       } catch (error) {
-        console.error("Error fetching user properties:", error);
+
         toast({
           title: "Error",
           description:
             "Failed to load your properties. Please try again later.",
           variant: "destructive",
         });
-        // Ensure we have at least some properties to display
-        const formattedProperties = mockProperties.map(convertToPropertyCard);
-        setProperties(formattedProperties);
-        setLikeCount(0); // Reset like count on error
-        setLikedPropertiesFromAll([]); // Reset liked properties on error
+        setProperties([]);
+        setLikeCount(0);
+        setLikedPropertiesFromAll([]);
       } finally {
         setLoading(false);
-        setMessages(mockMessages);
+        setMessages([]);
       }
     };
 
@@ -367,7 +310,7 @@ const Dashboard = () => {
         description: "Your account has been successfully activated.",
       });
     } catch (error) {
-      console.error("Error activating account:", error);
+
       toast({
         title: "Error",
         description: "Failed to activate account. Please try again later.",
@@ -397,7 +340,7 @@ const Dashboard = () => {
         description: "Your account has been deactivated successfully.",
       });
     } catch (error) {
-      console.error("Error deactivating account:", error);
+
       toast({
         title: "Error",
         description: "Failed to deactivate account. Please try again later.",
@@ -430,7 +373,7 @@ const Dashboard = () => {
       }
       navigate("/");
     } catch (error) {
-      console.error("Error deleting account:", error);
+
       toast({
         title: "Error",
         description: "Failed to delete account. Please try again later.",
@@ -475,7 +418,7 @@ const Dashboard = () => {
         throw new Error(response.data.message || "Failed to delete property");
       }
     } catch (error) {
-      console.error("Error deleting property:", error);
+
       toast({
         title: "Error",
         description: "Failed to delete property. Please try again later.",
@@ -606,7 +549,7 @@ const Dashboard = () => {
                 setLikedPropertiesByMe([]);
               }
             } catch (e) {
-              console.error("Error fetching liked properties by me:", e);
+        
               setLikedPropertiesByMe([]);
             } finally {
               setLoadingLikedByMe(false);

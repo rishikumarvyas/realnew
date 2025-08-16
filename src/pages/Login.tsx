@@ -117,7 +117,7 @@ const Login = ({ onClose }) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("OTP verification error:", error);
+
     } finally {
       setLoading(false);
     }
@@ -132,7 +132,7 @@ const Login = ({ onClose }) => {
     : "opacity-0 pointer-events-none";
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
+    <div className="fixed inset-0 flex items-center justify-center z-[60]">
       {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
@@ -143,11 +143,11 @@ const Login = ({ onClose }) => {
       <div
         className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
       >
-        <Card className="w-full shadow-xl border-none overflow-hidden">
+        <Card className="w-full shadow-xl border-none overflow-hidden mt-8 sm:mt-12">
           {/* House icon at the top */}
-          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-5 shadow-lg">
-              <Home className="h-8 w-8 text-white" />
+          <div className="absolute top-3 left-1/2 transform -translate-x-1/2">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-3 shadow-lg">
+              <Home className="h-5 w-5 text-white" />
             </div>
           </div>
 
@@ -159,7 +159,7 @@ const Login = ({ onClose }) => {
             <X className="h-5 w-5" />
           </button>
 
-          <CardHeader className="relative pt-12">
+          <CardHeader className="relative pt-12 px-6 sm:px-8">
             {step === "otp" && (
               <Button
                 variant="ghost"
@@ -179,7 +179,7 @@ const Login = ({ onClose }) => {
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="px-6 sm:px-8 pb-6">
             {step === "phone" ? (
               <form
                 onSubmit={handlePhoneSubmit}
@@ -231,7 +231,7 @@ const Login = ({ onClose }) => {
             )}
           </CardContent>
 
-          <CardFooter className="flex justify-center border-t p-6">
+          <CardFooter className="flex justify-center border-t p-6 px-6 sm:px-8">
             <div className="text-sm text-gray-500">
               Don't have an account?{" "}
               <button

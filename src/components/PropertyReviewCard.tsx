@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   MapPin,
   Bed,
@@ -56,11 +57,12 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [actionType, setActionType] = useState<string | null>(null);
   const { toast } = useToast();
+  const { createNotification, refreshNotifications } = useAuth();
   const navigate = useNavigate();
 
   const validatePropertyId = (propertyId: string): boolean => {
     if (!propertyId || propertyId.trim() === "") {
-      console.error("PropertyId is empty or undefined");
+
       toast({
         title: "Validation Error",
         description: "Property ID is missing. Cannot perform this action.",
@@ -85,6 +87,16 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
 
       // Check for success - status code 200
       if (response.status === 200) {
+        // Create notification for property approval
+        await createNotification(
+          `Your property "${property.title}" has been approved and is now live!`,
+          "property",
+          cleanPropertyId
+        );
+
+        // Refresh notifications to update count immediately
+        await refreshNotifications();
+
         toast({
           title: "✅ Success!",
           description: "Property has been approved successfully",
@@ -96,7 +108,7 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
         throw new Error("Failed to approve property");
       }
     } catch (error: any) {
-      console.error("❌ Approve error:", error);
+
       toast({
         title: "❌ Error",
         description: "Failed to approve property. Please try again.",
@@ -122,6 +134,16 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
 
       // Check for success - status code 200
       if (response.status === 200) {
+        // Create notification for property rejection
+        await createNotification(
+          `Your property "${property.title}" has been rejected. Please review and resubmit.`,
+          "property",
+          cleanPropertyId
+        );
+
+        // Refresh notifications to update count immediately
+        await refreshNotifications();
+
         toast({
           title: "✅ Success!",
           description: "Property has been rejected successfully",
@@ -133,7 +155,7 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
         throw new Error("Failed to reject property");
       }
     } catch (error: any) {
-      console.error("❌ Reject error:", error);
+
       toast({
         title: "❌ Error",
         description: "Failed to reject property. Please try again.",
@@ -158,6 +180,16 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
       const response = await axiosInstance.post("/api/Admin/Reject", payload);
 
       if (response.status === 200) {
+        // Create notification for property revocation
+        await createNotification(
+          `Your property "${property.title}" approval has been revoked.`,
+          "property",
+          cleanPropertyId
+        );
+
+        // Refresh notifications to update count immediately
+        await refreshNotifications();
+
         toast({
           title: "✅ Success!",
           description: "Property approval has been revoked successfully",
@@ -169,7 +201,7 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
         throw new Error("Failed to revoke property");
       }
     } catch (error: any) {
-      console.error("❌ Revoke error:", error);
+
       toast({
         title: "❌ Error",
         description: "Failed to revoke property. Please try again.",
@@ -194,6 +226,16 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
       const response = await axiosInstance.post("/api/Admin/Approve", payload);
 
       if (response.status === 200) {
+        // Create notification for property reconsideration
+        await createNotification(
+          `Your property "${property.title}" has been moved for reconsideration.`,
+          "property",
+          cleanPropertyId
+        );
+
+        // Refresh notifications to update count immediately
+        await refreshNotifications();
+
         toast({
           title: "✅ Success!",
           description: "Property moved for reconsideration successfully",
@@ -205,7 +247,7 @@ const PropertyReviewCard: React.FC<PropertyReviewCardProps> = ({
         throw new Error("Failed to reconsider property");
       }
     } catch (error: any) {
-      console.error("❌ Reconsider error:", error);
+
       toast({
         title: "❌ Error",
         description: "Failed to reconsider property. Please try again.",

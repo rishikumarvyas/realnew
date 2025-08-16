@@ -10,7 +10,7 @@ const AuthModal = () => {
   if (!showAuthModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[60]">
       {modalType === "login" && <Login onClose={closeAuthModal} />}
       {modalType === "signup" && <Signup onClose={closeAuthModal} />}
     </div>

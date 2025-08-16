@@ -139,7 +139,7 @@ const PropertyMap = ({
         }
         return false;
       } catch (error) {
-        console.error("Geocoding error:", error);
+  
         return false;
       }
     };
@@ -172,7 +172,7 @@ const PropertyMap = ({
       }
 
       // If all fail, show error
-      console.warn("Could not geocode location:", fullAddress);
+      
 
       // Add a default marker at center of India with error message
       const defaultLocation: [number, number] = [20.5937, 78.9629];

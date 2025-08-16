@@ -145,7 +145,7 @@ const AllProperty = () => {
 
       setProperties(transformedData);
     } catch (err) {
-      console.error("Failed to fetch properties:", err);
+
       setError("Unable to load properties. Please try again later.");
 
       // API failed - no fallback to mock data

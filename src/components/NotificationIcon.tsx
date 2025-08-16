@@ -3,7 +3,6 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import axiosInstance from "../axiosCalls/axiosInstance";
 
 interface Notification {
   notificationId: string;
@@ -14,101 +13,37 @@ interface Notification {
   notificationType?: "user" | "property";
 }
 
-interface NotificationResponse {
-  statusCode: number;
-  message: string;
-  messageId?: string;
-  userId?: string;
-  propertyId?: string;
-  notifications: Notification[];
-}
-
-// Interface for the mark as read request body
-interface MarkAsReadRequest {
-  type: string;
-  userId: string;
-  notificationId: string;
-  propertyId?: string;
-}
-
-// Interface for creating a new notification
-interface CreateNotificationRequest {
-  userId: string;
-  message: string;
-  propertyId?: string;
-  notificationType?: "user" | "property";
-}
-
 const NotificationIcon: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { user, notifications, unreadCount, fetchNotifications } = useAuth();
+  const { 
+    user, 
+    notifications, 
+    unreadCount, 
+    fetchNotifications,
+    refreshNotifications,
+    markNotificationAsRead 
+  } = useAuth();
 
   // Add effect to log notifications changes
-  useEffect(() => {}, [notifications, unreadCount]);
+  useEffect(() => {
+    
+  }, [notifications, unreadCount]);
 
   useEffect(() => {
     if (user) {
+      
+      
+      // Set up periodic refresh of notifications every 30 seconds
+      const interval = setInterval(() => {
+        refreshNotifications();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
     }
-  }, [user]);
-
-  const createNotification = async (
-    message: string,
-    notificationType: "user" | "property" = "user",
-    propertyId?: string,
-  ) => {
-    if (!user || !user.userId) {
-      console.warn("No user available for creating notification");
-      return false;
-    }
-
-    try {
-      const payload: CreateNotificationRequest = {
-        userId: user.userId,
-        message: message,
-        notificationType: notificationType,
-      };
-
-      // Add propertyId for property notifications
-      if (notificationType === "property" && propertyId) {
-        payload.propertyId = propertyId;
-      }
-
-      const response = await axiosInstance.post(
-        "/api/Notification/CreateNotification",
-        payload,
-      );
-
-      if (response.status === 200 || response.status === 201) {
-        // Refresh notifications to show the new one
-        await fetchNotifications();
-
-        toast({
-          title: "Success",
-          description: "Notification created successfully",
-        });
-
-        return true;
-      }
-    } catch (error: any) {
-      console.error("Error creating notification:", error);
-
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-      }
-
-      toast({
-        title: "Error",
-        description: "Failed to create notification",
-        variant: "destructive",
-      });
-
-      return false;
-    }
-  };
+  }, [user, refreshNotifications]);
 
   const toggleDropdown = async () => {
     if (!showDropdown) {
@@ -119,102 +54,29 @@ const NotificationIcon: React.FC = () => {
     setShowDropdown((prev) => !prev);
   };
 
-  const updateNotificationState = async (notificationId: string) => {
-    // After marking as read, refresh notifications to get updated state
-    await fetchNotifications();
-  };
-
-  const markAsRead = async (
-    notificationId: string,
-    notificationType?: "user" | "property",
-    propertyId?: string,
-  ) => {
-    if (!user || !user.userId) {
-      updateNotificationState(notificationId);
-      return;
-    }
-
-    try {
-      // Create payload based on the API schema
-      const payload: MarkAsReadRequest = {
-        type: notificationType || "user", // Set the type field
-        userId: user.userId,
-        notificationId: notificationId,
-      };
-
-      // Add propertyId only for property notifications
-      if (notificationType === "property" && propertyId) {
-        payload.propertyId = propertyId;
-      }
-
-      const response = await axiosInstance.put(
-        "/api/Notification/MarkAsRead",
-        payload,
-      );
-
-      if (response.status === 200) {
-        await updateNotificationState(notificationId);
-      }
-    } catch (error: any) {
-      console.error("Error marking notification as read:", error);
-
-      // Log the response data for debugging
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-      }
-
-      // Still update UI by refreshing notifications
-      await updateNotificationState(notificationId);
-
-      // Show error toast for API failures
-      toast({
-        title: "Warning",
-        description:
-          "Notification marked as read locally, but failed to sync with server",
-        variant: "destructive",
-      });
-    }
-  };
-
   const markAllAsRead = async () => {
     const unreadNotifications = notifications.filter((n) => !n.isRead);
 
     if (unreadNotifications.length === 0) return;
 
-    // Try to update on server
-    if (user && user.userId) {
-      try {
-        await Promise.all(
-          unreadNotifications.map((notification) => {
-            const payload: MarkAsReadRequest = {
-              type: notification.notificationType || "user",
-              userId: user.userId!,
-              notificationId: notification.notificationId,
-            };
+    // Mark all as read using the centralized function
+    try {
+      await Promise.all(
+        unreadNotifications.map((notification) =>
+          markNotificationAsRead(
+            notification.notificationId,
+            notification.notificationType,
+            notification.propertyId
+          )
+        )
+      );
+    } catch (error) {
 
-            if (
-              notification.notificationType === "property" &&
-              notification.propertyId
-            ) {
-              payload.propertyId = notification.propertyId;
-            }
-
-            return axiosInstance.put("/api/Notification/MarkAsRead", payload);
-          }),
-        );
-
-        // Refresh notifications after marking all as read
-        await fetchNotifications();
-      } catch (error) {
-        console.error("Error marking all notifications as read:", error);
-        toast({
-          title: "Warning",
-          description: "Some notifications failed to sync with server",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Warning",
+        description: "Some notifications failed to sync with server",
+        variant: "destructive",
+      });
     }
   };
 
@@ -256,7 +118,7 @@ const NotificationIcon: React.FC = () => {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
-      await markAsRead(
+      await markNotificationAsRead(
         notification.notificationId,
         notification.notificationType,
         notification.propertyId,
@@ -294,14 +156,6 @@ const NotificationIcon: React.FC = () => {
             <div className="flex justify-between items-center">
               <h3 className="font-medium text-blue-800">All Notifications</h3>
               <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-green-600 hover:text-green-800"
-                  onClick={() =>
-                    createNotification("Test notification created", "user")
-                  }
-                ></Button>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"

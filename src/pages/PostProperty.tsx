@@ -44,7 +44,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, createNotification, refreshNotifications } = useAuth();
 
   // Form states
   const [propertyType, setPropertyType] = useState("");
@@ -203,7 +203,7 @@ const PostProperty = () => {
         }
       }
     } catch (error) {
-      console.error(error);
+      
     }
   };
 
@@ -499,15 +499,25 @@ const PostProperty = () => {
         return;
       }
 
+      // Create notification for property posting
+      await createNotification(
+        `Your property "${title}" has been posted successfully and is pending approval`,
+        "property",
+        newPropertyId
+      );
+
+      // Refresh notifications to update count immediately
+      await refreshNotifications();
+
       toast({
-        title: "Property Posted Successfully!",
-        description: "Your property has been submitted for review.",
+        title: "Success!",
+        description: "Property posted successfully. It will be reviewed by our team.",
       });
 
       // Navigate to the Dashboard page with the PropertyId
       navigate(`/dashboard?newPropertyId=${newPropertyId}`);
     } catch (error) {
-      console.error("Error posting property:", error);
+
       toast({
         title: "Failed to Post Property",
         description:

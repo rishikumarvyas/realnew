@@ -28,6 +28,7 @@ import {
 import { useApiCache } from "@/hooks/use-api-cache";
 import debounce from "lodash/debounce";
 import axiosInstance from "@/axiosCalls/axiosInstance";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Property {
   propertyId: string;
@@ -77,9 +78,7 @@ const AdminPage = () => {
   });
   const { toast } = useToast();
   const { cachedApiCall, clearCache } = useApiCache();
-
-
-
+  const { createNotification, refreshNotifications } = useAuth();
 
 
   // OPTIMIZED: Single API call to get all properties and counts from GetProperty API
@@ -146,7 +145,7 @@ const AdminPage = () => {
             }
           };
         } catch (error) {
-          console.error("❌ Error fetching all properties:", error);
+
           return { properties: [], counts: { total: 0, pending: 0, approved: 0, rejected: 0 } };
         }
       });
@@ -162,7 +161,7 @@ const AdminPage = () => {
         });
       }
     } catch (error) {
-      console.error("❌ Error fetching properties:", error);
+
       toast({
         title: "Error",
         description: "Failed to fetch properties. Please try again.",
@@ -178,52 +177,10 @@ const AdminPage = () => {
     fetchAllProperties();
   }, [dateFilter, fetchAllProperties]);
 
-  // TEST: Simple API test function
-  const testApiCall = useCallback(async () => {
-    try {
-      const testBody = {
-        superCategoryId: 0,
-        propertyTypeIds: [],
-        accountId: "",
-        searchTerm: "",
-        StatusId: 0, // All properties
-        lastMonth: 0,
-        minPrice: 0,
-        maxPrice: 0,
-        bedroom: 0,
-        balcony: 0,
-        minArea: 0,
-        maxArea: 0,
-        pageNumber: 1,
-        pageSize: -1, // Get all properties for count
-      };
 
-      const response = await axiosInstance.post<GetPropertyResponse>(
-        "/api/Account/GetProperty",
-        testBody,
-      );
-      
-      console.log("🧪 Test API Response:", {
-        statusCode: response.data?.statusCode,
-        message: response.data?.message,
-        count: response.data?.count,
-        pendingCount: response.data?.pendingCount,
-        approvedCount: response.data?.approvedCount,
-        rejectedCount: response.data?.rejectedCount,
-        propertyCount: response.data?.propertyInfo?.length || 0,
-      });
-      
-      if (response.data?.propertyInfo?.length > 0) {
-        console.log("🧪 Properties found:", response.data.propertyInfo.length);
-      }
-    } catch (error) {
-      console.error("🧪 Test API Error:", error);
-    }
-  }, []);
 
   // INITIAL LOAD: Fetch properties immediately on mount
   useEffect(() => {
-    testApiCall();
     fetchAllProperties();
   }, []); // Only run once on mount
 
@@ -293,7 +250,7 @@ const AdminPage = () => {
           throw new Error("API call failed");
         }
       } catch (error) {
-        console.error("❌ Error in property action:", error);
+
         toast({
           title: "❌ Error",
           description: `Failed to ${action} property. Please try again.`,
@@ -318,6 +275,64 @@ const AdminPage = () => {
       className: "bg-blue-50 border-blue-200 text-blue-800",
     });
   }, [clearCache, fetchAllProperties, dateFilter]); // Added dateFilter dependency
+
+  const handleApproveProperty = async (propertyId: string, propertyTitle: string, ownerId: string) => {
+    try {
+      const response = await axiosInstance.put(`/api/Account/UpdatePropertyStatus`, {
+        propertyId: propertyId,
+        statusId: 2, // Approved status
+        accountId: ownerId
+      });
+
+      if (response.data.statusCode === 200) {
+        toast({
+          title: "Property Approved",
+          description: "Property has been approved and is now live.",
+        });
+
+        // Refresh the properties list
+        fetchAllProperties();
+      } else {
+        throw new Error(response.data.message || "Failed to approve property");
+      }
+    } catch (error) {
+
+      toast({
+        title: "Error",
+        description: "Failed to approve property. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectProperty = async (propertyId: string, propertyTitle: string, ownerId: string) => {
+    try {
+      const response = await axiosInstance.put(`/api/Account/UpdatePropertyStatus`, {
+        propertyId: propertyId,
+        statusId: 3, // Rejected status
+        accountId: ownerId
+      });
+
+      if (response.data.statusCode === 200) {
+        toast({
+          title: "Property Rejected",
+          description: "Property has been rejected. Owner will be notified.",
+        });
+
+        // Refresh the properties list
+        fetchAllProperties();
+      } else {
+        throw new Error(response.data.message || "Failed to reject property");
+      }
+    } catch (error) {
+
+      toast({
+        title: "Error",
+        description: "Failed to reject property. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Filter properties based on status (no date filtering needed as API handles it)
   const getFilteredProperties = useCallback(
@@ -405,14 +420,7 @@ const AdminPage = () => {
                 Refresh
               </Button>
 
-              <Button
-                onClick={testApiCall}
-                variant="outline"
-                size="sm"
-                className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:from-green-100 hover:to-emerald-100"
-              >
-                Test API
-              </Button>
+
 
               <Badge className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 shadow-lg">
                 <User className="w-4 h-4 mr-2" />

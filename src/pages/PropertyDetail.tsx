@@ -53,7 +53,7 @@ const PropertyDetail = () => {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [contactType, setContactType] = useState("whatsapp");
   const [isFavorite, setIsFavorite] = useState(false);
-  const { user } = useAuth();
+  const { user, createNotification, refreshNotifications } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -107,7 +107,7 @@ const PropertyDetail = () => {
           );
         }
       } catch (err: any) {
-        console.error("Error fetching property details:", err);
+  
         const errorMessage =
           err.response?.data?.message ||
           err.message ||
@@ -236,7 +236,7 @@ const PropertyDetail = () => {
         setSimilarProperties([]);
       }
     } catch (err) {
-      console.error("Error fetching similar properties:", err);
+      
       setSimilarProperties([]);
     } finally {
       setLoadingSimilar(false);
@@ -319,7 +319,7 @@ const PropertyDetail = () => {
           );
         }
       } catch (error: any) {
-        console.error("Error loading contact info:", error);
+
 
         const errorMessage =
           error.response?.data?.message ||
@@ -435,6 +435,12 @@ const PropertyDetail = () => {
               : Math.max(0, prev.likeCount - 1)),
         }));
 
+        // Backend already creates notification for like action, so we don't need to create it here
+        // But we need to refresh notifications to get the latest count
+        if (newLikeStatus) {
+          await refreshNotifications();
+        }
+
         toast({
           title: newLikeStatus
             ? "Added to favorites"
@@ -449,7 +455,7 @@ const PropertyDetail = () => {
         );
       }
     } catch (error: any) {
-      console.error("Error updating like status:", error);
+
 
       // Rollback optimistic update
       setIsFavorite(previousLikeStatus);
@@ -492,7 +498,7 @@ const PropertyDetail = () => {
         day: "numeric",
       });
     } catch (error) {
-      console.error("Error formatting date:", error);
+
       return "Invalid date";
     }
   };
@@ -508,7 +514,7 @@ const PropertyDetail = () => {
         description: "Property link has been copied to your clipboard.",
       });
     } catch (error) {
-      console.error("Failed to copy URL:", error);
+
 
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
