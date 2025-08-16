@@ -162,14 +162,14 @@ const Signup = ({ onClose }: SignupProps) => {
     setLoading(true);
 
     try {
-      const success = await signup(
+      const result = await signup(
         "+91" + phone,
         name,
         otp,
         userType.toString()
       );
 
-      if (success) {
+      if (result.success) {
         toast({
           title: "Registration Successful",
           description:
@@ -180,6 +180,7 @@ const Signup = ({ onClose }: SignupProps) => {
         toast({
           title: "Registration Failed",
           description:
+            result.message ||
             "Your number is already registered. Please sign in or use another number.",
           variant: "destructive",
         });

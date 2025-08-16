@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -15,6 +14,7 @@ import { ArrowLeft, X, Phone, Key, Home } from "lucide-react";
 import { OtpStep } from "@/components/login/OtpStep";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { OtpInput } from "@/components/OtpInput";
 
 const Login = ({ onClose }) => {
   const [phone, setPhone] = useState("");
@@ -24,6 +24,7 @@ const Login = ({ onClose }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, login, openSignupModal } = useAuth(); // Added openSignupModal
+  const continueBtnRef = useRef(null);
 
   const handleClose = () => {
     // First hide the modal with animation
@@ -76,8 +77,7 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description:
-            "Your number is not registered. Please sign up first.",
+          description: "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }
@@ -99,9 +99,9 @@ const Login = ({ onClose }) => {
       console.log(`Submitting login with phone: ${phone}, OTP: ${otpValue}`);
 
       // Call the login function
-      const success = await login(phone, otpValue);
+      const result = await login(phone, otpValue);
 
-      if (success) {
+      if (result.success) {
         toast({
           title: "Login Successful",
           description: "You have been logged in successfully.",
@@ -111,6 +111,7 @@ const Login = ({ onClose }) => {
         toast({
           title: "Login Failed",
           description:
+            result.message ||
             "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
@@ -195,31 +196,30 @@ const Login = ({ onClose }) => {
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
                     </Label>
-                    <div className="flex">
-                      <div className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-blue-50 text-blue-600 font-medium">
+                    <div className="flex items-center">
+                      <div className="flex items-center px-2 text-blue-600 font-medium bg-blue-50 h-9 ">
                         +91
                       </div>
-                      <Input
-                        id="phone"
-                        placeholder="Enter 10 digit phone number"
-                        value={phone}
-                        onChange={(e) => {
-                          // Allow only numbers and limit to 10 digits
-                          const value = e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 10);
-                          setPhone(value);
-                        }}
-                        type="tel"
-                        className="rounded-l-none border-blue-100 focus:border-blue-300"
-                        inputMode="numeric"
-                      />
+                      <div className="max-w-[1000px] w-full ml-[-1px]">
+                        <OtpInput
+                          value={phone}
+                          onChange={(val) => setPhone(val.slice(0, 10))}
+                          length={10}
+                          className="h-9 gap-1 [&>input]:w-6 [&>input]:h-9 [&>input]:text-base"
+                          onComplete={() => {
+                            if (continueBtnRef.current) {
+                              continueBtnRef.current.focus();
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg"
                     disabled={loading || phone.length !== 10}
+                    ref={continueBtnRef}
                   >
                     {loading ? "Sending OTP..." : "Continue"}
                   </Button>

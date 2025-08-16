@@ -19,7 +19,7 @@ interface Notification {
   isRead: boolean;
   createdDt: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
+  notificationType?: "user" | "property";
 }
 
 interface AuthContextType {
@@ -36,13 +36,16 @@ interface AuthContextType {
   closeAuthModal: () => void;
   // Auth functions
   requestOtp: (phoneNumber: string) => Promise<boolean>;
-  login: (phoneNumber: string, otp: string) => Promise<boolean>;
+  login: (
+    phoneNumber: string,
+    otp: string
+  ) => Promise<{ success: boolean; message?: string }>;
   signup: (
     phoneNumber: string,
     fullName: string,
     otp: string,
     userTypeId: string
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   fetchNotifications: () => Promise<void>;
 }
@@ -61,7 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Add effect to fetch notifications when user is available
   useEffect(() => {
     if (user?.userId) {
-      console.log('User available in AuthContext, fetching notifications...');
+      console.log("User available in AuthContext, fetching notifications...");
       fetchNotifications();
     }
   }, [user?.userId]);
@@ -102,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             token,
             userType: decodedToken?.userType || decodedToken?.userTypeId,
             role: decodedToken?.Role,
-            userTypeId: decodedToken?.userTypeId
+            userTypeId: decodedToken?.userTypeId,
           };
           if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
             setUser(userData);
@@ -123,17 +126,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const responseOtp = await axiosInstance.post(
-        `/api/Message/Send`,
-        {
-          phone: formattedPhone,
-          templateId: 3,
-          message: "Your OTP for Home Yatra login is: {{otp}}",
-          action: "HomeYatra",
-          name: "HomeYatra",
-          userTypeId: "0",
-        }
-      );
+      const responseOtp = await axiosInstance.post(`/api/Message/Send`, {
+        phone: formattedPhone,
+        templateId: 3,
+        message: "Your OTP for Home Yatra login is: {{otp}}",
+        action: "HomeYatra",
+        name: "HomeYatra",
+        userTypeId: "0",
+      });
 
       if (
         responseOtp?.data?.statusCode === 200 &&
@@ -151,25 +151,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  // Change signup return type to Promise<{ success: boolean; message?: string }>
   const signup = async (
     phoneNumber: string,
     fullName: string,
     otp: string,
     userTypeId: string
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
-      const signupResponse = await axiosInstance.post(
-        `/api/Auth/SignUp`,
-        {
-          name: fullName,
-          phone: formattedPhone,
-          otp,
-          userTypeId,
-        }
-      );
+      const signupResponse = await axiosInstance.post(`/api/Auth/SignUp`, {
+        name: fullName,
+        phone: formattedPhone,
+        otp,
+        userTypeId,
+      });
 
       if (
         signupResponse?.data?.statusCode === 200 &&
@@ -181,9 +180,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token = data?.token;
 
         if (!token) {
-          return false;
+          return { success: false, message: "No token received from server." };
         }
-        
+
         localStorage.setItem("token", token);
         const decodedToken = jwtDecode<decodedToken>(token);
 
@@ -193,9 +192,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken.Phone,
           name: decodedToken.UserName,
           token,
-          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          userType:
+            decodedToken.userType ||
+            decodedToken.userTypeId ||
+            data?.userType ||
+            data?.userTypeId,
           role: decodedToken.Role,
-          userTypeId: decodedToken.userTypeId || data?.userTypeId
+          userTypeId: decodedToken.userTypeId || data?.userTypeId,
         };
 
         // Store user data for immediate use
@@ -203,73 +206,92 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         // Close the auth modal after successful signup
         closeAuthModal();
-        return true;
+        return { success: true };
       } else {
-        return false;
+        return {
+          success: false,
+          message:
+            signupResponse?.data?.message || "Signup failed. Please try again.",
+        };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing up:", error);
-      return false;
+      let message = "An unexpected error occurred.";
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      return { success: false, message };
     }
   };
 
   const fetchNotifications = async () => {
     if (!user?.userId) {
-      console.log('No user ID available for fetching notifications');
+      console.log("No user ID available for fetching notifications");
       return;
     }
 
     try {
-      console.log('Fetching notifications for user:', user.userId);
-      const response = await axiosInstance.get(`/api/Notification/GetNotifications?userId=${user.userId}`);
+      console.log("Fetching notifications for user:", user.userId);
+      const response = await axiosInstance.get(
+        `/api/Notification/GetNotifications?userId=${user.userId}`
+      );
 
-      console.log('Notifications API response:', response.data);
+      console.log("Notifications API response:", response.data);
 
       if (response.status === 200 && response.data.notifications) {
         const allNotifications: Notification[] = response.data.notifications;
-        
-        // Sort notifications by date (newest first)
-        allNotifications.sort((a, b) => new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime());
 
-        console.log('Setting notifications:', allNotifications.length, 'items');
+        // Sort notifications by date (newest first)
+        allNotifications.sort(
+          (a, b) =>
+            new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime()
+        );
+
+        console.log("Setting notifications:", allNotifications.length, "items");
         setNotifications(allNotifications);
-        const newUnreadCount = allNotifications.filter(n => !n.isRead).length;
-        console.log('Setting unread count:', newUnreadCount);
+        const newUnreadCount = allNotifications.filter((n) => !n.isRead).length;
+        console.log("Setting unread count:", newUnreadCount);
         setUnreadCount(newUnreadCount);
       } else {
-        console.warn('No notifications found in response or unexpected response format:', response.data);
+        console.warn(
+          "No notifications found in response or unexpected response format:",
+          response.data
+        );
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error("Error fetching notifications:", error);
       if (axios.isAxiosError(error)) {
-        console.error('API Error details:', {
+        console.error("API Error details:", {
           status: error.response?.status,
           data: error.response?.data,
-          headers: error.response?.headers
+          headers: error.response?.headers,
         });
       }
     }
   };
 
-  const login = async (phoneNumber: string, otp: string): Promise<boolean> => {
+  // Change login return type to Promise<{ success: boolean; message?: string }>
+  const login = async (
+    phoneNumber: string,
+    otp: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
-      const loginResponse = await axiosInstance.post(
-        `/api/Auth/Login`,
-        {
-          phone: formattedPhone,
-          otp,
-        }
-      );
+      const loginResponse = await axiosInstance.post(`/api/Auth/Login`, {
+        phone: formattedPhone,
+        otp,
+      });
 
       if (!(loginResponse?.data?.statusCode === 200)) {
-        console.error(
-          "Login failed with status:",
-          loginResponse.data.statusCode
-        );
-        return false;
+        // Return API error message if present
+        return {
+          success: false,
+          message:
+            loginResponse?.data?.message || "Login failed. Please try again.",
+        };
       }
 
       try {
@@ -277,9 +299,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token = data?.token;
 
         if (!token) {
-          return false;
+          return { success: false, message: "No token received from server." };
         }
-        
+
         const decodedToken = jwtDecode<decodedToken>(token);
         localStorage.setItem("token", token);
 
@@ -289,9 +311,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken.Phone,
           token,
           name: decodedToken.UserName,
-          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          userType:
+            decodedToken.userType ||
+            decodedToken.userTypeId ||
+            data?.userType ||
+            data?.userTypeId,
           role: decodedToken.Role,
-          userTypeId: decodedToken.userTypeId || data?.userTypeId
+          userTypeId: decodedToken.userTypeId || data?.userTypeId,
         };
 
         setUser(userData);
@@ -302,20 +328,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           fetchAmenities(),
           fetchAllStates(),
           fetchUserTypes(),
-          fetchSuperCategory()
+          fetchSuperCategory(),
         ]);
 
         // Close the auth modal after successful login
         closeAuthModal();
 
-        return true;
+        return { success: true };
       } catch (e) {
         console.error("Error parsing login response:", e);
-        return false;
+        return { success: false, message: "Error parsing login response." };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during login:", error);
-      return false;
+      // Try to extract error message from API response
+      let message = "An unexpected error occurred.";
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      return { success: false, message };
     }
   };
 
