@@ -45,7 +45,7 @@ interface AuthContextType {
     fullName: string,
     otp: string,
     userTypeId: string
-  ) => Promise<boolean>;
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   fetchNotifications: () => Promise<void>;
 }
@@ -151,15 +151,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  // Change signup return type to Promise<{ success: boolean; message?: string }>
   const signup = async (
     phoneNumber: string,
     fullName: string,
     otp: string,
     userTypeId: string
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
       const signupResponse = await axiosInstance.post(`/api/Auth/SignUp`, {
         name: fullName,
@@ -178,7 +180,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token = data?.token;
 
         if (!token) {
-          return false;
+          return { success: false, message: "No token received from server." };
         }
 
         localStorage.setItem("token", token);
@@ -204,13 +206,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         // Close the auth modal after successful signup
         closeAuthModal();
-        return true;
+        return { success: true };
       } else {
-        return false;
+        return {
+          success: false,
+          message:
+            signupResponse?.data?.message || "Signup failed. Please try again.",
+        };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing up:", error);
-      return false;
+      let message = "An unexpected error occurred.";
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      return { success: false, message };
     }
   };
 
