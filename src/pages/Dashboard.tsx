@@ -189,14 +189,7 @@ const Dashboard = () => {
 
   const newPropertyId = getNewPropertyIdFromQuery();
 
-  useEffect(() => {
-    if (user?.name) {
-      setUserName(user.name);
-    }
-    if (user?.isActive !== undefined) {
-      setAccountIsActive(user.isActive);
-    }
-  }, [user]);
+  // Removed redundant useEffect - user data is set from API call in fetchUserProperties
 
   useEffect(() => {
     const fetchUserProperties = async () => {

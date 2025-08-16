@@ -184,71 +184,56 @@ const AdminPage = () => {
     fetchAllProperties();
   }, []); // Only run once on mount
 
-  // OPTIMIZED: Handle property action with selective updates
+  // OPTIMIZED: Handle property action with selective updates (no duplicate API calls)
   const handlePropertyAction = useCallback(
     async (propertyId: string, action: string, newStatus: string) => {
       try {
-        const payload = { propertyId: propertyId.trim() };
-        let response;
+        // OPTIMIZED: Update only the affected property instead of refetching all
+        setProperties((prevProperties) => {
+          return prevProperties.map((property) => {
+            if (property.propertyId === propertyId) {
+              return {
+                ...property,
+                statusId: newStatus,
+              };
+            }
+            return property;
+          });
+        });
 
-        // Call appropriate API based on action
-        if (action === "approve" || action === "reconsider") {
-          response = await axiosInstance.post("/api/Admin/Approve", payload);
-        } else if (action === "reject" || action === "revoke") {
-          response = await axiosInstance.post("/api/Admin/Reject", payload);
+        // Clear cache to ensure fresh data
+        clearCache(`admin_all_properties_date_${dateFilter}`);
+
+        // Refresh the data to get updated counts
+        await fetchAllProperties();
+
+        // Switch to appropriate tab based on new status
+        switch (newStatus) {
+          case "2": // Approved
+            setActiveTab("approved");
+            break;
+          case "3": // Rejected
+            setActiveTab("rejected");
+            break;
+          case "1": // Pending
+            setActiveTab("pending");
+            break;
         }
 
-        // Check if API call was successful
-        if (response && response.status === 200) {
-          // OPTIMIZED: Update only the affected property instead of refetching all
-          setProperties((prevProperties) => {
-            return prevProperties.map((property) => {
-              if (property.propertyId === propertyId) {
-                return {
-                  ...property,
-                  statusId: newStatus,
-                };
-              }
-              return property;
-            });
-          });
+        const actionMessages = {
+          approve: "Property approved successfully!",
+          reject: "Property rejected successfully!",
+          revoke: "Property approval revoked successfully!",
+          reconsider: "Property moved for reconsideration!",
+        };
 
-          // Clear cache to ensure fresh data
-          clearCache(`admin_all_properties_date_${dateFilter}`);
-
-          // Refresh the data to get updated counts
-          await fetchAllProperties();
-
-          // Switch to appropriate tab based on new status
-          switch (newStatus) {
-            case "2": // Approved
-              setActiveTab("approved");
-              break;
-            case "3": // Rejected
-              setActiveTab("rejected");
-              break;
-            case "1": // Pending
-              setActiveTab("pending");
-              break;
-          }
-
-          const actionMessages = {
-            approve: "Property approved successfully!",
-            reject: "Property rejected successfully!",
-            revoke: "Property approval revoked successfully!",
-            reconsider: "Property moved for reconsideration!",
-          };
-
-          toast({
-            title: "✅ Success!",
-            description:
-              actionMessages[action as keyof typeof actionMessages] ||
-              "Action completed successfully!",
-            className: "bg-green-50 border-green-200 text-green-800",
-          });
-        } else {
-          throw new Error("API call failed");
-        }
+        toast({
+          title: "✅ Success!",
+          description:
+            actionMessages[action as keyof typeof actionMessages] ||
+            "Action completed successfully!",
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
       } catch (error) {
 
         toast({

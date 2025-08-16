@@ -22,7 +22,6 @@ const NotificationIcon: React.FC = () => {
     user, 
     notifications, 
     unreadCount, 
-    fetchNotifications,
     refreshNotifications,
     markNotificationAsRead 
   } = useAuth();
@@ -48,7 +47,7 @@ const NotificationIcon: React.FC = () => {
   const toggleDropdown = async () => {
     if (!showDropdown) {
       setIsLoading(true);
-      await fetchNotifications();
+      await refreshNotifications();
       setIsLoading(false);
     }
     setShowDropdown((prev) => !prev);
