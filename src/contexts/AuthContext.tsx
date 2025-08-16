@@ -19,7 +19,7 @@ interface Notification {
   isRead: boolean;
   createdDt: string;
   propertyId?: string;
-  notificationType?: 'user' | 'property';
+  notificationType?: "user" | "property";
 }
 
 interface AuthContextType {
@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Add effect to fetch notifications when user is available
   useEffect(() => {
     if (user?.userId) {
-      console.log('User available in AuthContext, fetching notifications...');
+      console.log("User available in AuthContext, fetching notifications...");
       fetchNotifications();
     }
   }, [user?.userId]);
@@ -102,7 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             token,
             userType: decodedToken?.userType || decodedToken?.userTypeId,
             role: decodedToken?.Role,
-            userTypeId: decodedToken?.userTypeId
+            userTypeId: decodedToken?.userTypeId,
           };
           if (decodedToken && decodedToken.exp * 1000 > Date.now()) {
             setUser(userData);
@@ -123,17 +123,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const responseOtp = await axiosInstance.post(
-        `/api/Message/Send`,
-        {
-          phone: formattedPhone,
-          templateId: 3,
-          message: "Your OTP for Home Yatra login is: {{otp}}",
-          action: "HomeYatra",
-          name: "HomeYatra",
-          userTypeId: "0",
-        }
-      );
+      const responseOtp = await axiosInstance.post(`/api/Message/Send`, {
+        phone: formattedPhone,
+        templateId: 3,
+        message: "Your OTP for Home Yatra login is: {{otp}}",
+        action: "HomeYatra",
+        name: "HomeYatra",
+        userTypeId: "0",
+      });
 
       if (
         responseOtp?.data?.statusCode === 200 &&
@@ -161,15 +158,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const signupResponse = await axiosInstance.post(
-        `/api/Auth/SignUp`,
-        {
-          name: fullName,
-          phone: formattedPhone,
-          otp,
-          userTypeId,
-        }
-      );
+      const signupResponse = await axiosInstance.post(`/api/Auth/SignUp`, {
+        name: fullName,
+        phone: formattedPhone,
+        otp,
+        userTypeId,
+      });
 
       if (
         signupResponse?.data?.statusCode === 200 &&
@@ -183,7 +177,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (!token) {
           return false;
         }
-        
+
         localStorage.setItem("token", token);
         const decodedToken = jwtDecode<decodedToken>(token);
 
@@ -193,9 +187,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken.Phone,
           name: decodedToken.UserName,
           token,
-          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          userType:
+            decodedToken.userType ||
+            decodedToken.userTypeId ||
+            data?.userType ||
+            data?.userTypeId,
           role: decodedToken.Role,
-          userTypeId: decodedToken.userTypeId || data?.userTypeId
+          userTypeId: decodedToken.userTypeId || data?.userTypeId,
         };
 
         // Store user data for immediate use
@@ -215,37 +213,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const fetchNotifications = async () => {
     if (!user?.userId) {
-      console.log('No user ID available for fetching notifications');
+      console.log("No user ID available for fetching notifications");
       return;
     }
 
     try {
-      console.log('Fetching notifications for user:', user.userId);
-      const response = await axiosInstance.get(`/api/Notification/GetNotifications?userId=${user.userId}`);
+      console.log("Fetching notifications for user:", user.userId);
+      const response = await axiosInstance.get(
+        `/api/Notification/GetNotifications?userId=${user.userId}`
+      );
 
-      console.log('Notifications API response:', response.data);
+      console.log("Notifications API response:", response.data);
 
       if (response.status === 200 && response.data.notifications) {
         const allNotifications: Notification[] = response.data.notifications;
-        
-        // Sort notifications by date (newest first)
-        allNotifications.sort((a, b) => new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime());
 
-        console.log('Setting notifications:', allNotifications.length, 'items');
+        // Sort notifications by date (newest first)
+        allNotifications.sort(
+          (a, b) =>
+            new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime()
+        );
+
+        console.log("Setting notifications:", allNotifications.length, "items");
         setNotifications(allNotifications);
-        const newUnreadCount = allNotifications.filter(n => !n.isRead).length;
-        console.log('Setting unread count:', newUnreadCount);
+        const newUnreadCount = allNotifications.filter((n) => !n.isRead).length;
+        console.log("Setting unread count:", newUnreadCount);
         setUnreadCount(newUnreadCount);
       } else {
-        console.warn('No notifications found in response or unexpected response format:', response.data);
+        console.warn(
+          "No notifications found in response or unexpected response format:",
+          response.data
+        );
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error("Error fetching notifications:", error);
       if (axios.isAxiosError(error)) {
-        console.error('API Error details:', {
+        console.error("API Error details:", {
           status: error.response?.status,
           data: error.response?.data,
-          headers: error.response?.headers
+          headers: error.response?.headers,
         });
       }
     }
@@ -256,13 +262,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const formattedPhone = formatPhoneNumber(phoneNumber);
       if (!formattedPhone) return false;
 
-      const loginResponse = await axiosInstance.post(
-        `/api/Auth/Login`,
-        {
-          phone: formattedPhone,
-          otp,
-        }
-      );
+      const loginResponse = await axiosInstance.post(`/api/Auth/Login`, {
+        phone: formattedPhone,
+        otp,
+      });
 
       if (!(loginResponse?.data?.statusCode === 200)) {
         console.error(
@@ -279,7 +282,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         if (!token) {
           return false;
         }
-        
+
         const decodedToken = jwtDecode<decodedToken>(token);
         localStorage.setItem("token", token);
 
@@ -289,9 +292,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           phone: decodedToken.Phone,
           token,
           name: decodedToken.UserName,
-          userType: decodedToken.userType || decodedToken.userTypeId || data?.userType || data?.userTypeId,
+          userType:
+            decodedToken.userType ||
+            decodedToken.userTypeId ||
+            data?.userType ||
+            data?.userTypeId,
           role: decodedToken.Role,
-          userTypeId: decodedToken.userTypeId || data?.userTypeId
+          userTypeId: decodedToken.userTypeId || data?.userTypeId,
         };
 
         setUser(userData);
@@ -302,7 +309,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           fetchAmenities(),
           fetchAllStates(),
           fetchUserTypes(),
-          fetchSuperCategory()
+          fetchSuperCategory(),
         ]);
 
         // Close the auth modal after successful login
