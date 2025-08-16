@@ -36,7 +36,10 @@ interface AuthContextType {
   closeAuthModal: () => void;
   // Auth functions
   requestOtp: (phoneNumber: string) => Promise<boolean>;
-  login: (phoneNumber: string, otp: string) => Promise<{ success: boolean; message?: string }>;
+  login: (
+    phoneNumber: string,
+    otp: string
+  ) => Promise<{ success: boolean; message?: string }>;
   signup: (
     phoneNumber: string,
     fullName: string,
@@ -258,10 +261,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   // Change login return type to Promise<{ success: boolean; message?: string }>
-  const login = async (phoneNumber: string, otp: string): Promise<{ success: boolean; message?: string }> => {
+  const login = async (
+    phoneNumber: string,
+    otp: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return { success: false, message: "Invalid phone number" };
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
       const loginResponse = await axiosInstance.post(`/api/Auth/Login`, {
         phone: formattedPhone,
@@ -272,7 +279,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Return API error message if present
         return {
           success: false,
-          message: loginResponse?.data?.message || "Login failed. Please try again.",
+          message:
+            loginResponse?.data?.message || "Login failed. Please try again.",
         };
       }
 
