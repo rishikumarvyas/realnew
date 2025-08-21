@@ -6,6 +6,7 @@ interface OtpInputProps {
   length?: number;
   className?: string;
   verifyButtonRef?: React.RefObject<HTMLButtonElement>;
+  onComplete?: () => void;
 }
 
 export const OtpInput: React.FC<OtpInputProps> = ({
@@ -14,6 +15,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   length = 6,
   className,
   verifyButtonRef,
+  onComplete,
 }) => {
   const [activeInput, setActiveInput] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -24,15 +26,16 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   }
 
   useEffect(() => {
-    // When OTP is fully entered, move focus to Verify button
-    if (
-      value.length === length &&
-      value.split("").every((d) => d) &&
-      verifyButtonRef?.current
-    ) {
-      verifyButtonRef.current.focus();
+    if (value.length === length && value.split("").every((d) => d)) {
+      if (onComplete) {
+        //  When mobile number is fully entered in Login, move focus to Continue button
+        onComplete();
+      } else if (verifyButtonRef?.current) {
+        // When OTP is fully entered, move focus to Verify button
+        verifyButtonRef.current.focus();
+      }
     }
-  }, [value, length, verifyButtonRef]);
+  }, [value, length, verifyButtonRef, onComplete]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>,

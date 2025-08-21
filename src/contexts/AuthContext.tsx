@@ -37,19 +37,30 @@ interface AuthContextType {
   closeAuthModal: () => void;
   // Auth functions
   requestOtp: (phoneNumber: string) => Promise<boolean>;
-  login: (phoneNumber: string, otp: string) => Promise<boolean>;
+  login: (
+    phoneNumber: string,
+    otp: string
+  ) => Promise<{ success: boolean; message?: string }>;
   signup: (
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userTypeId: string,
-  ) => Promise<boolean>;
+    userTypeId: string
+  ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   fetchNotifications: () => Promise<void>;
   // NEW: Add notification creation functions
-  createNotification: (message: string, type?: "user" | "property", propertyId?: string) => Promise<boolean>;
+  createNotification: (
+    message: string,
+    type?: "user" | "property",
+    propertyId?: string
+  ) => Promise<boolean>;
   refreshNotifications: () => Promise<void>;
-  markNotificationAsRead: (notificationId: string, type?: "user" | "property", propertyId?: string) => Promise<boolean>;
+  markNotificationAsRead: (
+    notificationId: string,
+    type?: "user" | "property",
+    propertyId?: string
+  ) => Promise<boolean>;
 }
 
 // Create context with default values
@@ -71,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Add effect to fetch notifications when user is available
   useEffect(() => {
     if (user?.userId) {
+      console.log("User available in AuthContext, fetching notifications...");
       fetchNotifications();
     }
   }, [user?.userId]);
@@ -117,7 +129,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             setUser(userData);
           }
         } catch (error) {
-    
           localStorage.removeItem("token");
         }
       }
@@ -152,20 +163,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return false;
       }
     } catch (error) {
-
       return false;
     }
   };
 
+  // Change signup return type to Promise<{ success: boolean; message?: string }>
   const signup = async (
     phoneNumber: string,
     fullName: string,
     otp: string,
-    userTypeId: string,
-  ): Promise<boolean> => {
+    userTypeId: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
       const signupResponse = await axiosInstance.post(`/api/Auth/SignUp`, {
         name: fullName,
@@ -184,7 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token = data?.token;
 
         if (!token) {
-          return false;
+          return { success: false, message: "No token received from server." };
         }
 
         localStorage.setItem("token", token);
@@ -210,13 +222,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         // Close the auth modal after successful signup
         closeAuthModal();
-        return true;
+        return { success: true };
       } else {
-        return false;
+        return {
+          success: false,
+          message:
+            signupResponse?.data?.message || "Signup failed. Please try again.",
+        };
       }
-    } catch (error) {
-
-      return false;
+    } catch (error: any) {
+      console.error("Error signing up:", error);
+      let message = "An unexpected error occurred.";
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      return { success: false, message };
     }
   };
 
@@ -228,7 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     isFetchingNotifications.current = true;
     try {
       const response = await axiosInstance.get(
-        `/api/Notification/GetNotifications?userId=${user.userId}`,
+        `/api/Notification/GetNotifications?userId=${user.userId}`
       );
 
       if (response.status === 200 && response.data.notifications) {
@@ -237,19 +257,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         // Sort notifications by date (newest first)
         allNotifications.sort(
           (a, b) =>
-            new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime(),
+            new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime()
         );
 
         setNotifications(allNotifications);
         const newUnreadCount = allNotifications.filter((n) => !n.isRead).length;
         setUnreadCount(newUnreadCount);
       } else {
-
+        console.warn(
+          "No notifications found in response or unexpected response format:",
+          response.data
+        );
       }
     } catch (error) {
-
       if (axios.isAxiosError(error)) {
-
+        console.error("API Error details:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        });
       }
     } finally {
       isFetchingNotifications.current = false;
@@ -258,8 +284,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   // NEW: Create notification function
   const createNotification = async (
-    message: string, 
-    type: "user" | "property" = "user", 
+    message: string,
+    type: "user" | "property" = "user",
     propertyId?: string
   ): Promise<boolean> => {
     if (!user?.userId || isCreatingNotification.current) {
@@ -280,7 +306,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       const response = await axiosInstance.post(
         "/api/Notification/CreateNotification",
-        payload,
+        payload
       );
 
       if (response.status === 200 || response.status === 201) {
@@ -294,14 +320,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           notificationType: type,
         };
 
-        setNotifications(prev => [newNotification, ...prev]);
-        setUnreadCount(prev => prev + 1);
+        setNotifications((prev) => [newNotification, ...prev]);
+        setUnreadCount((prev) => prev + 1);
 
         return true;
       }
       return false;
     } catch (error) {
-
       return false;
     } finally {
       isCreatingNotification.current = false;
@@ -317,13 +342,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     isFetchingNotifications.current = true;
     try {
       const response = await axiosInstance.get(
-        `/api/Notification/GetNotifications?userId=${user.userId}`,
+        `/api/Notification/GetNotifications?userId=${user.userId}`
       );
 
       if (response.data.statusCode === 200 && response.data.notifications) {
         const notificationsData = response.data.notifications;
         setNotifications(notificationsData);
-        
+
         // Calculate unread count
         const unreadCount = notificationsData.filter(
           (notification: Notification) => !notification.isRead
@@ -331,7 +356,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         setUnreadCount(unreadCount);
       }
     } catch (error) {
-
+      console.error("Error on refresh Notification:", error);
     } finally {
       isFetchingNotifications.current = false;
     }
@@ -361,34 +386,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       const response = await axiosInstance.put(
         "/api/Notification/MarkAsRead",
-        payload,
+        payload
       );
 
       if (response.status === 200) {
         // Immediately update local state
-        setNotifications(prev => 
-          prev.map(notification => 
-            notification.notificationId === notificationId 
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.notificationId === notificationId
               ? { ...notification, isRead: true }
               : notification
           )
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount((prev) => Math.max(0, prev - 1));
         return true;
       }
       return false;
     } catch (error) {
-
       return false;
     } finally {
       isMarkingAsRead.current = false;
     }
   };
 
-  const login = async (phoneNumber: string, otp: string): Promise<boolean> => {
+  // Change login return type to Promise<{ success: boolean; message?: string }>
+  const login = async (
+    phoneNumber: string,
+    otp: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
       const loginResponse = await axiosInstance.post(`/api/Auth/Login`, {
         phone: formattedPhone,
@@ -396,8 +425,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       });
 
       if (!(loginResponse?.data?.statusCode === 200)) {
-
-        return false;
+        // Return API error message if present
+        return {
+          success: false,
+          message:
+            loginResponse?.data?.message || "Login failed. Please try again.",
+        };
       }
 
       try {
@@ -405,7 +438,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         const token = data?.token;
 
         if (!token) {
-          return false;
+          return { success: false, message: "No token received from server." };
         }
 
         const decodedToken = jwtDecode<decodedToken>(token);
@@ -440,29 +473,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             fetchAllStates(),
             fetchUserTypes(),
             fetchSuperCategory(),
-          ]).catch((error) => {
-  
-          });
+          ]).catch((error) => {});
         }, 1000);
 
         // Close the auth modal after successful login
         closeAuthModal();
 
-        return true;
+        return { success: true };
       } catch (e) {
-
-        return false;
+        console.error("Error parsing login response:", e);
+        return { success: false, message: "Error parsing login response." };
       }
-    } catch (error) {
-
-      return false;
+    } catch (error: any) {
+      console.error("Error during login:", error);
+      // Try to extract error message from API response
+      let message = "An unexpected error occurred.";
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      return { success: false, message };
     }
   };
 
   const fetchAmenities = async () => {
     try {
       const amenityRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=Amenity",
+        "/api/Generic/GetActiveRecords?tableName=Amenity"
       );
       if (
         amenityRes?.data?.statusCode === 200 &&
@@ -470,20 +506,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "amenities",
-          JSON.stringify(amenityRes?.data?.data),
+          JSON.stringify(amenityRes?.data?.data)
         );
       } else {
-
+        console.error("Failed to fetch amenities:", amenityRes.status);
       }
     } catch (err) {
-      
+      console.error("Error fetching amenities:", err);
     }
   };
 
   const fetchAllStates = async () => {
     try {
       const allStatesRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=State",
+        "/api/Generic/GetActiveRecords?tableName=State"
       );
       if (
         allStatesRes?.data?.statusCode === 200 &&
@@ -491,20 +527,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "allStates",
-          JSON.stringify(allStatesRes?.data?.data),
+          JSON.stringify(allStatesRes?.data?.data)
         );
       } else {
-
+        console.error("Failed to fetch allStates:", allStatesRes.status);
       }
     } catch (err) {
-
+      console.error("Error fetching allStates:", err);
     }
   };
 
   const fetchUserTypes = async () => {
     try {
       const UserTypesRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=userType",
+        "/api/Generic/GetActiveRecords?tableName=userType"
       );
       if (
         UserTypesRes?.data?.statusCode === 200 &&
@@ -512,20 +548,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "userType",
-          JSON.stringify(UserTypesRes?.data?.data),
+          JSON.stringify(UserTypesRes?.data?.data)
         );
       } else {
-
+        console.error("Failed to fetch userType:", UserTypesRes.status);
       }
     } catch (err) {
-
+      console.error("Error fetching userType:", err);
     }
   };
 
   const fetchSuperCategory = async () => {
     try {
       const superCategoryRes = await axiosInstance.get(
-        "/api/Generic/GetActiveRecords?tableName=superCategory",
+        "/api/Generic/GetActiveRecords?tableName=superCategory"
       );
       if (
         superCategoryRes?.data?.statusCode === 200 &&
@@ -533,13 +569,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       ) {
         localStorage.setItem(
           "superCategory",
-          JSON.stringify(superCategoryRes?.data?.data),
+          JSON.stringify(superCategoryRes?.data?.data)
         );
       } else {
-
+        console.error(
+          "Failed to fetch superCategory:",
+          superCategoryRes.status
+        );
       }
     } catch (err) {
-
+      console.error("Error fetching superCategory:", err);
     }
   };
 

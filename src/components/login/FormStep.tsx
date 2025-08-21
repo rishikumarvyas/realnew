@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Form,
@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { OtpInput } from "@/components/OtpInput";
 
 // Phone number validation for Indian numbers
 const phoneRegex = /^[6-9]\d{9}$/;
@@ -59,6 +60,7 @@ export const FormStep = ({
   phoneError = null,
 }: FormStepProps) => {
   const navigate = useNavigate();
+  const userTypeSelectRef = useRef(null);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -120,18 +122,26 @@ export const FormStep = ({
                 <FormLabel className="text-xs font-medium">
                   Phone Number
                 </FormLabel>
-                <div className="flex">
-                  <div className="flex items-center px-3 bg-muted border border-r-0 rounded-l h-9">
-                    <span className="text-muted-foreground text-sm">+91</span>
+                <div className="flex items-center">
+                  <div>
+                    <span className="flex items-center px-2 text-blue-600 font-medium bg-blue-50 h-9 ">
+                      +91
+                    </span>
                   </div>
                   <FormControl>
-                    <Input
-                      className="rounded-l-none h-9"
-                      placeholder="10-digit number"
-                      {...field}
-                      maxLength={10}
-                      autoComplete="tel"
-                    />
+                    <div className="max-w-[1000px] w-full ml-[-1px]">
+                      <OtpInput
+                        value={field.value}
+                        onChange={(val) => field.onChange(val.slice(0, 10))}
+                        length={10}
+                        className="h-9 gap-1 [&>input]:w-6 [&>input]:h-9 [&>input]:text-base "
+                        onComplete={() => {
+                          if (userTypeSelectRef.current) {
+                            userTypeSelectRef.current.focus();
+                          }
+                        }}
+                      />
+                    </div>
                   </FormControl>
                 </div>
                 {phoneError ? (
@@ -154,7 +164,7 @@ export const FormStep = ({
                   value={field.value > 0 ? field.value.toString() : ""}
                 >
                   <FormControl>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9" ref={userTypeSelectRef}>
                       <SelectValue placeholder="Select your user type" />
                     </SelectTrigger>
                   </FormControl>

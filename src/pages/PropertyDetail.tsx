@@ -945,6 +945,14 @@ const PropertyDetail = () => {
                       </span>
                     </div>
                     <div className="flex justify-between py-3">
+                      <span className="text-gray-600">Age of Property</span>
+                      <span className="font-medium">
+                        {property.age
+                          ? `${property.age} years`
+                          : "Not Specified"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-3">
                       <span className="text-gray-600">Total Area</span>
                       <span className="font-medium">{property.area} sq.ft</span>
                     </div>
