@@ -79,7 +79,7 @@ export const OtpStep = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-4 sm:mt-6">
       <div className="space-y-2 text-center">
         <p className="text-sm text-gray-500">
           A 6-digit code has been sent to your phone

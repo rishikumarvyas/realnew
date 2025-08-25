@@ -51,14 +51,16 @@ const BuilderProjectPost = () => {
     });
   };
   const handleAddListItem = (setter) => setter((prev) => [...prev, ""]);
-  const handleRemoveListItem = (setter, index) => setter((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveListItem = (setter, index) =>
+    setter((prev) => prev.filter((_, i) => i !== index));
 
   // Image upload handlers (stub)
   const handleImageUpload = (setter, e) => {
     const files = Array.from(e.target.files);
     setter((prev) => [...prev, ...files]);
   };
-  const handleRemoveImage = (setter, index) => setter((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveImage = (setter, index) =>
+    setter((prev) => prev.filter((_, i) => i !== index));
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -66,7 +68,9 @@ const BuilderProjectPost = () => {
         <div className="bg-blue-100 p-3 rounded-full mr-4">
           <span className="font-bold text-blue-600 text-xl">🏗️</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-800">Post Builder Project</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Post Builder Project
+        </h1>
       </div>
       <form>
         <div className="grid gap-8">
@@ -74,42 +78,72 @@ const BuilderProjectPost = () => {
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
               <CardTitle>Project Details</CardTitle>
-              <CardDescription>Enter the basic details about your project</CardDescription>
+              <CardDescription>
+                Enter the basic details about your project
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="projectName">Project Name</Label>
-                  <Input id="projectName" value={projectName} onChange={e => setProjectName(e.target.value)} />
+                  <Input
+                    id="projectName"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reraNumber">RERA Number</Label>
-                  <Input id="reraNumber" value={reraNumber} onChange={e => setReraNumber(e.target.value)} />
+                  <Input
+                    id="reraNumber"
+                    value={reraNumber}
+                    onChange={(e) => setReraNumber(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="projectStatus">Project Status</Label>
-                  <Select value={projectStatus} onValueChange={setProjectStatus}>
+                  <Select
+                    value={projectStatus}
+                    onValueChange={setProjectStatus}
+                  >
                     <SelectTrigger id="projectStatus">
                       <SelectValue placeholder="Select Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="New Launch">New Launch</SelectItem>
-                      <SelectItem value="Under Construction">Under Construction</SelectItem>
+                      <SelectItem value="Under Construction">
+                        Under Construction
+                      </SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="projectPhase">Project Phase</Label>
-                  <Input id="projectPhase" value={projectPhase} onChange={e => setProjectPhase(e.target.value)} />
+                  <Input
+                    id="projectPhase"
+                    value={projectPhase}
+                    onChange={(e) => setProjectPhase(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="projectArea">Project Area (Acres)</Label>
-                  <Input id="projectArea" value={projectArea} onChange={e => setProjectArea(e.target.value)} type="number" min="0" step="0.01" />
+                  <Input
+                    id="projectArea"
+                    value={projectArea}
+                    onChange={(e) => setProjectArea(e.target.value)}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="legal">Legal</Label>
-                  <Input id="legal" value={legal} onChange={e => setLegal(e.target.value)} />
+                  <Input
+                    id="legal"
+                    value={legal}
+                    onChange={(e) => setLegal(e.target.value)}
+                  />
                 </div>
               </div>
               {/* Conditional Dates */}
@@ -123,7 +157,10 @@ const BuilderProjectPost = () => {
                 {projectStatus === "Under Construction" && (
                   <div className="space-y-2">
                     <Label>Expected Completed</Label>
-                    <DatePicker date={expectedCompleted} setDate={setExpectedCompleted} />
+                    <DatePicker
+                      date={expectedCompleted}
+                      setDate={setExpectedCompleted}
+                    />
                   </div>
                 )}
                 {projectStatus === "Completed" && (
@@ -140,7 +177,9 @@ const BuilderProjectPost = () => {
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
               <CardTitle>Type & Location</CardTitle>
-              <CardDescription>Project type, price, and location details</CardDescription>
+              <CardDescription>
+                Project type, price, and location details
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -159,19 +198,35 @@ const BuilderProjectPost = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="startingPrice">Starting Price</Label>
-                  <Input id="startingPrice" value={startingPrice} onChange={e => setStartingPrice(e.target.value)} />
+                  <Input
+                    id="startingPrice"
+                    value={startingPrice}
+                    onChange={(e) => setStartingPrice(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="state">State</Label>
-                  <Input id="state" value={state} onChange={e => setState(e.target.value)} />
+                  <Input
+                    id="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
-                  <Input id="city" value={city} onChange={e => setCity(e.target.value)} />
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={location} onChange={e => setLocation(e.target.value)} />
+                  <Input
+                    id="location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -184,12 +239,32 @@ const BuilderProjectPost = () => {
               <CardDescription>Upload project plan images</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">
-              <Input type="file" multiple accept="image/*" onChange={e => handleImageUpload(setProjectPlanImages, e)} />
+              <Input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => handleImageUpload(setProjectPlanImages, e)}
+              />
               <div className="flex flex-wrap gap-4 mt-2">
                 {projectPlanImages.map((img, idx) => (
-                  <div key={idx} className="relative w-24 h-24 border rounded overflow-hidden">
-                    <img src={URL.createObjectURL(img)} alt="Project Plan" className="object-cover w-full h-full" />
-                    <Button type="button" size="icon" variant="destructive" className="absolute top-1 right-1" onClick={() => handleRemoveImage(setProjectPlanImages, idx)}>
+                  <div
+                    key={idx}
+                    className="relative w-24 h-24 border rounded overflow-hidden"
+                  >
+                    <img
+                      src={URL.createObjectURL(img)}
+                      alt="Project Plan"
+                      className="object-cover w-full h-full"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-1 right-1"
+                      onClick={() =>
+                        handleRemoveImage(setProjectPlanImages, idx)
+                      }
+                    >
                       ×
                     </Button>
                   </div>
@@ -205,12 +280,30 @@ const BuilderProjectPost = () => {
               <CardDescription>Upload floor plan images</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">
-              <Input type="file" multiple accept="image/*" onChange={e => handleImageUpload(setFloorPlanImages, e)} />
+              <Input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => handleImageUpload(setFloorPlanImages, e)}
+              />
               <div className="flex flex-wrap gap-4 mt-2">
                 {floorPlanImages.map((img, idx) => (
-                  <div key={idx} className="relative w-24 h-24 border rounded overflow-hidden">
-                    <img src={URL.createObjectURL(img)} alt="Floor Plan" className="object-cover w-full h-full" />
-                    <Button type="button" size="icon" variant="destructive" className="absolute top-1 right-1" onClick={() => handleRemoveImage(setFloorPlanImages, idx)}>
+                  <div
+                    key={idx}
+                    className="relative w-24 h-24 border rounded overflow-hidden"
+                  >
+                    <img
+                      src={URL.createObjectURL(img)}
+                      alt="Floor Plan"
+                      className="object-cover w-full h-full"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-1 right-1"
+                      onClick={() => handleRemoveImage(setFloorPlanImages, idx)}
+                    >
                       ×
                     </Button>
                   </div>
@@ -228,13 +321,28 @@ const BuilderProjectPost = () => {
             <CardContent className="space-y-4 pt-6">
               {amenities.map((item, idx) => (
                 <div key={idx} className="flex gap-2 items-center mb-2">
-                  <Input value={item} onChange={e => handleListChange(setAmenities, idx, e.target.value)} placeholder="Amenity" />
-                  <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveListItem(setAmenities, idx)}>
+                  <Input
+                    value={item}
+                    onChange={(e) =>
+                      handleListChange(setAmenities, idx, e.target.value)
+                    }
+                    placeholder="Amenity"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="destructive"
+                    onClick={() => handleRemoveListItem(setAmenities, idx)}
+                  >
                     ×
                   </Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={() => handleAddListItem(setAmenities)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleAddListItem(setAmenities)}
+              >
                 + Add Amenity
               </Button>
             </CardContent>
@@ -249,13 +357,34 @@ const BuilderProjectPost = () => {
             <CardContent className="space-y-4 pt-6">
               {exclusiveFeatures.map((item, idx) => (
                 <div key={idx} className="flex gap-2 items-center mb-2">
-                  <Input value={item} onChange={e => handleListChange(setExclusiveFeatures, idx, e.target.value)} placeholder="Exclusive Feature" />
-                  <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveListItem(setExclusiveFeatures, idx)}>
+                  <Input
+                    value={item}
+                    onChange={(e) =>
+                      handleListChange(
+                        setExclusiveFeatures,
+                        idx,
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Exclusive Feature"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="destructive"
+                    onClick={() =>
+                      handleRemoveListItem(setExclusiveFeatures, idx)
+                    }
+                  >
                     ×
                   </Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={() => handleAddListItem(setExclusiveFeatures)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleAddListItem(setExclusiveFeatures)}
+              >
                 + Add Feature
               </Button>
             </CardContent>
@@ -270,13 +399,28 @@ const BuilderProjectPost = () => {
             <CardContent className="space-y-4 pt-6">
               {paymentPlans.map((item, idx) => (
                 <div key={idx} className="flex gap-2 items-center mb-2">
-                  <Input value={item} onChange={e => handleListChange(setPaymentPlans, idx, e.target.value)} placeholder="Payment Plan" />
-                  <Button type="button" size="icon" variant="destructive" onClick={() => handleRemoveListItem(setPaymentPlans, idx)}>
+                  <Input
+                    value={item}
+                    onChange={(e) =>
+                      handleListChange(setPaymentPlans, idx, e.target.value)
+                    }
+                    placeholder="Payment Plan"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="destructive"
+                    onClick={() => handleRemoveListItem(setPaymentPlans, idx)}
+                  >
                     ×
                   </Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={() => handleAddListItem(setPaymentPlans)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleAddListItem(setPaymentPlans)}
+              >
                 + Add Payment Plan
               </Button>
             </CardContent>
@@ -291,4 +435,4 @@ const BuilderProjectPost = () => {
   );
 };
 
-export default BuilderProjectPost; 
+export default BuilderProjectPost;

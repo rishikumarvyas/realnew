@@ -14,7 +14,7 @@ export const formatPhoneNumber = (phoneNumber: string): string | null => {
 
   // Ensure the number is exactly 10 digits
   if (cleaned.length !== 10) {
-    console.error("Phone number must be exactly 10 digits");
+
     return null;
   }
 
@@ -39,12 +39,12 @@ export const parseJwt = (token: string): any => {
       atob(base64)
         .split("")
         .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
+        .join(""),
     );
 
     return JSON.parse(jsonPayload);
   } catch (e) {
-    console.error("Error parsing JWT token:", e);
+
     return null;
   }
 };

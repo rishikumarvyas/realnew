@@ -3,7 +3,6 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import axiosInstance from "../axiosCalls/axiosInstance";
 
 interface Notification {
   notificationId: string;
@@ -14,184 +13,44 @@ interface Notification {
   notificationType?: "user" | "property";
 }
 
-interface NotificationResponse {
-  statusCode: number;
-  message: string;
-  messageId?: string;
-  userId?: string;
-  propertyId?: string;
-  notifications: Notification[];
-}
-
-// Interface for the mark as read request body
-interface MarkAsReadRequest {
-  type: string;
-  userId: string;
-  notificationId: string;
-  propertyId?: string;
-}
-
-// Interface for creating a new notification
-interface CreateNotificationRequest {
-  userId: string;
-  message: string;
-  propertyId?: string;
-  notificationType?: "user" | "property";
-}
-
 const NotificationIcon: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { user, notifications, unreadCount, fetchNotifications } = useAuth();
+  const { 
+    user, 
+    notifications, 
+    unreadCount, 
+    refreshNotifications,
+    markNotificationAsRead 
+  } = useAuth();
 
   // Add effect to log notifications changes
   useEffect(() => {
-    console.log("NotificationIcon: notifications updated", {
-      count: notifications.length,
-      unreadCount,
-    });
+    
   }, [notifications, unreadCount]);
 
   useEffect(() => {
     if (user) {
-      console.log("NotificationIcon: User available:", user);
+      
+      
+      // Set up periodic refresh of notifications every 30 seconds
+      const interval = setInterval(() => {
+        refreshNotifications();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
     }
-  }, [user]);
-
-  const createNotification = async (
-    message: string,
-    notificationType: "user" | "property" = "user",
-    propertyId?: string
-  ) => {
-    if (!user || !user.userId) {
-      console.warn("No user available for creating notification");
-      return false;
-    }
-
-    try {
-      const payload: CreateNotificationRequest = {
-        userId: user.userId,
-        message: message,
-        notificationType: notificationType,
-      };
-
-      // Add propertyId for property notifications
-      if (notificationType === "property" && propertyId) {
-        payload.propertyId = propertyId;
-      }
-
-      console.log("Creating notification with payload:", payload);
-
-      const response = await axiosInstance.post(
-        "/api/Notification/CreateNotification",
-        payload
-      );
-
-      if (response.status === 200 || response.status === 201) {
-        console.log("Notification created successfully");
-
-        // Refresh notifications to show the new one
-        await fetchNotifications();
-
-        toast({
-          title: "Success",
-          description: "Notification created successfully",
-        });
-
-        return true;
-      }
-    } catch (error: any) {
-      console.error("Error creating notification:", error);
-
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-      }
-
-      toast({
-        title: "Error",
-        description: "Failed to create notification",
-        variant: "destructive",
-      });
-
-      return false;
-    }
-  };
+  }, [user, refreshNotifications]);
 
   const toggleDropdown = async () => {
     if (!showDropdown) {
-      console.log(
-        "NotificationIcon: Opening dropdown, fetching notifications..."
-      );
       setIsLoading(true);
-      await fetchNotifications();
+      await refreshNotifications();
       setIsLoading(false);
     }
     setShowDropdown((prev) => !prev);
-  };
-
-  const updateNotificationState = async (notificationId: string) => {
-    // After marking as read, refresh notifications to get updated state
-    await fetchNotifications();
-  };
-
-  const markAsRead = async (
-    notificationId: string,
-    notificationType?: "user" | "property",
-    propertyId?: string
-  ) => {
-    if (!user || !user.userId) {
-      updateNotificationState(notificationId);
-      return;
-    }
-
-    try {
-      // Create payload based on the API schema
-      const payload: MarkAsReadRequest = {
-        type: notificationType || "user", // Set the type field
-        userId: user.userId,
-        notificationId: notificationId,
-      };
-
-      // Add propertyId only for property notifications
-      if (notificationType === "property" && propertyId) {
-        payload.propertyId = propertyId;
-      }
-
-      console.log("Sending payload:", payload); // Debug log
-
-      const response = await axiosInstance.put(
-        "/api/Notification/MarkAsRead",
-        payload
-      );
-
-      if (response.status === 200) {
-        await updateNotificationState(notificationId);
-        console.log("Notification marked as read successfully");
-      }
-    } catch (error: any) {
-      console.error("Error marking notification as read:", error);
-
-      // Log the response data for debugging
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-      }
-
-      // Still update UI by refreshing notifications
-      await updateNotificationState(notificationId);
-
-      // Show error toast for API failures
-      toast({
-        title: "Warning",
-        description:
-          "Notification marked as read locally, but failed to sync with server",
-        variant: "destructive",
-      });
-    }
   };
 
   const markAllAsRead = async () => {
@@ -199,38 +58,24 @@ const NotificationIcon: React.FC = () => {
 
     if (unreadNotifications.length === 0) return;
 
-    // Try to update on server
-    if (user && user.userId) {
-      try {
-        await Promise.all(
-          unreadNotifications.map((notification) => {
-            const payload: MarkAsReadRequest = {
-              type: notification.notificationType || "user",
-              userId: user.userId!,
-              notificationId: notification.notificationId,
-            };
+    // Mark all as read using the centralized function
+    try {
+      await Promise.all(
+        unreadNotifications.map((notification) =>
+          markNotificationAsRead(
+            notification.notificationId,
+            notification.notificationType,
+            notification.propertyId
+          )
+        )
+      );
+    } catch (error) {
 
-            if (
-              notification.notificationType === "property" &&
-              notification.propertyId
-            ) {
-              payload.propertyId = notification.propertyId;
-            }
-
-            return axiosInstance.put("/api/Notification/MarkAsRead", payload);
-          })
-        );
-
-        // Refresh notifications after marking all as read
-        await fetchNotifications();
-      } catch (error) {
-        console.error("Error marking all notifications as read:", error);
-        toast({
-          title: "Warning",
-          description: "Some notifications failed to sync with server",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Warning",
+        description: "Some notifications failed to sync with server",
+        variant: "destructive",
+      });
     }
   };
 
@@ -272,10 +117,10 @@ const NotificationIcon: React.FC = () => {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
-      await markAsRead(
+      await markNotificationAsRead(
         notification.notificationId,
         notification.notificationType,
-        notification.propertyId
+        notification.propertyId,
       );
     }
 
@@ -288,12 +133,12 @@ const NotificationIcon: React.FC = () => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
       <Button
         onClick={toggleDropdown}
         variant="outline"
         size="icon"
-        className="relative rounded-full h-10 w-10 flex items-center justify-center border border-gray-200 hover:bg-blue-50 hover:text-blue-600"
+        className="relative rounded-full h-10 w-10 sm:h-10 sm:w-10 flex items-center justify-center border border-gray-200 hover:bg-blue-50 hover:text-blue-600 mx-auto sm:mx-0"
         aria-label="Notifications"
       >
         <Bell className="h-5 w-5" />
@@ -305,19 +150,11 @@ const NotificationIcon: React.FC = () => {
       </Button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border rounded-md shadow-xl z-50">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-white border rounded-md shadow-xl z-50 sm:right-0 sm:left-auto left-1/2 transform -translate-x-1/2 sm:transform-none sm:w-80 max-h-[calc(100vh-8rem)] overflow-hidden">
           <div className="p-3 border-b bg-gradient-to-r from-blue-50 to-blue-100">
             <div className="flex justify-between items-center">
               <h3 className="font-medium text-blue-800">All Notifications</h3>
               <div className="flex space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-green-600 hover:text-green-800"
-                  onClick={() =>
-                    createNotification("Test notification created", "user")
-                  }
-                ></Button>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
@@ -343,7 +180,7 @@ const NotificationIcon: React.FC = () => {
               <p className="text-sm text-gray-500">Loading notifications...</p>
             </div>
           ) : (
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[calc(100vh-12rem)] overflow-y-auto">
               {notifications.length > 0 ? (
                 notifications.map((notification) => (
                   <div

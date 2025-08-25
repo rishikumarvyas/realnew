@@ -44,7 +44,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, createNotification, refreshNotifications } = useAuth();
 
   // Form states
   const [propertyType, setPropertyType] = useState("");
@@ -73,7 +73,7 @@ const PostProperty = () => {
   const [isOCApproved, setIsOCApproved] = useState<string>("");
   const [isNA, setIsNA] = useState<string>("");
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined
+    undefined,
   );
   const [ageOfProperty, setAgeOfProperty] = useState("");
   const [ageError, setAgeError] = useState("");
@@ -84,7 +84,7 @@ const PostProperty = () => {
       setCityLoading(true);
       axios
         .get(
-          `https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=City&parentTableName=State&parentField=StateId&parentId=${selectedStateId}`
+          `https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=City&parentTableName=State&parentField=StateId&parentId=${selectedStateId}`,
         )
         .then((res) => {
           if (res?.data?.statusCode === 200 && res?.data?.data?.length > 0) {
@@ -113,10 +113,13 @@ const PostProperty = () => {
   const [preferenceStates, setPreferenceStates] = useState<
     Record<string, boolean>
   >(
-    preferenceOptions.reduce((acc, option) => {
-      acc[option.id] = false;
-      return acc;
-    }, {} as Record<string, boolean>)
+    preferenceOptions.reduce(
+      (acc, option) => {
+        acc[option.id] = false;
+        return acc;
+      },
+      {} as Record<string, boolean>,
+    ),
   );
 
   // Helper for category logic
@@ -129,7 +132,7 @@ const PostProperty = () => {
 
   const checkBoxAmenities: Amenity[] = isShop
     ? getAmenity().checkBoxAmenities.filter((item) =>
-        new Set(["1", "6", "7", "8"]).has(item.id)
+        new Set(["1", "6", "7", "8"]).has(item.id),
       )
     : getAmenity().checkBoxAmenities;
   const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
@@ -200,7 +203,7 @@ const PostProperty = () => {
         }
       }
     } catch (error) {
-      console.error(error);
+      
     }
   };
 
@@ -465,7 +468,7 @@ const PostProperty = () => {
         formData.append(`Images[${index}].File`, image);
         formData.append(
           `Images[${index}].IsMain`,
-          index === mainImageIndex ? "true" : "false"
+          index === mainImageIndex ? "true" : "false",
         );
       });
 
@@ -478,7 +481,7 @@ const PostProperty = () => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       const result = response.data;
@@ -496,17 +499,25 @@ const PostProperty = () => {
         return;
       }
 
-      console.log("New Property ID from API response:", newPropertyId);
+      // Create notification for property posting
+      await createNotification(
+        `Your property "${title}" has been posted successfully and is pending approval`,
+        "property",
+        newPropertyId
+      );
+
+      // Refresh notifications to update count immediately
+      await refreshNotifications();
 
       toast({
-        title: "Property Posted Successfully!",
-        description: "Your property has been submitted for review.",
+        title: "Success!",
+        description: "Property posted successfully. It will be reviewed by our team.",
       });
 
       // Navigate to the Dashboard page with the PropertyId
       navigate(`/dashboard?newPropertyId=${newPropertyId}`);
     } catch (error) {
-      console.error("Error posting property:", error);
+
       toast({
         title: "Failed to Post Property",
         description:

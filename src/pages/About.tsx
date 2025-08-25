@@ -39,25 +39,25 @@ export default function AboutUs() {
     const timers = [
       setTimeout(
         () => setIsVisible((prev) => ({ ...prev, banner: true })),
-        300
+        300,
       ),
       setTimeout(
         () => setIsVisible((prev) => ({ ...prev, mission: true })),
-        600
+        600,
       ),
       setTimeout(() => setIsVisible((prev) => ({ ...prev, stats: true })), 900),
       setTimeout(() => setIsVisible((prev) => ({ ...prev, team: true })), 1200),
       setTimeout(
         () => setIsVisible((prev) => ({ ...prev, history: true })),
-        1500
+        1500,
       ),
       setTimeout(
         () => setIsVisible((prev) => ({ ...prev, testimonials: true })),
-        1800
+        1800,
       ),
       setTimeout(
         () => setIsVisible((prev) => ({ ...prev, contact: true })),
-        2100
+        2100,
       ),
     ];
 
@@ -87,7 +87,7 @@ export default function AboutUs() {
               }
             });
           },
-          { threshold: 0.2 }
+          { threshold: 0.2 },
         );
 
         observer.observe(element);
@@ -259,7 +259,7 @@ export default function AboutUs() {
       {/* Hero Banner */}
       <div
         className={`banner-section relative h-screen max-h-[700px] overflow-hidden transition-all duration-1000 ${animateClass(
-          "banner"
+          "banner",
         )}`}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900 to-transparent opacity-70"></div>
@@ -289,7 +289,7 @@ export default function AboutUs() {
       {/* Our Mission */}
       <section
         className={`mission-section py-16 md:py-24 container mx-auto px-6 transition-all duration-1000 transform ${animateClass(
-          "mission"
+          "mission",
         )}`}
       >
         <div className="flex flex-col md:flex-row items-center">
@@ -330,7 +330,7 @@ export default function AboutUs() {
       {/* Stats Section */}
       <section
         className={`stats-section py-16 md:py-24 bg-gradient-to-r from-blue-50 to-white transition-all duration-1000 transform ${animateClass(
-          "stats"
+          "stats",
         )}`}
       >
         <div className="container mx-auto px-6">
@@ -368,7 +368,7 @@ export default function AboutUs() {
       {/* Our Team */}
       <section
         className={`team-section py-16 md:py-24 container mx-auto px-6 transition-all duration-1000 transform ${animateClass(
-          "team"
+          "team",
         )}`}
       >
         <div className="max-w-4xl mx-auto text-center mb-16">
@@ -410,7 +410,7 @@ export default function AboutUs() {
       {/* Our Journey */}
       <section
         className={`history-section py-16 md:py-24 bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-1000 transform ${animateClass(
-          "history"
+          "history",
         )}`}
       >
         <div className="container mx-auto px-6">
@@ -500,7 +500,7 @@ export default function AboutUs() {
       {/* Testimonials */}
       <section
         className={`testimonials-section py-16 md:py-24 bg-gray-50 transition-all duration-1000 transform ${animateClass(
-          "testimonials"
+          "testimonials",
         )}`}
       >
         <div className="container mx-auto px-6">
@@ -648,7 +648,7 @@ export default function AboutUs() {
       {/* Contact Section */}
       <section
         className={`contact-section py-16 md:py-24 bg-gradient-to-r from-blue-600 to-blue-500 text-white transition-all duration-1000 transform ${animateClass(
-          "contact"
+          "contact",
         )}`}
       >
         <div className="container mx-auto px-6">

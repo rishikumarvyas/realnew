@@ -1,4 +1,3 @@
-
 import { useState, FormEvent } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,7 @@ export function ContactForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!message.trim()) {
       toast({
         title: "Message Required",
@@ -43,24 +42,25 @@ export function ContactForm({
       });
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       // Simulate API call to backend
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
       toast({
         title: "Message Sent Successfully!",
         description: `Your message has been sent via ${contactType}.`,
       });
-      
+
       setMessage("");
       onOpenChange(false);
     } catch (error) {
       toast({
         title: "Failed to Send Message",
-        description: "There was an error sending your message. Please try again.",
+        description:
+          "There was an error sending your message. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -81,14 +81,13 @@ export function ContactForm({
               size="icon"
               className="h-6 w-6"
               onClick={() => onOpenChange(false)}
-            >
-            </Button>
+            ></Button>
           </DialogTitle>
           <DialogDescription>
             Send a message about &quot;{propertyTitle}&quot;
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div>

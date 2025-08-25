@@ -27,7 +27,7 @@ export function ContactUs() {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -36,7 +36,7 @@ export function ContactUs() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Here you would typically send the form data to your backend
-    console.log("Form submitted:", formData);
+
     setFormSubmitted(true);
 
     // Reset form after showing success message

@@ -123,15 +123,6 @@ export function Footer() {
                   Commercial
                 </Link>
               </li>
-              <li className="flex items-center">
-                <ChevronRight size={16} className="text-orange-600 mr-2" />
-                <Link
-                  to="/contactus"
-                  className="text-gray-800 hover:text-blue-600 transition duration-200"
-                >
-                  Contact
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -152,10 +143,10 @@ export function Footer() {
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-600 mr-2" />
                 <Link
-                  to="/contact"
+                  to="/contactus"
                   className="text-gray-800 hover:text-blue-600 transition duration-200"
                 >
-                  Contact Us
+                  Contact
                 </Link>
               </li>
               <li className="flex items-center">

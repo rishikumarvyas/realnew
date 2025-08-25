@@ -59,7 +59,7 @@ export default function EnhancedPrivacyPolicy() {
           }
         });
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     // Observe all elements with animation-trigger class

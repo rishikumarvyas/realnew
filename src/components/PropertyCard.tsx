@@ -2,6 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { MapPin, Bed, Bath, Maximize2, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export interface PropertyCardProps {
   id: string;
@@ -45,6 +47,8 @@ export function PropertyCard({
   propertyType,
   status,
 }: PropertyCardProps) {
+  const { toast } = useToast();
+
   // Get badge color based on property type - Updated for all types
   const getBadgeStyle = () => {
     switch (type) {
