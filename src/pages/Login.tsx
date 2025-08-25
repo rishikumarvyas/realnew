@@ -194,7 +194,7 @@ const Login = ({ onClose }) => {
                       Phone Number
                     </Label>
                     <div className="flex items-center">
-                      <div className="flex items-center px-2 text-blue-600 font-medium bg-blue-50 h-9 ">
+                      <div className="flex items-center px-0.5 text-blue-600 font-medium bg-blue-50 h-9 ">
                         +91
                       </div>
                       <div className="max-w-[1000px] w-full ml-[-1px]">
@@ -202,7 +202,7 @@ const Login = ({ onClose }) => {
                           value={phone}
                           onChange={(val) => setPhone(val.slice(0, 10))}
                           length={10}
-                          className="h-9 gap-1 [&>input]:w-6 [&>input]:h-9 [&>input]:text-base"
+                          className="h-9 gap-1 [&>input]:w-5 [&>input]:h-9 [&>input]:text-base"
                           onComplete={() => {
                             if (continueBtnRef.current) {
                               continueBtnRef.current.focus();

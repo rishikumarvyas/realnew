@@ -124,7 +124,7 @@ export const FormStep = ({
                 </FormLabel>
                 <div className="flex items-center">
                   <div>
-                    <span className="flex items-center px-2 text-blue-600 font-medium bg-blue-50 h-9 ">
+                    <span className="flex items-center px-0.5 text-blue-600 font-medium bg-blue-50 h-9 ">
                       +91
                     </span>
                   </div>
@@ -134,7 +134,7 @@ export const FormStep = ({
                         value={field.value}
                         onChange={(val) => field.onChange(val.slice(0, 10))}
                         length={10}
-                        className="h-9 gap-1 [&>input]:w-6 [&>input]:h-9 [&>input]:text-base "
+                        className="h-9 gap-1 [&>input]:w-5 [&>input]:h-9 [&>input]:text-base "
                         onComplete={() => {
                           if (userTypeSelectRef.current) {
                             userTypeSelectRef.current.focus();
