@@ -188,12 +188,25 @@ const Login = ({ onClose }) => {
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
                     </Label>
+<<<<<<< HEAD
                     <div className="space-y-3">
                       {/* Phone Number Input Boxes with inline country code */}
                       <div className="flex justify-center">
                         <PhoneInput
                           value={phone}
                           onChange={(val) => setPhone(val.slice(0, 10))}
+=======
+                    <div className="flex items-center">
+                      <div className="flex items-center px-0.5 text-blue-600 font-medium bg-blue-50 h-9 ">
+                        +91
+                      </div>
+                      <div className="max-w-[1000px] w-full ml-[-1px]">
+                        <OtpInput
+                          value={phone}
+                          onChange={(val) => setPhone(val.slice(0, 10))}
+                          length={10}
+                          className="h-9 gap-1 [&>input]:w-5 [&>input]:h-9 [&>input]:text-base"
+>>>>>>> 5c8d913b9708629bcf476cb87165bb4e1b115d5d
                           onComplete={() => {
                             if (continueBtnRef.current) {
                               continueBtnRef.current.focus();
