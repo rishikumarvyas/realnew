@@ -481,7 +481,7 @@ const PropertyDetail = () => {
   // Use posted by and phone information from the property details or API response
   const ownerDetails = {
     name:
-      ownerContactInfo?.publisherName || property?.postedBy || "Property Owner",
+      ownerContactInfo?.publisherName || property?.postedBy || "Posted By",
     phone:
       ownerContactInfo?.publisherPhone || property?.phone || "+91 98765 43210",
     email: "contact@homeyatra.com",
@@ -1202,7 +1202,7 @@ const PropertyDetail = () => {
                       property.superCategory.toLowerCase() === "rent" ? (
                       <>
                         <div className="flex justify-between border-b pb-3">
-                          <span className="text-gray-600">Like Count</span>
+                          <span className="text-gray-600">Likes</span>
                           <span className="font-medium flex items-center">
                             <Heart
                               className={`h-4 w-4 mr-1 ${
@@ -1286,7 +1286,7 @@ const PropertyDetail = () => {
                               </span>
                             </div>
                             <div className="flex justify-between border-b pb-3">
-                              <span className="text-gray-600">Like Count</span>
+                              <span className="text-gray-600">Likes</span>
                               <span className="font-medium flex items-center">
                                 <Heart
                                   className={`h-4 w-4 mr-1 ${
@@ -1333,25 +1333,73 @@ const PropertyDetail = () => {
               </Tabs>
             </div>
 
-            {/* Map Section - Updated with OpenStreetMap */}
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-lg font-medium mb-3 inline-flex items-center">
-                <MapPin className="text-blue-600 mr-2" size={18} />
-                Location
-              </h3>
+            {/* Enhanced Map Section */}
+            <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              {/* Map Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-blue-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="bg-blue-600 p-2 rounded-lg mr-3">
+                      <MapPin className="text-white" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">Property Location</h3>
+                      <p className="text-sm text-gray-600">Interactive map with precise location</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 rounded-full">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-blue-700">Live Location</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              <PropertyMap
-                address={property.address || ""}
-                city={property.city || ""}
-                state={property.state || ""}
-                className="h-[300px]"
-              />
+              {/* Map Container */}
+              <div className="p-6">
+                <PropertyMap
+                  address={property.address || ""}
+                  city={property.city || ""}
+                  state={property.state || ""}
+                  className="h-[400px]"
+                />
+              </div>
 
-              <p className="mt-3 text-sm text-gray-600">
-                {property.address}
-                {property.city ? `, ${property.city}` : ""}
-                {property.state ? `, ${property.state}` : ""}
-              </p>
+              {/* Location Details */}
+              <div className="px-6 pb-6">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-100 p-2 rounded-lg flex-shrink-0">
+                      <MapPin className="text-blue-600" size={16} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 mb-1">Complete Address</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {property.address}
+                        {property.city ? `, ${property.city}` : ""}
+                        {property.state ? `, ${property.state}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Location Features */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-gray-600">Precise Location</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-xs text-gray-600">Interactive Map</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span className="text-xs text-gray-600">Get Directions</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1408,11 +1456,11 @@ const PropertyDetail = () => {
                 </div>
 
                 <div>
-                  <div className="font-medium">
-                    {showContactInfo && ownerContactInfo?.publisherName
-                      ? ownerContactInfo.publisherName
-                      : property.postedBy || "Property Owner"}
-                  </div>
+                                     <div className="font-medium">
+                     {showContactInfo && ownerContactInfo?.publisherName
+                       ? ownerContactInfo.publisherName
+                       : property.postedBy || "Posted By"}
+                   </div>
                   {showContactInfo && ownerContactInfo?.publisherPhone && (
                     <div className="font-medium">
                       {ownerContactInfo.publisherPhone}

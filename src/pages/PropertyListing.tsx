@@ -1909,19 +1909,8 @@ export const PropertyListing = () => {
               </div>
             )}
 
-            {/* Results count and sort */}
+            {/* Sort options */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-              {/* Results count */}
-              <div className="mb-4 sm:mb-0">
-                <p className="text-sm text-gray-600">
-                  Showing{" "}
-                  <span className="font-semibold">
-                    {filteredProperties.length}
-                  </span>{" "}
-                  properties
-                </p>
-              </div>
-
               {/* Sort dropdown */}
               <div className="mt-2 sm:mt-0">
                 <Select value={sortBy} onValueChange={handleSortChange}>

@@ -462,10 +462,10 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center">
-              <Home className="w-5 h-5 text-blue-600 mr-2" />
-              <span className="text-3xl font-bold">{properties.length}</span>
-            </div>
+                          <div className="flex items-center">
+                <Home className="w-5 h-5 text-blue-600 mr-2" />
+                <span className="text-3xl font-bold">{properties.length}</span>
+              </div>
           </CardContent>
         </Card>
 

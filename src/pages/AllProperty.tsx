@@ -188,7 +188,7 @@ const AllProperty = () => {
               Loading active properties...
             </span>
           ) : (
-            `${properties.length} Active Properties Found`
+            "Active Properties"
           )}
         </h2>
       </div>
