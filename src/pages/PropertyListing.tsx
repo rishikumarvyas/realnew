@@ -6,6 +6,8 @@ import type { PropertyCardProps } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import SEOHead from "@/components/SEOHead";
+import { getPropertyListingSEO } from "@/utils/seoUtils";
 import {
   Search,
   FilterX,
@@ -251,6 +253,11 @@ export const PropertyListing = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // SEO configuration
+  const type = searchParams.get("type") || "all";
+  const city = searchParams.get("city") || "";
+  const seoConfig = getPropertyListingSEO(type, city);
 
   // Mobile filter visibility
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
@@ -1166,7 +1173,9 @@ export const PropertyListing = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <>
+      <SEOHead {...seoConfig} />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Hero Section with Slider - Compact */}
       <section className="relative h-96 sm:h-[500px] overflow-hidden">
         {/* Slider with clearer images */}
@@ -2091,7 +2100,8 @@ export const PropertyListing = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

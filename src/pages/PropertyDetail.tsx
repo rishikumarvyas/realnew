@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SEOHead from "@/components/SEOHead";
+import { getPropertyDetailSEO } from "@/utils/seoUtils";
 import {
   Bed,
   Bath,
@@ -49,6 +51,9 @@ const PropertyDetail = () => {
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // SEO configuration
+  const seoConfig = property ? getPropertyDetailSEO(property) : null;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [contactType, setContactType] = useState("whatsapp");
@@ -600,7 +605,9 @@ const PropertyDetail = () => {
       : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      {seoConfig && <SEOHead {...seoConfig} />}
+      <div className="min-h-screen bg-gray-50">
       {/* Header with back button and actions */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -1587,7 +1594,8 @@ const PropertyDetail = () => {
         onOpenChange={setGalleryOpen}
         initialIndex={activeImageIndex}
       />
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -8,6 +8,8 @@ import { Testimonial } from "@/components/Testimonial";
 import { StatCard } from "@/components/StatCard";
 import AllProperty from "./AllProperty";
 import { useAuth } from "@/contexts/AuthContext";
+import SEOHead from "@/components/SEOHead";
+import { getHomePageSEO } from "@/utils/seoUtils";
 import {
   Search,
   ArrowRight,
@@ -108,6 +110,9 @@ const Index = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
   const { isAuthenticated, openLoginModal } = useAuth();
+  
+  // SEO configuration
+  const seoConfig = getHomePageSEO();
 
   // Auto-advance slider every 5 seconds
   useEffect(() => {
@@ -194,7 +199,9 @@ const Index = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <>
+      <SEOHead {...seoConfig} />
+      <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Hero Section with Slider - Optimized for mobile */}
       <section className="relative h-screen sm:h-screen overflow-hidden">
         {/* Slider with clearer images */}
@@ -476,7 +483,8 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 };
 
