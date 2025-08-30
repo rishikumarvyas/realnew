@@ -10,12 +10,22 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { X, ArrowLeft, Home } from "lucide-react";
+import { X, ArrowLeft, Home, Phone, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { OtpStep } from "@/components/login/OtpStep";
-import { FormStep } from "@/components/login/FormStep";
+import { PhoneInput } from "@/components/PhoneInput";
 import axiosInstance from "../axiosCalls/axiosInstance";
 
 // Map user types to their respective IDs
@@ -37,6 +47,7 @@ const Signup = ({ onClose }: SignupProps) => {
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { requestOtp, signup, openLoginModal } = useAuth();
@@ -80,7 +91,6 @@ const Signup = ({ onClose }: SignupProps) => {
 
       await axiosInstance.post("/api/Message/Send", payload);
     } catch (error) {
-
       // We can show a toast here, but let's not block the signup flow
       toast({
         title: "Terms Acceptance Failed",
@@ -91,12 +101,45 @@ const Signup = ({ onClose }: SignupProps) => {
     }
   };
 
-  const handleFormSubmit = async (formSubmitData: any) => {
-    const {
-      name: fullName,
-      phone: phoneNumber,
-      userType: selectedUserType,
-    } = formSubmitData;
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!name.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter your full name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!phone.trim() || phone.length !== 10) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid 10-digit phone number.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (userType === 0) {
+      toast({
+        title: "User Type Required",
+        description: "Please select your user type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!termsAccepted) {
+      toast({
+        title: "Terms & Conditions",
+        description: "Please accept the Terms & Conditions to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     setPhoneError(null);
@@ -105,7 +148,7 @@ const Signup = ({ onClose }: SignupProps) => {
       // Check if the user already exists
       const users = localStorage.getItem("homeYatra_users");
       const existingUsers = users ? JSON.parse(users) : {};
-      const fullPhoneNumber = "+91" + phoneNumber;
+      const fullPhoneNumber = "+91" + phone;
 
       if (existingUsers[fullPhoneNumber]) {
         setPhoneError(
@@ -117,18 +160,13 @@ const Signup = ({ onClose }: SignupProps) => {
 
       // Send terms acceptance in the background (fire and forget)
       sendTermsAcceptance({
-        phone: phoneNumber,
-        name: fullName,
-        userTypeId: selectedUserType.toString(),
+        phone: phone,
+        name: name,
+        userTypeId: userType.toString(),
       });
 
-      // Set form data and request OTP directly
-      setName(fullName);
-      setPhone(phoneNumber);
-      setUserType(selectedUserType);
-
       // Request OTP
-      const success = await requestOtp("+91" + phoneNumber);
+      const success = await requestOtp("+91" + phone);
 
       if (success) {
         toast({
@@ -228,6 +266,17 @@ const Signup = ({ onClose }: SignupProps) => {
     setStep("form");
   };
 
+  const handleTermsClick = () => {
+    // Open Terms & Conditions page in a new tab
+    window.open("/terms", "_blank");
+  };
+
+  const handleUserTypeChange = (value: string) => {
+    setUserType(parseInt(value));
+  };
+
+  const isFormValid = name.trim() !== "" && phone.length === 10 && userType > 0 && termsAccepted;
+
   const popupClasses = isVisible
     ? "opacity-100 translate-y-0"
     : "opacity-0 translate-y-10 pointer-events-none";
@@ -287,14 +336,109 @@ const Signup = ({ onClose }: SignupProps) => {
 
             <CardContent className="px-6 sm:px-8 py-2 pb-6">
               {step === "form" ? (
-                <FormStep
-                  onSubmit={handleFormSubmit}
-                  loading={loading}
-                  userTypes={USER_TYPES}
-                  states={[]}
-                  initialUserType={undefined}
-                  phoneError={phoneError}
-                />
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  {/* Full Name Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="flex items-center gap-2 text-sm font-medium">
+                      <User className="h-4 w-4 text-blue-500" />
+                      Full Name
+                    </Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-11"
+                      autoComplete="name"
+                    />
+                  </div>
+
+                  {/* Phone Number Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                      <Phone className="h-4 w-4 text-blue-500" />
+                      Phone Number
+                    </Label>
+                    <div className="flex justify-center">
+                      <PhoneInput
+                        value={phone}
+                        onChange={(val) => setPhone(val.slice(0, 10))}
+                        onComplete={() => {
+                          // Focus on user type select when phone is complete
+                          const userTypeSelect = document.getElementById('userType');
+                          if (userTypeSelect) {
+                            userTypeSelect.focus();
+                          }
+                        }}
+                      />
+                    </div>
+                    {phoneError && (
+                      <p className="text-red-500 text-xs">{phoneError}</p>
+                    )}
+                  </div>
+
+                  {/* User Type Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="userType" className="flex items-center gap-2 text-sm font-medium">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      I am a
+                    </Label>
+                    <Select
+                      value={userType > 0 ? userType.toString() : ""}
+                      onValueChange={handleUserTypeChange}
+                    >
+                      <SelectTrigger id="userType" className="h-11">
+                        <SelectValue placeholder="Select your user type" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[70] bg-white border border-gray-200 shadow-lg">
+                        {USER_TYPES.map((type) => (
+                          <SelectItem key={type.id} value={type.id.toString()}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Terms & Conditions */}
+                  <div className="flex items-start space-x-3 pt-2">
+                    <Checkbox
+                      id="terms"
+                      checked={termsAccepted}
+                      onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                      className="mt-1"
+                    />
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="terms"
+                        className="text-xs text-gray-700 cursor-pointer leading-relaxed"
+                      >
+                        I have read and agree to the{" "}
+                        <span
+                          className="font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                          onClick={handleTermsClick}
+                        >
+                          Terms & Conditions
+                        </span>{" "}
+                        of HomeYatra.
+                      </Label>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    className={`w-full h-11 text-base font-medium transition-all duration-300 ${
+                      isFormValid && !loading
+                        ? "bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 shadow-md hover:shadow-lg"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                    disabled={!isFormValid || loading}
+                  >
+                    {loading ? "Processing..." : "Continue with OTP"}
+                  </Button>
+                </form>
               ) : (
                 <OtpStep
                   phone={phone}
