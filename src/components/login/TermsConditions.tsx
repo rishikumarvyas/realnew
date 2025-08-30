@@ -4,7 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Shield, FileText, Users, Lock, Loader2, AlertCircle } from "lucide-react";
+import {
+  X,
+  Shield,
+  FileText,
+  Users,
+  Lock,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TermsCondition {
@@ -40,7 +48,12 @@ interface TermsConditionsProps {
   };
 }
 
-const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsConditionsProps) => {
+const TermsConditions = ({
+  onAccept,
+  onClose,
+  isVisible,
+  userData,
+}: TermsConditionsProps) => {
   const [accepted, setAccepted] = useState(false);
   const [termsData, setTermsData] = useState<TermsCondition[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,10 +63,10 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
 
   // Create axios instance
   const apiClient = axios.create({
-    baseURL: 'https://homeyatraapi.azurewebsites.net/api',
+    baseURL: "https://homeyatraapi.azurewebsites.net/api",
     timeout: 10000,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   });
 
@@ -62,25 +75,24 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Fetching terms and conditions...');
-      
+
       const response = await apiClient.get<ApiResponse>(
-        '/Generic/GetActiveRecords?tableName=termsconditions'
+        "/Generic/GetActiveRecords?tableName=termsconditions",
       );
-      
-      console.log('📥 Terms and conditions response:', response.data);
-      
-      if (response.data && response.data.data && response.data.data.length > 0) {
+
+      if (
+        response.data &&
+        response.data.data &&
+        response.data.data.length > 0
+      ) {
         setTermsData(response.data.data);
-        console.log('✅ Terms data loaded successfully');
-        
+
         toast({
           title: "Terms & Conditions Loaded",
           description: `Loaded ${response.data.data.length} terms section(s).`,
         });
       } else {
-        console.log('⚠️ No data found in API response');
-        setError('No terms and conditions data found');
+        setError("No terms and conditions data found");
         toast({
           variant: "destructive",
           title: "No Data Found",
@@ -88,8 +100,8 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
         });
       }
     } catch (err) {
-      console.error('❌ Error fetching terms and conditions:', err);
-      setError('Failed to load terms and conditions');
+
+      setError("Failed to load terms and conditions");
       toast({
         variant: "destructive",
         title: "Error",
@@ -104,7 +116,6 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
   const sendTermsAcceptance = async () => {
     try {
       setIsSubmitting(true);
-      console.log('🔄 Sending terms acceptance...');
 
       // Use provided userData or fallback values
       const userPhone = userData?.phone || "user_phone_number";
@@ -112,20 +123,16 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
       const userTypeId = userData?.userTypeId || "1";
 
       const payload: MessagePayload = {
-        phone: userPhone.startsWith('+91') ? userPhone : `+91${userPhone}`,
+        phone: userPhone.startsWith("+91") ? userPhone : `+91${userPhone}`,
         templateId: 0,
         message: "Terms and Conditions accepted during signup",
         action: "terms_accepted",
         name: userName,
         userTypeId: userTypeId,
-        isTermsConditionsAccepted: true
+        isTermsConditionsAccepted: true,
       };
 
-      console.log('📤 Sending payload:', payload);
-
-      const response = await apiClient.post('/Message/Send', payload);
-
-      console.log('📤 Terms acceptance sent successfully:', response.data);
+      const response = await apiClient.post("/Message/Send", payload);
 
       toast({
         title: "Terms Accepted",
@@ -133,9 +140,8 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
       });
 
       onAccept(); // Call the parent onAccept function
-
     } catch (err) {
-      console.error('❌ Error sending terms acceptance:', err);
+
       toast({
         variant: "destructive",
         title: "Error",
@@ -161,7 +167,7 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
 
   const formatTermsContent = (content: string) => {
     // Split content into paragraphs and format
-    const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+    const paragraphs = content.split(/\n\s*\n/).filter((p) => p.trim());
     return paragraphs.map((paragraph, index) => (
       <p key={index} className="mb-4 text-gray-700 leading-relaxed text-sm">
         {paragraph.trim()}
@@ -198,14 +204,18 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
             >
               <X className="h-5 w-5" />
             </button>
-            
+
             <div className="flex items-center gap-3">
               <div className="bg-white/20 rounded-full p-2">
                 <FileText className="h-6 w-6" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold">Terms & Conditions</CardTitle>
-                <p className="text-blue-100 text-sm mt-1">HomeYatra Platform Agreement</p>
+                <CardTitle className="text-2xl font-bold">
+                  Terms & Conditions
+                </CardTitle>
+                <p className="text-blue-100 text-sm mt-1">
+                  HomeYatra Platform Agreement
+                </p>
               </div>
             </div>
           </CardHeader>
@@ -217,7 +227,9 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm">Loading Terms & Conditions...</p>
+                    <p className="text-gray-600 text-sm">
+                      Loading Terms & Conditions...
+                    </p>
                   </div>
                 </div>
               ) : error ? (
@@ -238,19 +250,26 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
                 <div className="space-y-6 text-gray-700">
                   {/* Welcome Section */}
                   <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
-                    <h3 className="font-semibold text-blue-800 mb-2">Welcome to HomeYatra</h3>
+                    <h3 className="font-semibold text-blue-800 mb-2">
+                      Welcome to HomeYatra
+                    </h3>
                     <p className="text-sm text-blue-700">
-                      By creating an account, you agree to our terms of service and privacy policy. 
-                      Please read these terms carefully before proceeding.
+                      By creating an account, you agree to our terms of service
+                      and privacy policy. Please read these terms carefully
+                      before proceeding.
                     </p>
                   </div>
 
                   {/* API Terms Content */}
                   <div className="space-y-4 border-t pt-4">
-                    <h3 className="font-semibold text-gray-800">Platform Terms & Conditions</h3>
+                    <h3 className="font-semibold text-gray-800">
+                      Platform Terms & Conditions
+                    </h3>
                     {termsData.map((section, index) => (
                       <div key={section.id} className="space-y-2">
-                        <h4 className="font-medium text-gray-700">Section {index + 1}</h4>
+                        <h4 className="font-medium text-gray-700">
+                          Section {index + 1}
+                        </h4>
                         <div className="text-sm text-gray-600">
                           {formatTermsContent(section.termsconditions)}
                         </div>
@@ -262,7 +281,9 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm">No terms and conditions available</p>
+                    <p className="text-gray-600 text-sm">
+                      No terms and conditions available
+                    </p>
                   </div>
                 </div>
               )}
@@ -278,11 +299,20 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
                   className="mt-1"
                   disabled={loading || error !== null}
                 />
-                <label htmlFor="accept-terms" className="text-sm text-gray-700 cursor-pointer">
+                <label
+                  htmlFor="accept-terms"
+                  className="text-sm text-gray-700 cursor-pointer"
+                >
                   I have read and agree to the{" "}
-                  <span className="font-semibold text-blue-600">Terms & Conditions</span> and{" "}
-                  <span className="font-semibold text-blue-600">Privacy Policy</span> of HomeYatra. 
-                  I understand my rights and responsibilities as a platform user.
+                  <span className="font-semibold text-blue-600">
+                    Terms & Conditions
+                  </span>{" "}
+                  and{" "}
+                  <span className="font-semibold text-blue-600">
+                    Privacy Policy
+                  </span>{" "}
+                  of HomeYatra. I understand my rights and responsibilities as a
+                  platform user.
                 </label>
               </div>
 
@@ -297,7 +327,9 @@ const TermsConditions = ({ onAccept, onClose, isVisible, userData }: TermsCondit
                 </Button>
                 <Button
                   onClick={handleAccept}
-                  disabled={!accepted || loading || error !== null || isSubmitting}
+                  disabled={
+                    !accepted || loading || error !== null || isSubmitting
+                  }
                   className="px-8 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 flex items-center gap-2"
                 >
                   {isSubmitting ? (

@@ -27,7 +27,7 @@ export function ContactUs() {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -36,7 +36,7 @@ export function ContactUs() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Here you would typically send the form data to your backend
-    console.log("Form submitted:", formData);
+
     setFormSubmitted(true);
 
     // Reset form after showing success message
@@ -120,9 +120,9 @@ export function ContactUs() {
             </div>
             <h3 className="font-bold text-xl mb-3 text-gray-800">Email Us</h3>
             <p className="text-gray-600">
-              General Inquiries: contact@homeyatra.in
+              General Inquiries: Support@homeyatra.com
               <br />
-              Support: support@homeyatra.in
+              Support: Support@homeyatra.com
             </p>
           </div>
 

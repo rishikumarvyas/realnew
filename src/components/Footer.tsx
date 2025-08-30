@@ -123,15 +123,6 @@ export function Footer() {
                   Commercial
                 </Link>
               </li>
-              <li className="flex items-center">
-                <ChevronRight size={16} className="text-orange-600 mr-2" />
-                <Link
-                  to="/contactus"
-                  className="text-gray-800 hover:text-blue-600 transition duration-200"
-                >
-                  Contact
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -152,10 +143,10 @@ export function Footer() {
               <li className="flex items-center">
                 <ChevronRight size={16} className="text-orange-600 mr-2" />
                 <Link
-                  to="/contact"
+                  to="/contactus"
                   className="text-gray-800 hover:text-blue-600 transition duration-200"
                 >
-                  Contact Us
+                  Contact
                 </Link>
               </li>
               <li className="flex items-center">
@@ -206,7 +197,7 @@ export function Footer() {
               </li>
               <li className="flex items-center">
                 <Mail className="text-orange-600 mr-3" size={18} />
-                <span className="text-gray-800">contact@homeyatra.in</span>
+                <span className="text-gray-800">Support@homeyatra.com</span>
               </li>
               <li className="flex items-center">
                 <Clock className="text-orange-600 mr-3" size={18} />

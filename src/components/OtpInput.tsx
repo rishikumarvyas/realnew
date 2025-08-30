@@ -28,10 +28,8 @@ export const OtpInput: React.FC<OtpInputProps> = ({
   useEffect(() => {
     if (value.length === length && value.split("").every((d) => d)) {
       if (onComplete) {
-        //  When mobile number is fully entered in Login, move focus to Continue button
         onComplete();
       } else if (verifyButtonRef?.current) {
-        // When OTP is fully entered, move focus to Verify button
         verifyButtonRef.current.focus();
       }
     }
@@ -39,7 +37,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     const newValue = e.target.value.replace(/[^0-9]/g, "");
 
@@ -57,7 +55,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
-    index: number
+    index: number,
   ) => {
     if (e.key === "Backspace") {
       if (!value[index] && index > 0) {
@@ -108,8 +106,31 @@ export const OtpInput: React.FC<OtpInputProps> = ({
     setActiveInput(lastFilledIndex);
   };
 
+  // Determine sizing based on length (phone number vs OTP)
+  const isPhoneNumber = length === 10;
+  
+  const getInputClasses = () => {
+    if (isPhoneNumber) {
+      // Smaller boxes for phone number (10 digits)
+      return "h-8 w-8 sm:h-10 sm:w-10 md:h-11 md:w-11 rounded-md border-2 border-gray-200 bg-white text-center text-sm sm:text-base md:text-lg font-semibold shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-50";
+    } else {
+      // Larger boxes for OTP (6 digits)
+      return "h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-lg border-2 border-gray-200 bg-white text-center text-lg sm:text-xl md:text-2xl font-semibold shadow-sm transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-50";
+    }
+  };
+
+  const getContainerClasses = () => {
+    if (isPhoneNumber) {
+      // Tighter spacing for phone number
+      return `flex justify-center gap-0.5 sm:gap-1 md:gap-1.5 ${className || ""}`;
+    } else {
+      // More spacing for OTP
+      return `flex justify-center gap-1.5 sm:gap-2 md:gap-3 ${className || ""}`;
+    }
+  };
+
   return (
-    <div className={`flex justify-center gap-2 ${className || ""}`}>
+    <div className={getContainerClasses()}>
       {Array(length)
         .fill(0)
         .map((_, index) => (
@@ -126,7 +147,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
             onPaste={handlePaste}
             onFocus={() => handleFocus(index)}
             onClick={() => handleFocus(index)}
-            className="h-12 w-12 rounded-md border border-input bg-background text-center text-lg shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className={getInputClasses()}
           />
         ))}
     </div>

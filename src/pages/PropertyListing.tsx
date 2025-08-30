@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "@/axiosCalls/axiosInstance";
 import { PropertyCard } from "@/components/PropertyCard";
 import type { PropertyCardProps } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import SEOHead from "@/components/SEOHead";
+import { getPropertyListingSEO } from "@/utils/seoUtils";
 import {
   Search,
   FilterX,
@@ -24,6 +26,9 @@ import {
   Plus,
   Minus,
   X,
+  Key,
+  MapPin as Map,
+  Store,
 } from "lucide-react";
 import {
   Select,
@@ -44,6 +49,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import debounce from "lodash/debounce";
 
 // API interfaces
 interface ApiResponse {
@@ -247,6 +253,11 @@ export const PropertyListing = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // SEO configuration
+  const type = searchParams.get("type") || "all";
+  const city = searchParams.get("city") || "";
+  const seoConfig = getPropertyListingSEO(type, city);
 
   // Mobile filter visibility
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
@@ -261,10 +272,41 @@ export const PropertyListing = () => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [sortOrder, setSortOrder] = useState<string>("desc");
 
+  // Map UI sort option to API sort parameters
+  const getApiSort = (uiSort: string): { apiSortBy: string; apiSortOrder: string } => {
+    switch (uiSort) {
+      case "price-low":
+        return { apiSortBy: "price", apiSortOrder: "asc" };
+      case "price-high":
+        return { apiSortBy: "price", apiSortOrder: "desc" };
+      case "area-high":
+        return { apiSortBy: "area", apiSortOrder: "desc" };
+      case "newest":
+      default:
+        // Backend returns newest first by default
+        return { apiSortBy: "", apiSortOrder: "desc" };
+    }
+  };
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 6;
   const totalPages = Math.ceil(filteredProperties.length / pageSize);
+
+  // NEW: Track if this is the initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // NEW: Track the last property type that was fetched
+  const [lastFetchedType, setLastFetchedType] = useState<string>("all");
+  
+  // NEW: Use state to track the current type to avoid dependency issues
+  const [currentType, setCurrentType] = useState<string>("all");
+  
+  // Use ref to store fetchProperties function to avoid dependency issues
+  const fetchPropertiesRef = useRef<((typeParam: string) => Promise<void>) | null>(null);
+  
+  // Add flag to prevent multiple API calls
+  const isFetchingRef = useRef<boolean>(false);
 
   // Define filter visibility types
   type FilterVisibility = {
@@ -357,9 +399,9 @@ export const PropertyListing = () => {
   const [minBathrooms, setMinBathrooms] = useState(0);
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
-  const [maxArea, setMaxArea] = useState(5000); // Added for area range slider
+  const [maxArea, setMaxArea] = useState(0); // Default to 0 (no limit)
   const [selectedPriceStep, setSelectedPriceStep] = useState<string | null>(
-    null
+    null,
   );
   const [selectedAreaStep, setSelectedAreaStep] = useState<string | null>(null);
 
@@ -373,7 +415,7 @@ export const PropertyListing = () => {
 
   // Advanced filter states
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined
+    undefined,
   );
   const [preferenceId, setPreferenceId] = useState<string>("4"); // Default to "Anyone"
   const [furnished, setFurnished] = useState<string>("Fully"); // Default to "Fully Furnished"
@@ -382,29 +424,22 @@ export const PropertyListing = () => {
   // UI state for advanced filters visibility
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Debug state to show API request/response
-  const [apiDebug, setApiDebug] = useState({
-    request: null,
-    response: null,
-    error: null,
-  });
+
 
   // Fetch suggestions from API with debounce
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchTerm.trim().length > 1) {
-        axios
+        axiosInstance
           .get(
-            `https://homeyatraapi.azurewebsites.net/api/account/suggestions?term=${encodeURIComponent(
-              searchTerm
-            )}`
+            `/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`,
           )
           .then((res) => {
             setSuggestions(res.data);
             setShowSuggestions(true);
           })
           .catch((err) => {
-            console.error("Suggestion error:", err);
+      
             setSuggestions([]);
           });
       } else {
@@ -425,12 +460,6 @@ export const PropertyListing = () => {
     searchParams.set("search", suggestion);
     setSearchParams(searchParams);
     setSearchQuery(suggestion);
-
-    // Remove toast notification for search applied
-    // toast({
-    //   title: "Search Applied",
-    //   description: `Showing results for "${suggestion}"`,
-    // });
   };
 
   // Check if advanced filters should be hidden based on property type
@@ -443,163 +472,60 @@ export const PropertyListing = () => {
     setMobileFiltersVisible(!mobileFiltersVisible);
   };
 
-  // Initialize from URL params and fetch data
-  useEffect(() => {
-    // Get parameters from URL
-    const typeParam = searchParams.get("type");
-    const searchParam = searchParams.get("search");
-    const minPriceParam = searchParams.get("minPrice");
-    const maxPriceParam = searchParams.get("maxPrice");
-    const bedroomsParam = searchParams.get("bedrooms");
-    const bathroomsParam = searchParams.get("bathrooms");
-    const balconyParam = searchParams.get("balcony");
-    const minAreaParam = searchParams.get("minArea");
-    const availableFromParam = searchParams.get("availableFrom");
-    const preferenceParam = searchParams.get("preference");
-    const furnishedParam = searchParams.get("furnished");
-    const amenitiesParam = searchParams.get("amenities");
-    const sortParam = searchParams.get("sort");
+  // NEW: Function to check if we need to fetch new data
+  const shouldFetchNewData = (currentType: string) => {
+    // Always fetch on initial load
+    if (isInitialLoad) return true;
+    
+    // Fetch if property type changed
+    if (currentType !== lastFetchedType) return true;
+    
+    // Fetch if commercial type changed (for commercial properties)
+    if (currentType === "commercial" && commercialType !== lastFetchedType) return true;
+    
+    return false;
+  };
 
-    // CRITICAL FIX: Set activeTab from URL parameter or default to "all"
-    const currentTab = typeParam || "all";
-    if (currentTab !== activeTab) {
-      setActiveTab(currentTab);
+    // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
+  const fetchProperties = useCallback(async (typeParam: string = "all") => {
+    // Prevent multiple simultaneous API calls
+    if (isFetchingRef.current) {
+      
+      return;
     }
-
-    // Set other state from URL params if they exist
-    if (searchParam && searchParam !== searchQuery) {
-      setSearchQuery(searchParam);
-      setSearchTerm(searchParam);
-    }
-
-    if (minPriceParam && maxPriceParam) {
-      const newPriceRange = [parseInt(minPriceParam), parseInt(maxPriceParam)];
-      if (
-        newPriceRange[0] !== priceRange[0] ||
-        newPriceRange[1] !== priceRange[1]
-      ) {
-        setPriceRange(newPriceRange);
-      }
-    }
-
-    if (bedroomsParam) {
-      const bedrooms = parseInt(bedroomsParam);
-      if (bedrooms !== minBedrooms) {
-        setMinBedrooms(bedrooms);
-      }
-    }
-
-    if (bathroomsParam) {
-      const bathrooms = parseInt(bathroomsParam);
-      if (bathrooms !== minBathrooms) {
-        setMinBathrooms(bathrooms);
-      }
-    }
-
-    if (balconyParam) {
-      const balcony = parseInt(balconyParam);
-      if (balcony !== minBalcony) {
-        setMinBalcony(balcony);
-      }
-    }
-
-    if (minAreaParam) {
-      const area = parseInt(minAreaParam);
-      if (area !== minArea) {
-        setMinArea(area);
-      }
-    }
-
-    if (availableFromParam) {
-      const date = new Date(availableFromParam);
-      if (!availableFrom || date.getTime() !== availableFrom.getTime()) {
-        setAvailableFrom(date);
-      }
-    }
-
-    if (preferenceParam && preferenceParam !== preferenceId) {
-      setPreferenceId(preferenceParam);
-    }
-
-    if (furnishedParam && furnishedParam !== furnished) {
-      setFurnished(furnishedParam);
-    } else if (!furnishedParam) {
-      // If no furnished param in URL, set to default but don't add to URL
-      setFurnished("Fully");
-    }
-
-    if (amenitiesParam) {
-      const amenities = amenitiesParam.split(",");
-      if (
-        JSON.stringify(amenities.sort()) !==
-        JSON.stringify(selectedAmenities.sort())
-      ) {
-        setSelectedAmenities(amenities);
-      }
-    }
-
-    if (sortParam && sortParam !== sortBy) {
-      setSortBy(sortParam);
-    }
-
-    // Initialize multi-select states from URL parameters
-    const priceStepsParam = searchParams.get("priceSteps");
-    const areaStepsParam = searchParams.get("areaSteps");
-
-    if (priceStepsParam) {
-      const priceSteps = priceStepsParam.split(",");
-      if (
-        JSON.stringify(priceSteps.sort()) !==
-        JSON.stringify(selectedPriceSteps.sort())
-      ) {
-        setSelectedPriceSteps(priceSteps);
-      }
-    }
-
-    if (areaStepsParam) {
-      const areaSteps = areaStepsParam.split(",");
-      if (
-        JSON.stringify(areaSteps.sort()) !==
-        JSON.stringify(selectedAreaSteps.sort())
-      ) {
-        setSelectedAreaSteps(areaSteps);
-      }
-    }
-
-    // IMPORTANT: Only fetch when activeTab changes or when component first loads
-    fetchProperties();
-  }, [searchParams]); // Only depend on searchParams
-
-  // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
-  const fetchProperties = async () => {
+    
+    
+    isFetchingRef.current = true;
     setLoading(true);
-    try {
-      // Get the current type from URL, not from state
-      const currentTypeParam = searchParams.get("type") || "all";
+      try {
+        // Get the current type from parameter only, not from searchParams
+        const currentTypeParam = typeParam;
 
-      // Prepare filter options based on URL parameters - UPDATED: Use actual price and area values
-      const filterOptions: FilterOptions = {
-        searchTerm: searchParams.get("search") || "",
-        minPrice: parseInt(searchParams.get("minPrice") || "0"),
-        maxPrice: parseInt(searchParams.get("maxPrice") || "0"),
-        minBedrooms: parseInt(searchParams.get("bedrooms") || "0"),
-        minBathrooms: parseInt(searchParams.get("bathrooms") || "0"),
-        minBalcony: parseInt(searchParams.get("balcony") || "0"),
-        minArea: parseInt(searchParams.get("minArea") || "0"),
-        maxArea: parseInt(searchParams.get("maxArea") || "5000"),
-        availableFrom: searchParams.get("availableFrom") || undefined,
-        preferenceId: searchParams.get("preference") || undefined,
-        furnished: searchParams.get("furnished") || undefined,
-        amenities: searchParams.get("amenities")?.split(",") || undefined,
-      };
+        // MODIFIED: Don't read filter values from URL, use default values for API call
+        const filterOptions: FilterOptions = {
+          searchTerm: "", // Don't use URL search term
+          minPrice: 0, // Don't use URL price range
+          maxPrice: 0, // Don't use URL price range
+          minBedrooms: 0, // Don't use URL bedrooms
+          minBathrooms: 0, // Don't use URL bathrooms
+          minBalcony: 0, // Don't use URL balcony
+          minArea: 0, // Don't use URL area
+          maxArea: 0, // No max-area limit
+          availableFrom: undefined, // Don't use URL date
+          preferenceId: undefined, // Don't use URL preference
+          furnished: undefined, // Don't use URL furnished
+          amenities: undefined, // Don't use URL amenities
+        };
 
-      // FIXED: Use current URL type parameter instead of state
-      const typeConfig =
-        propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+        // FIXED: Use current URL type parameter instead of state
+        const typeConfig =
+          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
 
-      let superCategoryId = typeConfig.superCategoryId;
-      let propertyTypeIds = typeConfig.propertyTypeIds || [];
-      let propertyFor = typeConfig.propertyFor;
+        let superCategoryId = typeConfig.superCategoryId;
+        let propertyTypeIds = typeConfig.propertyTypeIds || [];
+        let propertyFor = typeConfig.propertyFor;
+
+  
 
       // Special handling for different property types
       if (currentTypeParam === "plot") {
@@ -612,64 +538,30 @@ export const PropertyListing = () => {
         propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
       }
 
-      // Pagination params
+      // Pagination params - Use defaults to avoid searchParams dependency
       let pageSize = -1;
       let pageNumber = 0;
 
       if (currentTypeParam !== "all") {
         pageSize = 10;
-        pageNumber = parseInt(searchParams.get("page") || "1") - 1;
+        pageNumber = 0; // Always start from page 1
       }
 
-      // Get sort parameters from URL or use defaults
-      const sortParam = searchParams.get("sort") || "newest";
-      let apiSortBy = "";
-      let apiSortOrder = "desc";
+      // Derive API sort parameters from UI state
+      const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
 
-      // Map sort options to API parameters
-      switch (sortParam) {
-        case "price-low":
-          apiSortBy = "price";
-          apiSortOrder = "asc";
-          break;
-        case "price-high":
-          apiSortBy = "price";
-          apiSortOrder = "desc";
-          break;
-        case "area-high":
-          apiSortBy = "area";
-          apiSortOrder = "desc";
-          break;
-        case "newest":
-        default:
-          // Default: Newest First (no specific sort parameters needed)
-          apiSortBy = "";
-          apiSortOrder = "desc";
-          break;
-      }
-
-      // Prepare request payload - UPDATED: Use actual price and area values from filterOptions
-      const requestPayload = {
+      // Prepare request payload - MODIFIED: Use default values, not URL filter values
+      const requestPayload: any = {
         superCategoryId,
-        propertyTypeIds:
-          propertyTypeIds.length > 0 ? propertyTypeIds : undefined,
-        propertyFor,
         accountId: "string",
-        searchTerm: filterOptions.searchTerm,
-        StatusId: 2, // ADDED: StatusId set to 2 as requested
-        minPrice: filterOptions.minPrice, // UPDATED: Use actual minPrice value
-        maxPrice: filterOptions.maxPrice, // UPDATED: Use actual maxPrice value
-        bedroom: filterOptions.minBedrooms,
-        bathroom: filterOptions.minBathrooms,
-        balcony: filterOptions.minBalcony,
-        minArea: filterOptions.minArea, // UPDATED: Use actual minArea value
-        maxArea: filterOptions.maxArea, // UPDATED: Use actual maxArea value
-        availableFrom: filterOptions.availableFrom,
-        preferenceId: filterOptions.preferenceId
-          ? parseInt(filterOptions.preferenceId)
-          : undefined,
-        furnished: searchParams.get("furnished") || undefined,
-        amenities: filterOptions.amenities,
+        searchTerm: searchQuery,
+        minPrice: filterOptions.minPrice, // Use default 0
+        maxPrice: filterOptions.maxPrice, // Use default 0
+        bedroom: filterOptions.minBedrooms, // Use default 0
+        bathroom: filterOptions.minBathrooms, // Use default 0
+        balcony: filterOptions.minBalcony, // Use default 0
+        minArea: filterOptions.minArea, // Use default 0
+        maxArea: filterOptions.maxArea, // Use default 5000
         pageNumber,
         pageSize,
         // Add sorting parameters
@@ -677,32 +569,50 @@ export const PropertyListing = () => {
         SortOrder: apiSortOrder,
       };
 
-      console.log("API Request Payload:", {
-        type: currentTypeParam,
-        furnished: filterOptions.furnished,
-        furnishedParam: searchParams.get("furnished"),
-        sortBy: apiSortBy,
-        sortOrder: apiSortOrder,
-        payload: requestPayload,
-      });
+      // Only add propertyTypeIds if it's not empty
+      if (propertyTypeIds.length > 0) {
+        requestPayload.propertyTypeIds = propertyTypeIds;
+      }
 
-      console.log(
-        `Fetching properties for type: ${currentTypeParam}`,
-        requestPayload
-      );
-      setApiDebug((prev) => ({ ...prev, request: requestPayload }));
+      // Only add propertyFor if it's defined
+      if (propertyFor !== undefined) {
+        requestPayload.propertyFor = propertyFor;
+      }
 
-      const response = await axios.post<ApiResponse>(
-        "https://homeyatraapi.azurewebsites.net/api/Account/GetProperty",
+      // Only add optional parameters if they have values
+      if (filterOptions.availableFrom) {
+        requestPayload.availableFrom = filterOptions.availableFrom;
+      }
+      if (filterOptions.preferenceId) {
+        requestPayload.preferenceId = filterOptions.preferenceId;
+      }
+      if (filterOptions.furnished) {
+        requestPayload.furnished = filterOptions.furnished;
+      }
+      if (filterOptions.amenities && filterOptions.amenities.length > 0) {
+        requestPayload.amenities = filterOptions.amenities;
+      }
+
+      
+      
+
+      const response = await axiosInstance.post<ApiResponse>(
+        "/api/Account/GetProperty",
         requestPayload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
       );
 
-      setApiDebug((prev) => ({ ...prev, response: response.data }));
+      
+      
+
+      // Check if we have properties in the response
+      if (
+        !response.data.propertyInfo ||
+        response.data.propertyInfo.length === 0
+      ) {
+        setProperties([]);
+        setFilteredProperties([]);
+        return;
+      }
 
       // Transform API data with proper type mapping - Updated to merge shop/commercial
       const transformedData = response.data.propertyInfo.map(
@@ -757,324 +667,236 @@ export const PropertyListing = () => {
             propertyType: prop.propertyType,
             status: prop.superCategory,
           };
-        }
+        },
       );
 
-      console.log(
-        "Transformed properties furnished values:",
-        transformedData.map((p) => ({ id: p.id, furnished: p.furnished }))
-      );
       setProperties(transformedData);
 
-      // Apply client-side filtering based on current URL type
-      let filtered = transformedData;
+    } catch (err) {
+      
 
+      
+      // Handle 404 error specifically
+      if (err.response?.status === 404) {
+
+        setError("No properties found with the current filters. Try adjusting your search criteria.");
+      } else {
+        setError("Unable to load properties. Please try again later.");
+      }
+      
+      
+
+      // Set empty arrays to show no properties
+      setProperties([]);
+      setFilteredProperties([]);
+    } finally {
+      setLoading(false);
+      isFetchingRef.current = false;
+    }
+  }, [sortBy]); // Depend on sortBy so API receives latest SortBy/SortOrder
+
+  // Store fetchProperties in ref to avoid dependency issues
+  fetchPropertiesRef.current = fetchProperties;
+
+  // Handle retry button click
+  const handleRetry = useCallback(() => {
+    const currentType = searchParams.get("type") || "all";
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentType);
+    }
+  }, [searchParams]); // Remove fetchProperties dependency
+
+  // Ensure initial data fetch and subsequent fetches on type changes
+  useEffect(() => {
+    const typeParam = searchParams.get("type") || "all";
+    
+    // Sync tab with URL
+    if (typeParam !== activeTab) {
+      setActiveTab(typeParam);
+    }
+
+    // Always fetch on first mount, even if URL type equals default
+    if (isInitialLoad && fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(typeParam);
+      setLastFetchedType(typeParam);
+      setCurrentType(typeParam);
+        setIsInitialLoad(false);
+      return;
+    }
+
+    // Fetch when the URL type actually changes thereafter
+    if (typeParam !== currentType && fetchPropertiesRef.current) {
+      if (shouldFetchNewData(typeParam)) {
+        fetchPropertiesRef.current(typeParam);
+        setLastFetchedType(typeParam);
+      }
+      setCurrentType(typeParam);
+    }
+  }, [searchParams, isInitialLoad, currentType, shouldFetchNewData]);
+
+  // Sync `search` URL param into local search state so external links (e.g., Footer cities)
+  // immediately filter the listings by city/locality/society.
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+      setSearchTerm(urlSearch);
+      setCurrentPage(1);
+    }
+    // Intentionally depends on searchParams to react to URL changes from outside
+  }, [searchParams]);
+
+  // Refetch server data when search term changes (e.g., clicking a footer city)
+  useEffect(() => {
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentType);
+    }
+  }, [searchQuery]);
+
+  // Apply filters to the property list - MODIFIED: This now handles ALL filtering client-side
+  const applyFilters = useCallback(
+    (data: PropertyCardProps[]) => {
+      let filtered = data;
+
+      // Get current type from URL
+      const currentTypeParam = searchParams.get("type") || "all";
+
+      // Apply property type filtering first
       if (currentTypeParam === "plot") {
-        filtered = transformedData.filter(
+        filtered = filtered.filter(
           (prop) =>
             prop.type === "plot" ||
             prop.propertyType === "4" ||
-            (prop.propertyType?.toLowerCase() || "").includes("plot")
+            (prop.propertyType?.toLowerCase() || "").includes("plot"),
         );
       } else if (currentTypeParam === "commercial") {
-        filtered = transformedData.filter(
+        filtered = filtered.filter(
           (prop) =>
             prop.type === "commercial" ||
             prop.propertyType === "2" ||
             prop.propertyType === "7" ||
             (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-            (prop.propertyType?.toLowerCase() || "").includes("shop")
+            (prop.propertyType?.toLowerCase() || "").includes("shop"),
         );
       } else if (currentTypeParam !== "all") {
-        filtered = transformedData.filter(
-          (property) => property.type === currentTypeParam
+        filtered = filtered.filter(
+          (property) => property.type === currentTypeParam,
         );
       }
 
-      // Apply other filters
-      const currentSearchQuery = searchParams.get("search") || "";
-      const currentPriceRange = [
-        parseInt(searchParams.get("minPrice") || "0"),
-        parseInt(searchParams.get("maxPrice") || "20000000"),
-      ];
-      const currentMinArea = parseInt(searchParams.get("minArea") || "0");
+      // Apply search filter
+      if (searchQuery) {
+        filtered = filtered.filter(
+          (property) =>
+            property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            property.location.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
+      }
 
-      filtered = filtered.filter((property) => {
-        if (
-          currentSearchQuery &&
-          !property.title
-            .toLowerCase()
-            .includes(currentSearchQuery.toLowerCase()) &&
-          !property.location
-            .toLowerCase()
-            .includes(currentSearchQuery.toLowerCase())
-        ) {
-          return false;
-        }
-
-        if (
-          property.price < currentPriceRange[0] ||
-          property.price > currentPriceRange[1]
-        ) {
-          return false;
-        }
-
-        if (property.area < currentMinArea) {
-          return false;
-        }
-
-        // Apply furnished filter
-        const currentFurnished = searchParams.get("furnished");
-        if (currentFurnished && property.furnished !== currentFurnished) {
-          return false;
-        }
-
-        return true;
-      });
-
-      setFilteredProperties(filtered);
-
-      // Remove toast notification for properties loaded
-      // toast({
-      //   title: "Properties Loaded",
-      //   description: `Found ${filtered.length} ${currentTypeParam === 'all' ? '' : currentTypeParam} properties.`,
-      // });
-    } catch (err) {
-      console.error("Failed to fetch properties:", err);
-      setError("Unable to load properties. Please try again later.");
-      setApiDebug((prev) => ({ ...prev, error: err }));
-
-      // Remove toast notification for error loading properties
-      // toast({
-      //   variant: "destructive",
-      //   title: "Error loading properties",
-      //   description: "We're having trouble fetching properties. Using sample data instead.",
-      // });
-
-      // useMockData(); // You may need to implement this function
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Apply filters to the property list
-  const applyFilters = (data: PropertyCardProps[]) => {
-    let filtered = data;
-
-    // Apply search filter
-    if (searchQuery) {
+      // Apply price range filter
       filtered = filtered.filter(
         (property) =>
-          property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          property.location.toLowerCase().includes(searchQuery.toLowerCase())
+          property.price >= priceRange[0] && property.price <= priceRange[1],
       );
-    }
 
-    // Apply price range filter
-    filtered = filtered.filter(
-      (property) =>
-        property.price >= priceRange[0] && property.price <= priceRange[1]
-    );
-
-    // Apply area range filter
-    filtered = filtered.filter(
-      (property) => property.area >= minArea && property.area <= maxArea
-    );
-
-    // Apply bedroom filter
-    if (minBedrooms > 0) {
+      // Apply area range filter (treat maxArea=0 as no upper limit)
+      const effectiveMaxArea = maxArea && maxArea > 0 ? maxArea : Number.MAX_SAFE_INTEGER;
       filtered = filtered.filter(
-        (property) => property.bedrooms >= minBedrooms
+        (property) => property.area >= minArea && property.area <= effectiveMaxArea,
       );
-    }
 
-    // Apply bathroom filter
-    if (minBathrooms > 0) {
-      filtered = filtered.filter(
-        (property) => property.bathrooms >= minBathrooms
-      );
-    }
+      // Apply bedroom filter
+      if (minBedrooms > 0) {
+        filtered = filtered.filter(
+          (property) => property.bedrooms >= minBedrooms,
+        );
+      }
 
-    // Apply balcony filter
-    if (minBalcony > 0) {
-      filtered = filtered.filter((property) => property.balcony >= minBalcony);
-    }
+      // Apply bathroom filter
+      if (minBathrooms > 0) {
+        filtered = filtered.filter(
+          (property) => property.bathrooms >= minBathrooms,
+        );
+      }
 
-    // Apply availability filter
-    if (availableFrom) {
-      filtered = filtered.filter((property) => {
-        if (!property.availableFrom) return false;
-        const propertyDate = new Date(property.availableFrom);
-        return propertyDate >= availableFrom;
-      });
-    }
+      // Apply balcony filter
+      if (minBalcony > 0) {
+        filtered = filtered.filter(
+          (property) => property.balcony >= minBalcony,
+        );
+      }
 
-    // Apply tenant preference filter
-    if (preferenceId !== "0") {
-      filtered = filtered.filter(
-        (property) => property.preferenceId === parseInt(preferenceId)
-      );
-    }
+      // Apply availability filter
+      if (availableFrom) {
+        filtered = filtered.filter((property) => {
+          if (!property.availableFrom) return false;
+          const propertyDate = new Date(property.availableFrom);
+          return propertyDate >= availableFrom;
+        });
+      }
 
-    // Apply furnished filter
-    const currentFurnished = searchParams.get("furnished");
-    if (currentFurnished) {
-      console.log("Applying furnished filter:", {
-        filterValue: currentFurnished,
-        propertiesBefore: filtered.length,
-        furnishedValues: filtered.map((p) => p.furnished),
-      });
-      filtered = filtered.filter(
-        (property) => property.furnished === currentFurnished
-      );
-      console.log("After furnished filter:", {
-        propertiesAfter: filtered.length,
-        remainingFurnishedValues: filtered.map((p) => p.furnished),
-      });
-    }
+      // Apply tenant preference filter - ONLY for rent properties and when a specific preference is selected
+      if (preferenceId !== "0" && currentTypeParam === "rent") {
+        // FIXED: Handle properties without preferenceId (show them) and properties with matching preferenceId
+        filtered = filtered.filter(
+          (property) =>
+            !property.preferenceId ||
+            property.preferenceId === parseInt(preferenceId),
+        );
+      }
 
-    // Apply amenities filter
-    if (selectedAmenities.length > 0) {
-      filtered = filtered.filter((property) =>
-        selectedAmenities.every((amenity) =>
-          property.amenities?.includes(amenity)
-        )
-      );
-    }
+      // Apply furnished filter
+      const currentFurnished = searchParams.get("furnished");
+      if (currentFurnished) {
+        filtered = filtered.filter(
+          (property) => property.furnished === currentFurnished,
+        );
+      }
 
-    setFilteredProperties(filtered);
-  };
+      // Apply amenities filter
+      if (selectedAmenities.length > 0) {
+        filtered = filtered.filter((property) =>
+          selectedAmenities.every((amenity) =>
+            property.amenities?.includes(amenity),
+          ),
+        );
+      }
 
-  // Enhanced mock data for fallback or development
-  const useMockData = () => {
-    const mockProperties: PropertyCardProps[] = [
-      {
-        id: "prop1",
-        title: "Modern 3BHK with Sea View",
-        price: 7500000,
-        location: "Bandra West, Mumbai",
-        type: "buy",
-        bedrooms: 3,
-        bathrooms: 3,
-        balcony: 1,
-        area: 1450,
-        image:
-          "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-        amenities: ["Parking", "Security", "Power Backup"],
-        furnished: "Fully",
-        likeCount: 0,
-      },
-      {
-        id: "prop2",
-        title: "Luxury 4BHK Penthouse",
-        price: 12500000,
-        location: "Worli, Mumbai",
-        type: "buy",
-        bedrooms: 4,
-        bathrooms: 4,
-        balcony: 2,
-        area: 2100,
-        image:
-          "https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&q=80",
-        amenities: ["Swimming Pool", "Gym", "Club House", "Parking"],
-        furnished: "Fully",
-        likeCount: 0,
-      },
-      {
-        id: "prop3",
-        title: "Studio Apartment with Balcony",
-        price: 35000,
-        location: "Koramangala, Bangalore",
-        type: "rent",
-        bedrooms: 1,
-        bathrooms: 1,
-        balcony: 1,
-        area: 650,
-        image:
-          "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80",
-        availableFrom: "2025-05-15T00:00:00",
-        preferenceId: 2, // Bachelor
-        amenities: ["WiFi", "Power Backup"],
-        furnished: "Semi",
-        likeCount: 0,
-      },
-      {
-        id: "prop9",
-        title: "Residential Plot in Prime Location",
-        price: 3500000,
-        location: "Electronic City, Bangalore",
-        type: "plot",
-        bedrooms: 0,
-        bathrooms: 0,
-        balcony: 0,
-        area: 2400,
-        image:
-          "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80",
-        amenities: ["Power Backup"],
-        propertyType: "Plot",
-        likeCount: 0,
-      },
-      {
-        id: "prop10",
-        title: "Commercial Space in Business District",
-        price: 85000,
-        location: "Connaught Place, Delhi",
-        type: "commercial",
-        bedrooms: 0,
-        bathrooms: 2,
-        balcony: 0,
-        area: 1800,
-        image:
-          "https://images.unsplash.com/photo-1497215842964-222b430dc094?auto=format&fit=crop&q=80",
-        amenities: ["WiFi", "Power Backup", "Security", "Parking"],
-        furnished: "Fully",
-        propertyType: "Commercial",
-        likeCount: 0,
-      },
-      {
-        id: "prop11",
-        title: "Retail Shop in Prime Location",
-        price: 120000,
-        location: "Saket, Delhi",
-        type: "commercial",
-        bedrooms: 0,
-        bathrooms: 1,
-        balcony: 0,
-        area: 850,
-        image:
-          "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&q=80",
-        amenities: ["Security", "Power Backup"],
-        furnished: "Not",
-        propertyType: "Commercial",
-        likeCount: 0,
-      },
-    ];
+      // Apply sorting (client-side) to ensure correct order even if API ignores SortBy
+      if (sortBy === "price-low") {
+        filtered = [...filtered].sort((a, b) => (a.price || 0) - (b.price || 0));
+      } else if (sortBy === "price-high") {
+        filtered = [...filtered].sort((a, b) => (b.price || 0) - (a.price || 0));
+      } else if (sortBy === "area-high") {
+        filtered = [...filtered].sort((a, b) => (b.area || 0) - (a.area || 0));
+      } // "newest" defaults to API order
 
-    setProperties(mockProperties);
-    applyFilters(mockProperties);
-  };
+      setFilteredProperties(filtered);
+    },
+    [
+      searchParams,
+      searchQuery,
+      priceRange,
+      minBedrooms,
+      minBathrooms,
+      minBalcony,
+      minArea,
+      maxArea,
+      availableFrom,
+      preferenceId,
+      selectedAmenities,
+      sortBy,
+    ],
+  );
 
-  // Update filters when any filter state changes
+  // OPTIMIZED: Apply filters without triggering new API calls
   useEffect(() => {
     if (properties.length > 0) {
       applyFilters(properties);
     }
-  }, [
-    activeTab,
-    searchQuery,
-    priceRange,
-    minBedrooms,
-    minBathrooms,
-    minBalcony,
-    minArea,
-    maxArea,
-    availableFrom,
-    preferenceId,
-    furnished,
-    selectedAmenities,
-  ]);
+  }, [properties, applyFilters]); // Only depend on properties, not individual filter states
 
-  // Handle tab change and update URL
+  // MODIFIED: Handle tab change and update URL - ONLY trigger API call on property type change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
 
@@ -1103,14 +925,14 @@ export const PropertyListing = () => {
     setSearchParams(searchParams);
   };
 
-  // Add handler for commercial type change
+  // MODIFIED: Add handler for commercial type change - ONLY trigger API call on commercial type change
   const handleCommercialTypeChange = (value: "buy" | "rent") => {
     setCommercialType(value);
     searchParams.set("commercialType", value);
     setSearchParams(searchParams);
   };
 
-  // Handle price step selection (multi-select)
+  // MODIFIED: Handle price step selection (multi-select) - NO API call, NO URL update
   const handlePriceStepChange = (stepId: string) => {
     const priceSteps =
       activeTab === "rent" ||
@@ -1139,19 +961,15 @@ export const PropertyListing = () => {
       const minPrice = Math.min(...selectedSteps.map((step) => step!.min));
       const maxPrice = Math.max(...selectedSteps.map((step) => step!.max));
 
-      searchParams.set("minPrice", minPrice.toString());
-      searchParams.set("maxPrice", maxPrice.toString());
-      searchParams.set("priceSteps", newSelectedPriceSteps.join(","));
+      setPriceRange([minPrice, maxPrice]);
     } else {
-      searchParams.delete("minPrice");
-      searchParams.delete("maxPrice");
-      searchParams.delete("priceSteps");
+      // Reset to default range
+      const config = priceRangeConfig[activeTab as keyof typeof priceRangeConfig] || priceRangeConfig.buy;
+      setPriceRange([config.min, config.max]);
     }
-
-    setSearchParams(searchParams);
   };
 
-  // Handle area step selection (multi-select)
+  // MODIFIED: Handle area step selection (multi-select) - NO API call, NO URL update
   const handleAreaStepChange = (stepId: string) => {
     let newSelectedAreaSteps: string[];
 
@@ -1174,47 +992,36 @@ export const PropertyListing = () => {
       const minArea = Math.min(...selectedSteps.map((step) => step!.min));
       const maxArea = Math.max(...selectedSteps.map((step) => step!.max));
 
-      searchParams.set("minArea", minArea.toString());
-      searchParams.set("maxArea", maxArea.toString());
-      searchParams.set("areaSteps", newSelectedAreaSteps.join(","));
+      setMinArea(minArea);
+      setMaxArea(maxArea);
     } else {
-      searchParams.delete("minArea");
-      searchParams.delete("maxArea");
-      searchParams.delete("areaSteps");
+      // Reset to default range
+      setMinArea(0);
+      setMaxArea(5000);
     }
-
-    setSearchParams(searchParams);
   };
 
-  // Handle search form submission
+  // MODIFIED: Handle search form submission - NO API call, NO URL update
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchTerm.trim()) {
-      searchParams.set("search", searchTerm);
-      setSearchParams(searchParams);
       setSearchQuery(searchTerm);
-
-      // Remove toast notification for search applied
-      // toast({
-      //   title: "Search Applied",
-      //   description: `Showing results for "${searchTerm}"`,
-      // });
     }
   };
 
-  // Reset all filters to default values
+  // MODIFIED: Reset all filters to default values - NO API call, NO URL update
   const resetFilters = () => {
     setPriceRange([0, 50000000]);
     setMinBedrooms(0);
     setMinBathrooms(0);
     setMinBalcony(0);
     setMinArea(0);
-    setMaxArea(5000); // FIXED: Reset maxArea to 5000
+    setMaxArea(5000);
     setSearchQuery("");
     setSearchTerm("");
     setAvailableFrom(undefined);
     setPreferenceId("4");
-    setFurnished("Fully"); // Reset to default "Fully Furnished"
+    setFurnished("Fully");
     setSelectedAmenities([]);
     setActiveTab("all");
     setSelectedPriceStep(null);
@@ -1222,96 +1029,54 @@ export const PropertyListing = () => {
     setSelectedPriceSteps([]);
     setSelectedAreaSteps([]);
     setSortBy("newest");
-    setSearchParams(new URLSearchParams());
-
-    // Remove toast notification for filters reset
-    // toast({
-    //   title: "Filters Reset",
-    //   description: "All filters have been cleared.",
-    // });
+    
+    // Only clear URL parameters, don't set new ones
+    const newSearchParams = new URLSearchParams();
+    setSearchParams(newSearchParams);
   };
 
-  // Handle price range change
+  // MODIFIED: Handle price range change - NO API call, NO URL update
   const handlePriceRangeChange = (value: number[]) => {
     setPriceRange(value);
-    searchParams.set("minPrice", value[0].toString());
-    searchParams.set("maxPrice", value[1].toString());
-    setSearchParams(searchParams);
   };
 
-  // Handle area range change
+  // MODIFIED: Handle area range change - NO API call, NO URL update
   const handleAreaChange = (value: number[]) => {
     setMinArea(value[0]);
     setMaxArea(value[1]);
-    searchParams.set("minArea", value[0].toString());
-    searchParams.set("maxArea", value[1].toString());
-    setSearchParams(searchParams);
   };
 
-  // Update URL when bedroom selection changes
+  // MODIFIED: Update when bedroom selection changes - NO API call, NO URL update
   const handleBedroomChange = (value: number) => {
     setMinBedrooms(value);
-    if (value > 0) {
-      searchParams.set("bedrooms", value.toString());
-    } else {
-      searchParams.delete("bedrooms");
-    }
-    setSearchParams(searchParams);
   };
 
-  // Update URL when bathroom selection changes
+  // MODIFIED: Update when bathroom selection changes - NO API call, NO URL update
   const handleBathroomChange = (value: number) => {
     setMinBathrooms(value);
-    if (value > 0) {
-      searchParams.set("bathrooms", value.toString());
-    } else {
-      searchParams.delete("bathrooms");
-    }
-    setSearchParams(searchParams);
   };
 
-  // Update URL when balcony selection changes
+  // MODIFIED: Update when balcony selection changes - NO API call, NO URL update
   const handleBalconyChange = (value: number) => {
     setMinBalcony(value);
-    if (value > 0) {
-      searchParams.set("balcony", value.toString());
-    } else {
-      searchParams.delete("balcony");
-    }
-    setSearchParams(searchParams);
   };
 
-  // Update URL when availability date changes
+  // MODIFIED: Update when availability date changes - NO API call, NO URL update
   const handleDateChange = (date: Date | undefined) => {
     setAvailableFrom(date);
-    if (date) {
-      searchParams.set("availableFrom", date.toISOString().split("T")[0]);
-    } else {
-      searchParams.delete("availableFrom");
-    }
-    setSearchParams(searchParams);
   };
 
-  // Update URL when preference changes
+  // MODIFIED: Update when preference changes - NO API call, NO URL update
   const handlePreferenceChange = (value: string) => {
     setPreferenceId(value);
-    if (value !== "4") {
-      searchParams.set("preference", value);
-    } else {
-      searchParams.delete("preference");
-    }
-    setSearchParams(searchParams);
   };
 
-  // Update URL when furnished status changes
+  // MODIFIED: Update when furnished status changes - NO API call, NO URL update
   const handleFurnishedChange = (value: string) => {
     setFurnished(value);
-    // Always set furnished parameter since we have a default value
-    searchParams.set("furnished", value);
-    setSearchParams(searchParams);
   };
 
-  // Handle amenity toggle
+  // MODIFIED: Handle amenity toggle - NO API call, NO URL update
   const handleAmenityToggle = (amenity: string) => {
     let newAmenities: string[];
 
@@ -1322,22 +1087,23 @@ export const PropertyListing = () => {
     }
 
     setSelectedAmenities(newAmenities);
-
-    if (newAmenities.length > 0) {
-      searchParams.set("amenities", newAmenities.join(","));
-    } else {
-      searchParams.delete("amenities");
-    }
-
-    setSearchParams(searchParams);
   };
 
-  // Handle sort change
+  // Handle sort change: update state and reset pagination
   const handleSortChange = (value: string) => {
     setSortBy(value);
-    searchParams.set("sort", value);
-    setSearchParams(searchParams);
+    const { apiSortOrder } = getApiSort(value);
+    setSortOrder(apiSortOrder);
+    setCurrentPage(1);
   };
+
+  // Refetch from server when sort changes (skip first mount to avoid duplicate)
+  useEffect(() => {
+    if (isInitialLoad) return;
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentType);
+    }
+  }, [sortBy]);
 
   // Format price display based on property type
   const formatPrice = (price: number, type: string) => {
@@ -1347,15 +1113,13 @@ export const PropertyListing = () => {
     return config.format(price);
   };
 
-  // Update price range when property type changes
+  // MODIFIED: Update price range when property type changes - NO URL update for filters
   useEffect(() => {
     const config =
       priceRangeConfig[activeTab as keyof typeof priceRangeConfig] ||
       priceRangeConfig.buy;
     setPriceRange([config.min, config.max]);
-    searchParams.set("minPrice", config.min.toString());
-    searchParams.set("maxPrice", config.max.toString());
-    setSearchParams(searchParams);
+    // Remove URL updates for price range
   }, [activeTab]);
 
   // Add state for sidebar visibility
@@ -1387,7 +1151,7 @@ export const PropertyListing = () => {
   // Slice filteredProperties for current page
   const paginatedProperties = filteredProperties.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
 
   useEffect(() => {
@@ -1409,36 +1173,38 @@ export const PropertyListing = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero section with search */}
-      <div className="relative">
-        {/* Background Image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
-          }}
-        />
+    <>
+      <SEOHead {...seoConfig} />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Hero Section with Slider - Compact */}
+      <section className="relative h-96 sm:h-[500px] overflow-hidden">
+        {/* Slider with clearer images */}
+        <div className="absolute inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-100"
+            style={{
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+            }}
+          />
+          {/* Light overlay for text readability */}
+          <div className="absolute inset-0 bg-black/10"></div>
+        </div>
 
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-black opacity-50"></div>
+        {/* Hero Content - Responsive padding and sizing */}
+        <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 z-10 h-full flex flex-col justify-center items-center">
+          <div className="animate-fade-in text-center w-full">
+            <div className="bg-white/70 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg mx-4 sm:mx-auto">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight text-black">
+                <span>Find Your </span>
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
+                  Dream Property
+                </span>
+              </h2>
 
-        {/* Content */}
-        <div className="relative py-20 px-4">
-          <div className="max-w-3xl mx-auto bg-white/60 p-8 md:p-12 rounded-xl shadow-2xl">
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 text-black">
-                Find Your Dream Property
-              </h1>
-              <p className="text-lg text-gray-800 mb-8">
-                Use our advanced filters to find the perfect property that
-                matches your requirements
-              </p>
-              {/* Search Input Form (copied from Index.tsx) */}
               <form
                 onSubmit={handleSearch}
-                className="mt-4 sm:mt-6 relative mx-auto"
+                className="mt-3 sm:mt-4 relative mx-auto"
               >
                 <div className="relative flex shadow-xl">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
@@ -1462,6 +1228,7 @@ export const PropertyListing = () => {
                     Search
                   </Button>
                 </div>
+
                 {showSuggestions && suggestions.length > 0 && (
                   <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
                     {suggestions.map((suggestion, index) => (
@@ -1479,7 +1246,7 @@ export const PropertyListing = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="w-full px-4 py-8">
         {/* Mobile filter toggle button - only visible on mobile */}
@@ -1506,8 +1273,8 @@ export const PropertyListing = () => {
           {/* Collapsible Sidebar filters */}
           <div
             className={`transition-all duration-300 mb-6 md:mb-0 shrink-0 overflow-hidden flex flex-col
-              ${sidebarVisible ? "w-full md:w-[300px]" : "w-12 md:w-12"}
-              bg-gradient-to-br from-blue-50 via-indigo-50 to-white border-r border-blue-200 relative rounded-2xl shadow-xl
+              ${sidebarVisible ? "w-full md:w-[320px]" : "w-12 md:w-12"}
+              bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 border-r border-slate-200 relative rounded-2xl shadow-2xl backdrop-blur-sm
               ${!mobileFiltersVisible ? "md:block hidden" : ""}`}
             style={{
               minWidth: sidebarVisible ? undefined : "3rem",
@@ -1516,14 +1283,14 @@ export const PropertyListing = () => {
           >
             {/* Sidebar toggle button - only visible on desktop */}
             <div
-              className="hidden md:flex items-center justify-end h-10 w-full"
-              style={{ minHeight: "2.5rem" }}
+              className="hidden md:flex items-center justify-end h-12 w-full p-2"
+              style={{ minHeight: "3rem" }}
             >
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setSidebarVisible(!sidebarVisible)}
-                className="mb-2"
+                className="mb-2 bg-white/80 backdrop-blur-sm border-slate-300 hover:bg-white hover:border-slate-400 shadow-md"
               >
                 {sidebarVisible ? (
                   <>
@@ -1544,18 +1311,24 @@ export const PropertyListing = () => {
               }`}
             >
               {(sidebarVisible || mobileFiltersVisible) && (
-                <div className="p-0">
+                <div className="p-4">
                   {/* Filter Card */}
-                  <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-blue-100 p-6 flex flex-col gap-4 hover:shadow-2xl transition-all duration-300">
+                  <div className="bg-gradient-to-br from-white/95 via-white/90 to-white/85 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-6 flex flex-col gap-6 hover:shadow-3xl transition-all duration-300 relative overflow-hidden">
+                    {/* Decorative background elements */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full -translate-y-10 translate-x-10 blur-xl"></div>
+                    <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-indigo-400/8 to-blue-400/8 rounded-full translate-y-8 -translate-x-8 blur-lg"></div>
                     {/* Property Type Tabs Section - Collapsible */}
-                    <div className="mb-6">
+                    <div className="mb-6 relative">
                       <div
-                        className="font-semibold text-blue-700 text-sm mb-2 flex items-center justify-between cursor-pointer"
+                        className="font-bold text-slate-800 text-sm mb-3 flex items-center justify-between cursor-pointer bg-gradient-to-r from-slate-100 to-blue-50 p-3 rounded-xl border border-slate-200/50"
                         onClick={() =>
                           setPropertyTypeCollapsed(!propertyTypeCollapsed)
                         }
                       >
                         <span className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <Home className="h-3 w-3 text-white" />
+                          </div>
                           <span>Property Type</span>
                           {propertyTypeCollapsed && (
                             <span className="text-lg">
@@ -1564,9 +1337,9 @@ export const PropertyListing = () => {
                           )}
                         </span>
                         {propertyTypeCollapsed ? (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4 text-slate-600" />
                         ) : (
-                          <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4 text-slate-600" />
                         )}
                       </div>
                       {!propertyTypeCollapsed && (
@@ -1585,11 +1358,11 @@ export const PropertyListing = () => {
                             <button
                               key={tab.key}
                               onClick={() => handleTabChange(tab.key)}
-                              className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200
+                              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 border
                                 ${
                                   activeTab === tab.key
-                                    ? "bg-blue-600 text-white shadow-lg border border-blue-200"
-                                    : "bg-white text-blue-700 hover:bg-blue-100 border border-blue-100"
+                                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg border-blue-300 transform scale-105"
+                                    : "bg-white/80 text-slate-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-slate-200 hover:border-blue-300 hover:shadow-md"
                                 }
                               `}
                             >
@@ -1641,21 +1414,14 @@ export const PropertyListing = () => {
                     )}
 
                     {/* Sidebar Header */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FilterX className="h-5 w-5 text-blue-600" />
-                        <span className="text-lg font-bold text-blue-700">
-                          Filters
-                        </span>
+                    <div className="flex items-center justify-between mb-4 p-3 bg-gradient-to-r from-slate-100 to-blue-50 rounded-xl border border-slate-200/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          <FilterX className="h-4 w-4 text-white" />
+                        </div>
+
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={resetFilters}
-                        className="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-100 px-2"
-                      >
-                        Clear All
-                      </Button>
+
                     </div>
 
                     {/* Price Range Section */}
@@ -1718,13 +1484,16 @@ export const PropertyListing = () => {
                     )}
 
                     {/* Rooms & Features Section */}
-                    <div className="bg-blue-100 rounded-xl p-4 flex flex-col gap-4">
-                      <div className="font-semibold text-blue-700 text-sm mb-2">
+                    <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl p-4 flex flex-col gap-4 border border-slate-200/50">
+                      <div className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                        <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
+                          <Bed className="h-3 w-3 text-white" />
+                        </div>
                         {activeTab === "plot"
                           ? "Features"
                           : activeTab === "commercial"
-                          ? "Features"
-                          : "Rooms & Features"}
+                            ? "Features"
+                            : "Rooms & Features"}
                       </div>
 
                       {/* Residential Features */}
@@ -1733,7 +1502,7 @@ export const PropertyListing = () => {
                           {/* Bedrooms Dropdown */}
                           {shouldShowFilter("showBedrooms") && (
                             <div>
-                              <label className="block text-xs font-semibold text-blue-700 mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                 Bedrooms
                               </label>
                               <Select
@@ -1742,10 +1511,10 @@ export const PropertyListing = () => {
                                   handleBedroomChange(Number(v))
                                 }
                               >
-                                <SelectTrigger className="rounded-lg border-blue-300 bg-blue-50 text-blue-900 font-medium focus:ring-2 focus:ring-blue-400">
+                                <SelectTrigger className="rounded-lg border-slate-300 bg-white/80 text-slate-900 font-medium focus:ring-2 focus:ring-blue-400 hover:bg-white">
                                   <SelectValue placeholder="Any" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-white border-blue-200">
+                                <SelectContent className="bg-white border-slate-200">
                                   <SelectItem value="0">Any</SelectItem>
                                   <SelectItem value="1">1</SelectItem>
                                   <SelectItem value="2">2</SelectItem>
@@ -1759,7 +1528,7 @@ export const PropertyListing = () => {
                           {/* Bathrooms Dropdown */}
                           {shouldShowFilter("showBathrooms") && (
                             <div>
-                              <label className="block text-xs font-semibold text-blue-700 mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                 Bathrooms
                               </label>
                               <Select
@@ -1787,7 +1556,7 @@ export const PropertyListing = () => {
                           {/* Balconies Dropdown */}
                           {shouldShowFilter("showBalcony") && (
                             <div>
-                              <label className="block text-xs font-semibold text-blue-700 mb-1">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">
                                 Balconies
                               </label>
                               <Select
@@ -2144,31 +1913,13 @@ export const PropertyListing = () => {
                     </Badge>
                   )}
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetFilters}
-                    className="text-xs text-red-500 hover:text-red-600 hover:bg-red-50 ml-auto"
-                  >
-                    Clear All
-                  </Button>
+
                 </div>
               </div>
             )}
 
-            {/* Results count and sort */}
+            {/* Sort options */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-              {/* Results count */}
-              <div className="mb-4 sm:mb-0">
-                <p className="text-sm text-gray-600">
-                  Showing{" "}
-                  <span className="font-semibold">
-                    {filteredProperties.length}
-                  </span>{" "}
-                  properties
-                </p>
-              </div>
-
               {/* Sort dropdown */}
               <div className="mt-2 sm:mt-0">
                 <Select value={sortBy} onValueChange={handleSortChange}>
@@ -2198,7 +1949,7 @@ export const PropertyListing = () => {
                   <X className="h-10 w-10 text-red-500 mx-auto mb-4" />
                   <p className="text-red-600 mb-4">{error}</p>
                   <Button
-                    onClick={fetchProperties}
+                    onClick={handleRetry}
                     variant="outline"
                     className="bg-white border-red-200 hover:bg-red-50"
                   >
@@ -2246,7 +1997,7 @@ export const PropertyListing = () => {
                         .filter(
                           (prop) =>
                             prop.type === "commercial" &&
-                            !prop.status?.toLowerCase().includes("rent")
+                            !prop.status?.toLowerCase().includes("rent"),
                         )
                         .map((property) => (
                           <div key={property.id} className="w-full">
@@ -2255,7 +2006,7 @@ export const PropertyListing = () => {
                               likeCount={property.likeCount}
                               formattedPrice={formatPrice(
                                 property.price,
-                                property.type
+                                property.type,
                               )}
                               commercialType="buy" // Pass prop
                             />
@@ -2274,7 +2025,7 @@ export const PropertyListing = () => {
                         .filter(
                           (prop) =>
                             prop.type === "commercial" &&
-                            prop.status?.toLowerCase().includes("rent")
+                            prop.status?.toLowerCase().includes("rent"),
                         )
                         .map((property) => (
                           <div key={property.id} className="w-full">
@@ -2283,7 +2034,7 @@ export const PropertyListing = () => {
                               likeCount={property.likeCount}
                               formattedPrice={formatPrice(
                                 property.price,
-                                property.type
+                                property.type,
                               )}
                               commercialType="rent" // Pass prop
                             />
@@ -2301,7 +2052,7 @@ export const PropertyListing = () => {
                           likeCount={property.likeCount}
                           formattedPrice={formatPrice(
                             property.price,
-                            property.type
+                            property.type,
                           )}
                         />
                       </div>
@@ -2349,7 +2100,8 @@ export const PropertyListing = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

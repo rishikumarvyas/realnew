@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   ReactNode,
+  useRef,
 } from "react";
 import { BASE_URL } from "@/constants/api";
 import { formatPhoneNumber } from "@/utils/auth";
@@ -48,6 +49,18 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   fetchNotifications: () => Promise<void>;
+  // NEW: Add notification creation functions
+  createNotification: (
+    message: string,
+    type?: "user" | "property",
+    propertyId?: string
+  ) => Promise<boolean>;
+  refreshNotifications: () => Promise<void>;
+  markNotificationAsRead: (
+    notificationId: string,
+    type?: "user" | "property",
+    propertyId?: string
+  ) => Promise<boolean>;
 }
 
 // Create context with default values
@@ -60,6 +73,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  // NEW: Add refs to prevent multiple API calls
+  const isFetchingNotifications = useRef(false);
+  const isCreatingNotification = useRef(false);
+  const isMarkingAsRead = useRef(false);
 
   // Add effect to fetch notifications when user is available
   useEffect(() => {
@@ -111,7 +129,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             setUser(userData);
           }
         } catch (error) {
-          console.error("Error parsing stored token:", error);
           localStorage.removeItem("token");
         }
       }
@@ -146,7 +163,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return false;
       }
     } catch (error) {
-      console.error("Error requesting OTP:", error);
       return false;
     }
   };
@@ -225,18 +241,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const fetchNotifications = async () => {
-    if (!user?.userId) {
-      console.log("No user ID available for fetching notifications");
+    if (!user?.userId || isFetchingNotifications.current) {
       return;
     }
 
+    isFetchingNotifications.current = true;
     try {
-      console.log("Fetching notifications for user:", user.userId);
       const response = await axiosInstance.get(
         `/api/Notification/GetNotifications?userId=${user.userId}`
       );
-
-      console.log("Notifications API response:", response.data);
 
       if (response.status === 200 && response.data.notifications) {
         const allNotifications: Notification[] = response.data.notifications;
@@ -247,10 +260,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             new Date(b.createdDt).getTime() - new Date(a.createdDt).getTime()
         );
 
-        console.log("Setting notifications:", allNotifications.length, "items");
         setNotifications(allNotifications);
         const newUnreadCount = allNotifications.filter((n) => !n.isRead).length;
-        console.log("Setting unread count:", newUnreadCount);
         setUnreadCount(newUnreadCount);
       } else {
         console.warn(
@@ -259,7 +270,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         );
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
       if (axios.isAxiosError(error)) {
         console.error("API Error details:", {
           status: error.response?.status,
@@ -267,6 +277,135 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           headers: error.response?.headers,
         });
       }
+    } finally {
+      isFetchingNotifications.current = false;
+    }
+  };
+
+  // NEW: Create notification function
+  const createNotification = async (
+    message: string,
+    type: "user" | "property" = "user",
+    propertyId?: string
+  ): Promise<boolean> => {
+    if (!user?.userId || isCreatingNotification.current) {
+      return false;
+    }
+
+    isCreatingNotification.current = true;
+    try {
+      const payload: any = {
+        userId: user.userId,
+        message: message,
+        notificationType: type,
+      };
+
+      if (type === "property" && propertyId) {
+        payload.propertyId = propertyId;
+      }
+
+      const response = await axiosInstance.post(
+        "/api/Notification/CreateNotification",
+        payload
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        // Immediately add to local state for instant UI update
+        const newNotification: Notification = {
+          notificationId: response.data.messageId || Date.now().toString(),
+          message: message,
+          isRead: false,
+          createdDt: new Date().toISOString(),
+          propertyId: propertyId,
+          notificationType: type,
+        };
+
+        setNotifications((prev) => [newNotification, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    } finally {
+      isCreatingNotification.current = false;
+    }
+  };
+
+  // NEW: Refresh notifications after backend actions (like, post, etc.)
+  const refreshNotifications = async (): Promise<void> => {
+    if (!user?.userId || isFetchingNotifications.current) {
+      return;
+    }
+
+    isFetchingNotifications.current = true;
+    try {
+      const response = await axiosInstance.get(
+        `/api/Notification/GetNotifications?userId=${user.userId}`
+      );
+
+      if (response.data.statusCode === 200 && response.data.notifications) {
+        const notificationsData = response.data.notifications;
+        setNotifications(notificationsData);
+
+        // Calculate unread count
+        const unreadCount = notificationsData.filter(
+          (notification: Notification) => !notification.isRead
+        ).length;
+        setUnreadCount(unreadCount);
+      }
+    } catch (error) {
+      console.error("Error on refresh Notification:", error);
+    } finally {
+      isFetchingNotifications.current = false;
+    }
+  };
+
+  // NEW: Mark notification as read function
+  const markNotificationAsRead = async (
+    notificationId: string,
+    type: "user" | "property" = "user",
+    propertyId?: string
+  ): Promise<boolean> => {
+    if (!user?.userId || isMarkingAsRead.current) {
+      return false;
+    }
+
+    isMarkingAsRead.current = true;
+    try {
+      const payload: any = {
+        type: type,
+        userId: user.userId,
+        notificationId: notificationId,
+      };
+
+      if (type === "property" && propertyId) {
+        payload.propertyId = propertyId;
+      }
+
+      const response = await axiosInstance.put(
+        "/api/Notification/MarkAsRead",
+        payload
+      );
+
+      if (response.status === 200) {
+        // Immediately update local state
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.notificationId === notificationId
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    } finally {
+      isMarkingAsRead.current = false;
     }
   };
 
@@ -322,14 +461,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         setUser(userData);
 
-        // Fetch all required data in parallel
+        // OPTIMIZED: Fetch only essential data on login, cache the rest
         await Promise.all([
-          fetchNotifications(),
-          fetchAmenities(),
-          fetchAllStates(),
-          fetchUserTypes(),
-          fetchSuperCategory(),
+          fetchNotifications(), // Essential for user experience
+          fetchAmenities(), // Essential for property forms
         ]);
+
+        // OPTIMIZED: Fetch other data in background to avoid blocking login
+        setTimeout(() => {
+          Promise.all([
+            fetchAllStates(),
+            fetchUserTypes(),
+            fetchSuperCategory(),
+          ]).catch((error) => {});
+        }, 1000);
 
         // Close the auth modal after successful login
         closeAuthModal();
@@ -467,6 +612,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     signup,
     logout,
     fetchNotifications,
+    // NEW: Add notification functions
+    createNotification,
+    refreshNotifications,
+    markNotificationAsRead,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

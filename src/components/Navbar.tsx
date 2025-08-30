@@ -107,7 +107,7 @@ export function Navbar() {
                     "text-gray-800 px-3 py-2 text-sm font-medium border-b-2 transition-all duration-200",
                     isActive("/properties", type)
                       ? "text-blue-600 border-blue-600"
-                      : "hover:text-blue-600 hover:border-blue-600 border-transparent"
+                      : "hover:text-blue-600 hover:border-blue-600 border-transparent",
                   )}
                 >
                   {label}
@@ -117,7 +117,7 @@ export function Navbar() {
                 <Link
                   to="/newlanching"
                   className={cn(
-                    "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+                    "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200",
                   )}
                 >
                   New Launching
@@ -276,7 +276,7 @@ export function Navbar() {
                 to={`/properties?type=${type}`}
                 className={cn(
                   "flex flex-col items-center justify-center p-4 rounded-xl transition-colors",
-                  bgColor
+                  bgColor,
                 )}
                 onClick={() => setIsOpen(false)}
               >
@@ -347,8 +347,10 @@ export function Navbar() {
                   </Link>
                 )}
 
-                <div className="flex justify-center py-2">
-                  <NotificationIcon />
+                <div className="flex justify-center py-2 relative">
+                  <div className="relative">
+                    <NotificationIcon />
+                  </div>
                 </div>
 
                 {/* Logout */}
