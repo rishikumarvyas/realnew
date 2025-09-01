@@ -36,6 +36,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/ui/carousel";
 import { Switch } from "@/components/ui/switch";
 import { ContactForm } from "@/components/ContactForm";
@@ -64,6 +65,10 @@ const PropertyDetail = () => {
 
   // Ref for carousel API access
   const carouselApiRef = useRef<any>(null);
+  // Ref to store the onSelect handler for cleanup
+  const carouselSelectHandlerRef = useRef<((...args: any[]) => void) | null>(
+    null
+  );
 
   // States for image gallery and likes
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -138,6 +143,22 @@ const PropertyDetail = () => {
       carouselApiRef.current.scrollTo(activeImageIndex);
     }
   }, [activeImageIndex]);
+
+  // cleanup carousel select listener on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        if (carouselApiRef.current && carouselSelectHandlerRef.current) {
+          carouselApiRef.current.off(
+            "select",
+            carouselSelectHandlerRef.current
+          );
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, []);
 
   // Fetch similar properties based on location and property type
   const fetchSimilarProperties = async (city: string, propertyType: string) => {
@@ -703,7 +724,35 @@ const PropertyDetail = () => {
               <div className="relative">
                 <Carousel
                   className="w-full"
-                  setApi={carouselApiRef.current}
+                  setApi={(api: CarouselApi) => {
+                    // assign api
+                    carouselApiRef.current = api;
+
+                    if (!api) return;
+
+                    // set to active index once API available
+                    try {
+                      api.scrollTo(activeImageIndex);
+                    } catch (e) {
+                      /* ignore */
+                    }
+
+                    // attach select listener to keep state in sync
+                    const onSelect = () => {
+                      try {
+                        const selected = api.selectedScrollSnap();
+                        if (typeof selected === "number") {
+                          setActiveImageIndex(selected);
+                        }
+                      } catch (err) {
+                        // ignore
+                      }
+                    };
+
+                    // store for cleanup
+                    carouselSelectHandlerRef.current = onSelect;
+                    api.on("select", onSelect);
+                  }}
                   opts={{
                     startIndex: activeImageIndex,
                     loop: true,
@@ -715,7 +764,10 @@ const PropertyDetail = () => {
                         <div className="aspect-[16/10] overflow-hidden relative">
                           <div
                             className="w-full h-full cursor-pointer group"
-                            onClick={() => setGalleryOpen(true)}
+                            onClick={() => {
+                              setActiveImageIndex(index);
+                              setGalleryOpen(true);
+                            }}
                           >
                             <img
                               src={image.imageUrl}
