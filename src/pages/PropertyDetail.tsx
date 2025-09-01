@@ -935,67 +935,85 @@ const PropertyDetail = () => {
                   </TabsList>
 
                   <TabsContent value="details" className="p-6">
-                    <div className="divide-y">
-                      <div className="flex justify-between py-3">
-                        <span className="text-gray-600">Property Type</span>
-                        <span className="font-medium">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                      <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                        <div className="text-sm text-gray-600">
+                          Property Type
+                        </div>
+                        <div className="font-medium mt-1">
                           {property.propertyType || "Not specified"}
-                        </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between py-3">
-                        <span className="text-gray-600">Location</span>
-                        <span className="font-medium">
+
+                      <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                        <div className="text-sm text-gray-600">Location</div>
+                        <div className="font-medium mt-1">
                           {property.city || ""}
-                          {", "}
+                          {property.city || property.state ? ", " : ""}
                           {property.state ? property.state : ""}
-                        </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between py-3">
-                        <span className="text-gray-600">Age of Property</span>
-                        <span className="font-medium">
+
+                      <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                        <div className="text-sm text-gray-600">
+                          Age of Property
+                        </div>
+                        <div className="font-medium mt-1">
                           {property.age
                             ? `${property.age} years`
                             : "Not Specified"}
-                        </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between py-3">
-                        <span className="text-gray-600">Total Area</span>
-                        <span className="font-medium">
+
+                      <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                        <div className="text-sm text-gray-600">Total Area</div>
+                        <div className="font-medium mt-1">
                           {property.area} sq.ft
-                        </span>
+                        </div>
                       </div>
+
                       {/* Only show for non-Plot and non-Shop */}
                       {property.propertyType &&
                       !["plot", "shop"].includes(
                         property.propertyType.toLowerCase()
                       ) ? (
                         <>
-                          <div className="flex justify-between py-3">
-                            <span className="text-gray-600">Bedrooms</span>
-                            <span className="font-medium">
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Bedrooms
+                            </div>
+                            <div className="font-medium mt-1">
                               {property.bedroom}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between py-3">
-                            <span className="text-gray-600">Bathrooms</span>
-                            <span className="font-medium">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Bathrooms
+                            </div>
+                            <div className="font-medium mt-1">
                               {property.bathroom}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between py-3">
-                            <span className="text-gray-600">Balconies</span>
-                            <span className="font-medium">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Balconies
+                            </div>
+                            <div className="font-medium mt-1">
                               {property.balcony}
-                            </span>
+                            </div>
                           </div>
                         </>
                       ) : null}
-                      <div className="flex justify-between py-3">
-                        <span className="text-gray-600">Listed By</span>
-                        <span className="font-medium">
+
+                      <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                        <div className="text-sm text-gray-600">Listed By</div>
+                        <div className="font-medium mt-1">
                           {property.userType || "Owner"}
-                        </span>
+                        </div>
                       </div>
+
                       {/* Only show 'Available From' if not Plot and not Buy */}
                       {!(
                         property.propertyType &&
@@ -1005,45 +1023,52 @@ const PropertyDetail = () => {
                           property.superCategory &&
                           property.superCategory.toLowerCase() === "buy"
                         ) && (
-                          <div className="flex justify-between py-3">
-                            <span className="text-gray-600">
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
                               Available From
-                            </span>
-                            <span className="font-medium">
+                            </div>
+                            <div className="font-medium mt-1">
                               {property.availableFrom &&
                                 new Date(
                                   property.availableFrom
                                 ).toLocaleDateString()}
-                            </span>
+                            </div>
                           </div>
                         )}
+
                       {/* Show isNA for Plot */}
                       {property.propertyType &&
                         property.propertyType.toLowerCase() === "plot" && (
-                          <div className="flex justify-between py-3">
-                            <span className="text-gray-600">Is NA</span>
-                            <span className="font-medium">
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">Is NA</div>
+                            <div className="font-medium mt-1">
                               {property.isNA !== null &&
                               property.isNA !== undefined
                                 ? property.isNA
                                   ? "Yes"
                                   : "No"
                                 : "Not specified"}
-                            </span>
+                            </div>
                           </div>
                         )}
+
                       {/* Show preferences for Rent */}
                       {property.superCategory &&
                         property.superCategory.toLowerCase() === "rent" &&
                         property.preferences &&
                         property.preferences.length > 0 && (
-                          <div className="flex justify-between py-3">
-                            <span className="text-gray-600">Preferences</span>
-                            <span className="font-medium">
+                          <div className="bg-gray-50 p-4 rounded-lg sm:col-span-2 lg:col-span-3 hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Preferences
+                            </div>
+                            <div className="font-medium mt-1">
                               {property.preferences
-                                .map((pref: any) => pref.preference)
+                                .map(
+                                  (pref: { preference?: string }) =>
+                                    pref.preference
+                                )
                                 .join(", ")}
-                            </span>
+                            </div>
                           </div>
                         )}
                     </div>
@@ -1057,7 +1082,13 @@ const PropertyDetail = () => {
                         property.amenityDetails.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {property.amenityDetails.map(
-                              (amenity: any, index: number) => {
+                              (
+                                amenity: {
+                                  amenity: string;
+                                  amenityId?: string;
+                                },
+                                index: number
+                              ) => {
                                 let icon = null;
 
                                 if (
@@ -1155,14 +1186,16 @@ const PropertyDetail = () => {
                     )}
 
                   <TabsContent value="moreInfo" className="p-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-6">
                       {/* For Plot, only show Is NA, Liked by You, and Listed Date */}
                       {property.propertyType &&
                       property.propertyType.toLowerCase() === "plot" ? (
                         <>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">NA (Plot)</span>
-                            <span className="font-medium flex items-center">
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              NA (Plot)
+                            </div>
+                            <div className="font-medium mt-1 flex items-center">
                               {property.isNA !== null &&
                               property.isNA !== undefined ? (
                                 <Badge
@@ -1183,11 +1216,14 @@ const PropertyDetail = () => {
                                   Not specified
                                 </Badge>
                               )}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Liked by You</span>
-                            <span className="font-medium flex items-center">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Liked by You
+                            </div>
+                            <div className="font-medium mt-1">
                               {isFavorite ? (
                                 <Badge
                                   variant="default"
@@ -1203,13 +1239,16 @@ const PropertyDetail = () => {
                                   No
                                 </Badge>
                               )}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Listed Date</span>
-                            <span className="font-medium">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Listed Date
+                            </div>
+                            <div className="font-medium mt-1">
                               {formatDate(property.createdDt)}
-                            </span>
+                            </div>
                           </div>
                         </>
                       ) : property.propertyType &&
@@ -1217,20 +1256,23 @@ const PropertyDetail = () => {
                         property.superCategory &&
                         property.superCategory.toLowerCase() === "rent" ? (
                         <>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Likes</span>
-                            <span className="font-medium flex items-center">
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">Likes</div>
+                            <div className="font-medium mt-1 flex items-center">
                               <Heart
                                 className={`h-4 w-4 mr-1 ${
                                   isFavorite ? "fill-red-500 text-red-500" : ""
                                 }`}
                               />
                               {likesCount}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Liked by You</span>
-                            <span className="font-medium flex items-center">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Liked by You
+                            </div>
+                            <div className="font-medium mt-1">
                               {isFavorite ? (
                                 <Badge
                                   variant="default"
@@ -1246,24 +1288,27 @@ const PropertyDetail = () => {
                                   No
                                 </Badge>
                               )}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Listed Date</span>
-                            <span className="font-medium">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Listed Date
+                            </div>
+                            <div className="font-medium mt-1">
                               {formatDate(property.createdDt)}
-                            </span>
+                            </div>
                           </div>
                         </>
                       ) : (
                         <>
                           {property.superCategory?.toLowerCase() !== "rent" && (
                             <>
-                              <div className="flex justify-between border-b pb-3">
-                                <span className="text-gray-600">
+                              <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                                <div className="text-sm text-gray-600">
                                   RERA Approved
-                                </span>
-                                <span className="font-medium flex items-center">
+                                </div>
+                                <div className="font-medium mt-1">
                                   {property.isReraApproved ? (
                                     <Badge
                                       variant="default"
@@ -1279,13 +1324,14 @@ const PropertyDetail = () => {
                                       No
                                     </Badge>
                                   )}
-                                </span>
+                                </div>
                               </div>
-                              <div className="flex justify-between border-b pb-3">
-                                <span className="text-gray-600">
+
+                              <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                                <div className="text-sm text-gray-600">
                                   OC Approved
-                                </span>
-                                <span className="font-medium flex items-center">
+                                </div>
+                                <div className="font-medium mt-1">
                                   {property.isOCApproved ? (
                                     <Badge
                                       variant="default"
@@ -1301,11 +1347,14 @@ const PropertyDetail = () => {
                                       No
                                     </Badge>
                                   )}
-                                </span>
+                                </div>
                               </div>
-                              <div className="flex justify-between border-b pb-3">
-                                <span className="text-gray-600">Likes</span>
-                                <span className="font-medium flex items-center">
+
+                              <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                                <div className="text-sm text-gray-600">
+                                  Likes
+                                </div>
+                                <div className="font-medium mt-1 flex items-center">
                                   <Heart
                                     className={`h-4 w-4 mr-1 ${
                                       isFavorite
@@ -1314,13 +1363,16 @@ const PropertyDetail = () => {
                                     }`}
                                   />
                                   {likesCount}
-                                </span>
+                                </div>
                               </div>
                             </>
                           )}
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Liked by You</span>
-                            <span className="font-medium flex items-center">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Liked by You
+                            </div>
+                            <div className="font-medium mt-1">
                               {isFavorite ? (
                                 <Badge
                                   variant="default"
@@ -1336,13 +1388,16 @@ const PropertyDetail = () => {
                                   No
                                 </Badge>
                               )}
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex justify-between border-b pb-3">
-                            <span className="text-gray-600">Listed Date</span>
-                            <span className="font-medium">
+
+                          <div className="bg-gray-50 p-4 rounded-lg hover:bg-blue-50 transition-colors hover:scale-[1.02] transform">
+                            <div className="text-sm text-gray-600">
+                              Listed Date
+                            </div>
+                            <div className="font-medium mt-1">
                               {formatDate(property.createdDt)}
-                            </span>
+                            </div>
                           </div>
                         </>
                       )}
