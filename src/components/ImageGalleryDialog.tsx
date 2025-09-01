@@ -48,16 +48,6 @@ export const ImageGalleryDialog: React.FC<ImageGalleryDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl w-11/12 p-0 bg-black text-white">
         <div className="relative h-[80vh] flex flex-col">
-          {/* Close button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-
           {/* Image counter */}
           <div className="absolute top-4 left-4 z-50 bg-black/50 text-white text-sm px-3 py-1 rounded-full">
             {currentIndex + 1} / {images.length}
