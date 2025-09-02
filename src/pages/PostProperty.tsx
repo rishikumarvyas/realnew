@@ -335,7 +335,8 @@ const PostProperty = () => {
       return;
     }
 
-    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+    // Skip age validation for Plots (age field is not shown for Plot)
+    if (!isPlot && (ageOfProperty === "" || /\D/.test(ageOfProperty))) {
       setAgeError("Please enter a valid number (years only)");
       toast({
         title: "Invalid Age of Property",
@@ -431,7 +432,10 @@ const PostProperty = () => {
       formData.append("StateId", selectedStateId.toString());
       formData.append("Locality", locality.toString());
       formData.append("UserTypeId", userTypeId.toString());
-      formData.append("Age", ageOfProperty);
+      // Only include Age for non-plot categories
+      if (!isPlot && ageOfProperty !== "") {
+        formData.append("Age", ageOfProperty);
+      }
 
       // Add amenities
       amenityIds.forEach((id) => {
