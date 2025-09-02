@@ -199,7 +199,9 @@ const PostProperty = () => {
           setMainImageIndex(images.length); // Set to the first of the newly added images
         }
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const removeImage = (index) => {
