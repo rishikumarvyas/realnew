@@ -40,7 +40,7 @@ const TermsAndConditions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const [agreementChecked, setAgreementChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +52,7 @@ const TermsAndConditions = () => {
       setLoading(true);
 
       const response = await fetch(
-        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=termsconditions",
+        "https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=termsconditions"
       );
 
       if (!response.ok) {
@@ -78,7 +78,6 @@ const TermsAndConditions = () => {
         });
       }
     } catch (err) {
-
       setError("Failed to load terms and conditions");
       toast({
         variant: "destructive",
@@ -113,7 +112,7 @@ const TermsAndConditions = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
 
       if (!response.ok) {
@@ -127,7 +126,6 @@ const TermsAndConditions = () => {
         description: "Your acceptance has been recorded successfully.",
       });
     } catch (err) {
-
       toast({
         variant: "destructive",
         title: "Error",
