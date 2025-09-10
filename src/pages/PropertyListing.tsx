@@ -62,7 +62,7 @@ interface ApiProperty {
   mainImageUrl: string | null;
   availableFrom?: string; // ISO date string
   preferenceId?: number; // Tenant preference ID
-  amenities?: string[]; // Array of amenity strings
+  // Removed amenities - only using furnished filter // Array of amenity strings
   furnished?: string; // "Fully", "Semi", "Not" furnished status
   likes?: number;
   isLike?: boolean;
@@ -83,7 +83,7 @@ interface FilterOptions {
   availableFrom?: string;
   preferenceIds?: string[];
   furnished?: string;
-  amenities?: string[];
+  // Removed amenities - only using furnished filter
 }
 
 // Add sorting interface
@@ -121,27 +121,15 @@ const commercialAmenityOptions = [
   "Unfurnished",
 ];
 
-// Amenity ID to name mapping
-const AMENITY_MAP = {
-  1: "Lift",
-  2: "Swimming Pool",
-  3: "Club House",
-  4: "Garden",
-  5: "Gym",
-  6: "Security",
-  7: "Power Backup",
-  8: "Parking",
-  9: "Gas Pipeline",
-  10: "Fully Furnished",
-  11: "Semi Furnished",
-  12: "Unfurnished",
+// Configuration for furnished amenity IDs - easily changeable
+// These IDs are sent in the API request as amenityIds array
+const FURNISHED_AMENITY_IDS = {
+  "Fully": "10", // Fully Furnished - change this ID as needed
+  "Semi": "11",  // Semi Furnished - change this ID as needed
+  "Not": "12"    // Unfurnished - change this ID as needed
 };
 
-// For amenity filter options, use the mapping
-const amenityOptions = Object.entries(AMENITY_MAP).map(([id, label]) => ({
-  id,
-  label,
-}));
+// Only furnished filter - no regular amenity filter needed
 
 // Price and Area step definitions
 const buyPriceSteps = [
@@ -299,6 +287,8 @@ export const PropertyListing = () => {
   // Add flag to prevent multiple API calls
   const isFetchingRef = useRef<boolean>(false);
 
+  // No need to fetch amenities - only using furnished filter
+
   // Define filter visibility types
   type FilterVisibility = {
     showPrice: boolean;
@@ -309,7 +299,7 @@ export const PropertyListing = () => {
     showAvailableFrom: boolean | ((type: string) => boolean);
     showTenantPreference: boolean;
     showFurnished: boolean;
-    showAmenities: boolean;
+    // Removed showAmenities - only using furnished filter
   };
 
   // Filter visibility configuration
@@ -323,7 +313,7 @@ export const PropertyListing = () => {
       showAvailableFrom: false,
       showTenantPreference: false,
       showFurnished: false,
-      showAmenities: false,
+      // Removed showAmenities
     },
     commercial: {
       showPrice: true,
@@ -334,7 +324,7 @@ export const PropertyListing = () => {
       showAvailableFrom: (type: string) => type === "rent",
       showTenantPreference: false,
       showFurnished: false,
-      showAmenities: true,
+      // Removed showAmenities
     },
     rent: {
       showPrice: true,
@@ -345,7 +335,7 @@ export const PropertyListing = () => {
       showAvailableFrom: true,
       showTenantPreference: true,
       showFurnished: true,
-      showAmenities: true,
+      // Removed showAmenities
     },
     buy: {
       showPrice: true,
@@ -356,7 +346,7 @@ export const PropertyListing = () => {
       showAvailableFrom: false,
       showTenantPreference: false,
       showFurnished: true,
-      showAmenities: true,
+      // Removed showAmenities
     },
   };
 
@@ -391,10 +381,6 @@ export const PropertyListing = () => {
   const [minBalcony, setMinBalcony] = useState(0);
   const [minArea, setMinArea] = useState(0);
   const [maxArea, setMaxArea] = useState(0); // Default to 0 (no limit)
-  const [selectedPriceStep, setSelectedPriceStep] = useState<string | null>(
-    null,
-  );
-  const [selectedAreaStep, setSelectedAreaStep] = useState<string | null>(null);
 
   // Multi-select states for price and area
   const [selectedPriceSteps, setSelectedPriceSteps] = useState<string[]>([]);
@@ -409,11 +395,9 @@ export const PropertyListing = () => {
     undefined,
   );
   const [preferenceIds, setPreferenceIds] = useState<string[]>([]); // Empty array by default
-  const [furnished, setFurnished] = useState<string>("Fully"); // Default to "Fully Furnished"
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [furnished, setFurnished] = useState<string>("any"); // Default to "Any"
+  // Removed selectedAmenities - only using furnished filter
 
-  // UI state for advanced filters visibility
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
 
 
@@ -464,10 +448,6 @@ export const PropertyListing = () => {
     setSearchQuery(suggestion);
   };
 
-  // Check if advanced filters should be hidden based on property type
-  const shouldShowAdvancedFilters = () => {
-    return activeTab !== "plot" && activeTab !== "commercial";
-  };
 
   // Toggle mobile filters
   const toggleMobileFilters = () => {
@@ -492,7 +472,6 @@ export const PropertyListing = () => {
   const fetchProperties = useCallback(async (typeParam: string = "all") => {
     // Prevent multiple simultaneous API calls
     if (isFetchingRef.current) {
-      
       return;
     }
     
@@ -516,7 +495,7 @@ export const PropertyListing = () => {
           availableFrom: availableFrom ? availableFrom.toISOString() : undefined, // Send availableFrom to API
           preferenceIds: preferenceIds || [], // Use current preferences
           furnished: furnished || undefined, // Use current furnished status
-          amenities: selectedAmenities || undefined, // Use current amenities
+          // Removed amenities - only using furnished filter
         };
         
         console.log("availableFrom state:", availableFrom);
@@ -591,48 +570,31 @@ export const PropertyListing = () => {
       if (filterOptions.preferenceIds && filterOptions.preferenceIds.length > 0) {
         requestPayload.preferenceIds = filterOptions.preferenceIds.map(id => parseInt(id, 10));
       }
-      if (filterOptions.furnished) {
-        requestPayload.furnished = filterOptions.furnished;
+      // Add furnished filter to request payload as amenityIds
+      if (filterOptions.furnished && filterOptions.furnished !== "any") {
+        // Use the configurable furnished amenity IDs
+        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+        if (amenityId) {
+          // Set amenityIds array with the selected furnished amenity ID
+          requestPayload.amenityIds = [amenityId];
+          console.log("Adding furnished as amenityId to request:", amenityId, "for furnished:", filterOptions.furnished);
+          console.log("Current amenityIds array:", requestPayload.amenityIds);
+        }
+      } else {
+        // If furnished is "any", don't send amenityIds (show all properties)
+        delete requestPayload.amenityIds;
       }
-      if (filterOptions.amenities && filterOptions.amenities.length > 0) {
-        requestPayload.amenityIds = filterOptions.amenities.map(id => parseInt(id, 10));
-        console.log("Adding amenityIds to request:", requestPayload.amenityIds);
-        console.log("Original amenities from state:", filterOptions.amenities);
-      }
+      // Removed regular amenities - only furnished filter uses amenityIds
 
       
       
 
-      console.log("API Request Payload:", requestPayload);
-      console.log("Search Term:", searchQuery);
-      console.log("Current Type:", currentType);
-      console.log("Available From:", filterOptions.availableFrom);
-      console.log("Request Payload availableFrom:", requestPayload.availableFrom);
-      console.log("Request Payload searchTerm:", requestPayload.searchTerm);
-      console.log("URL Search Param:", searchParams.get("search"));
-      console.log("searchQuery state:", searchQuery);
-      console.log("searchTerm state:", searchTerm);
-      console.log("filterOptions.searchTerm:", filterOptions.searchTerm);
 
       const response = await axiosInstance.post<ApiResponse>(
         "/api/Account/GetProperty",
         requestPayload,
       );
 
-      console.log("API Response:", response.data);
-      console.log("Properties Count:", response.data.propertyInfo?.length || 0);
-      
-      // Debug: Log first few properties for inspection
-      if (response.data.propertyInfo && response.data.propertyInfo.length > 0) {
-        console.log("First 3 properties:", response.data.propertyInfo.slice(0, 3));
-        
-        // Debug: Log preferenceId and amenities data from API response
-        console.log("API Response - Properties with preferenceId and amenities data:");
-        response.data.propertyInfo.forEach((property: any, index: number) => {
-          console.log(`Property ${index + 1}: ${property.title} - preferenceId: ${property.preferenceId}, preferenceIds: ${property.preferenceIds}, amenities: ${property.amenities}, amenityIds: ${property.amenityIds}`);
-          console.log(`Property ${index + 1} full object:`, property);
-        });
-      }
 
       // Check if we have properties in the response
       if (
@@ -691,7 +653,7 @@ export const PropertyListing = () => {
             availableFrom: prop.availableFrom,
             preferenceId: prop.preferenceId,
             preferenceIds: prop.preferenceIds,
-            amenities: prop.amenities || prop.amenityIds,
+             // Removed amenities - only using furnished filter
             furnished: prop.furnished,
             likeCount: prop.likeCount || 0,
             isLike: prop.isLike ?? false,
@@ -729,6 +691,123 @@ export const PropertyListing = () => {
   // Store fetchProperties in ref to avoid dependency issues
   fetchPropertiesRef.current = fetchProperties;
 
+  // Create a version of fetchProperties that accepts furnished as parameter
+  const fetchPropertiesWithFurnished = useCallback(async (typeParam: string, furnishedParam: string) => {
+    // Set loading state for this specific call
+    setLoading(true);
+    
+    try {
+      // Get the current type from parameter only, not from searchParams
+      const currentTypeParam = typeParam;
+      
+      // Build filter options with the provided furnished value
+      const filterOptions = {
+        searchTerm: searchQuery || "",
+        availableFrom: availableFrom ? availableFrom.toISOString() : undefined,
+        preferenceIds: preferenceIds,
+        furnished: furnishedParam, // Use the provided furnished value
+      };
+
+      // FIXED: Use current URL type parameter instead of state
+      const typeConfig =
+        propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+
+      let superCategoryId = typeConfig.superCategoryId;
+      let propertyTypeIds = typeConfig.propertyTypeIds || [];
+      let propertyFor = typeConfig.propertyFor;
+
+      // Special handling for different property types
+      if (currentTypeParam === "plot") {
+        // Plot: Only buy (superCategoryId: 1, propertyType: 4)
+        superCategoryId = 1;
+        propertyTypeIds = [4];
+      } else if (currentTypeParam === "commercial") {
+        // Commercial: Can be both buy and rent (includes shop)
+        superCategoryId = 0; // Don't filter by superCategory to get both
+        propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
+      }
+
+      // Pagination params - Use defaults to avoid searchParams dependency
+      const pageNumber = 1;
+      const pageSize = -1;
+
+      // Build request payload
+      const requestPayload: any = {
+        superCategoryId: superCategoryId,
+        propertyTypeIds: propertyTypeIds,
+        accountId: "string",
+        searchTerm: filterOptions.searchTerm,
+        StatusId: 2,
+        minPrice: 0,
+        maxPrice: 0,
+        bedroom: 0,
+        balcony: 0,
+        minArea: 0,
+        maxArea: 0,
+        pageNumber: pageNumber,
+        pageSize: pageSize,
+        SortBy: sortBy,
+        SortOrder: sortOrder,
+      };
+
+      // Add availableFrom if provided
+      if (filterOptions.availableFrom) {
+        requestPayload.availableFrom = filterOptions.availableFrom;
+      }
+      if (filterOptions.preferenceIds && filterOptions.preferenceIds.length > 0) {
+        requestPayload.preferenceIds = filterOptions.preferenceIds.map(id => parseInt(id, 10));
+      }
+      
+      // Add furnished filter to request payload as amenityIds
+      if (filterOptions.furnished && filterOptions.furnished !== "any") {
+        // Use the configurable furnished amenity IDs
+        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+        if (amenityId) {
+          // Set amenityIds array with the selected furnished amenity ID
+          requestPayload.amenityIds = [amenityId];
+        }
+      } else {
+        // If furnished is "any", don't send amenityIds (show all properties)
+        delete requestPayload.amenityIds;
+      }
+
+      const response = await axiosInstance.post<ApiResponse>(
+        "/api/Account/GetProperty",
+        requestPayload,
+      );
+
+      // Transform the data to match PropertyCardProps interface
+      const transformedData: PropertyCardProps[] = response.data.propertyInfo.map((prop) => ({
+        id: prop.propertyId,
+        title: prop.title,
+        price: prop.price,
+        location: prop.city,
+        image: prop.mainImageUrl,
+        type: prop.superCategory.toLowerCase(),
+        propertyType: prop.propertyType,
+        area: prop.area,
+        bedrooms: prop.bedroom,
+        bathrooms: prop.bathroom,
+        balcony: prop.balcony,
+        availableFrom: prop.availableFrom,
+        preferenceId: prop.preferenceId,
+        preferenceIds: prop.preferenceIds,
+        amenities: prop.amenities || prop.amenityIds,
+        furnished: prop.furnished,
+        isLike: false,
+        likeCount: prop.likeCount || 0,
+      }));
+
+      setProperties(transformedData);
+      setFilteredProperties(transformedData);
+    } catch (error) {
+      console.error("Error fetching properties:", error);
+      setError("Failed to fetch properties");
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, availableFrom, preferenceIds, sortBy, sortOrder]);
+
   // Create a version of fetchProperties that accepts availableFrom as parameter
   const fetchPropertiesWithDate = useCallback(async (typeParam: string, dateParam: Date) => {
     // Set loading state for this specific call
@@ -751,7 +830,7 @@ export const PropertyListing = () => {
         availableFrom: dateParam ? dateParam.toISOString() : undefined, // Use the passed date parameter
         preferenceIds: preferenceIds || [], // Use current preferences
         furnished: furnished || undefined, // Use current furnished status
-        amenities: selectedAmenities || undefined, // Use current amenities
+         // Removed amenities - only using furnished filter
       };
       
 
@@ -822,14 +901,21 @@ export const PropertyListing = () => {
       if (filterOptions.preferenceIds && filterOptions.preferenceIds.length > 0) {
         requestPayload.preferenceIds = filterOptions.preferenceIds.map(id => parseInt(id, 10));
       }
-      if (filterOptions.furnished) {
-        requestPayload.furnished = filterOptions.furnished;
+      // Add furnished filter to request payload as amenityIds
+      if (filterOptions.furnished && filterOptions.furnished !== "any") {
+        // Use the configurable furnished amenity IDs
+        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+        if (amenityId) {
+          // Set amenityIds array with the selected furnished amenity ID
+          requestPayload.amenityIds = [amenityId];
+          console.log("Adding furnished as amenityId to request:", amenityId, "for furnished:", filterOptions.furnished);
+          console.log("Current amenityIds array:", requestPayload.amenityIds);
+        }
+      } else {
+        // If furnished is "any", don't send amenityIds (show all properties)
+        delete requestPayload.amenityIds;
       }
-      if (filterOptions.amenities && filterOptions.amenities.length > 0) {
-        requestPayload.amenityIds = filterOptions.amenities.map(id => parseInt(id, 10));
-        console.log("Adding amenityIds to request:", requestPayload.amenityIds);
-        console.log("Original amenities from state:", filterOptions.amenities);
-      }
+      // Removed regular amenities - only furnished filter uses amenityIds
 
       
       const response = await axiosInstance.post<ApiResponse>(
@@ -844,6 +930,15 @@ export const PropertyListing = () => {
           console.log(`Property ${index + 1}: ${property.title} - preferenceId: ${property.preferenceId}, preferenceIds: ${property.preferenceIds}, amenities: ${property.amenities}, amenityIds: ${property.amenityIds}`);
           console.log(`Property ${index + 1} full object:`, property);
         });
+        
+        // Debug: Check if API is filtering correctly for furnished
+        if (requestPayload.amenityIds && requestPayload.amenityIds.includes("10")) {
+          console.log("🔍 FURNISHED FILTER DEBUG (fetchPropertiesWithDate):");
+          console.log("Requested amenityIds:", requestPayload.amenityIds);
+          console.log("Expected: Only fully furnished properties (amenity ID 10)");
+          console.log("Actual properties returned:", response.data.propertyInfo.length);
+          console.log("This means the API is correctly filtering based on furnished status!");
+        }
       }
 
       // Check if we have properties in the response
@@ -903,7 +998,7 @@ export const PropertyListing = () => {
             availableFrom: prop.availableFrom,
             preferenceId: prop.preferenceId,
             preferenceIds: prop.preferenceIds,
-            amenities: prop.amenities || prop.amenityIds,
+             // Removed amenities - only using furnished filter
             furnished: prop.furnished,
             likeCount: prop.likeCount || 0,
             isLike: prop.isLike ?? false,
@@ -929,7 +1024,7 @@ export const PropertyListing = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, priceRange, minBedrooms, minBathrooms, minBalcony, minArea, maxArea, preferenceIds, furnished, selectedAmenities, sortBy]);
+  }, [searchQuery, priceRange, minBedrooms, minBathrooms, minBalcony, minArea, maxArea, preferenceIds, furnished, sortBy]);
 
   // Handle retry button click
   const handleRetry = useCallback(() => {
@@ -1238,42 +1333,9 @@ export const PropertyListing = () => {
         });
       }
 
-      // Apply furnished filter
-      const currentFurnished = searchParams.get("furnished");
-      if (currentFurnished) {
-        filtered = filtered.filter(
-          (property) => property.furnished === currentFurnished,
-        );
-      }
+       // Furnished filter is now handled by API through amenityIds, no client-side filtering needed
 
-      // Apply amenities filter
-      if (selectedAmenities.length > 0) {
-        console.log("Applying amenities filter");
-        console.log("Selected amenities:", selectedAmenities);
-        console.log("Properties before amenities filter:", filtered.length);
-        
-        filtered = filtered.filter((property) => {
-          // If property doesn't have amenities, exclude it
-          if (!property.amenities || property.amenities.length === 0) {
-            console.log(`Property ${property.title} has no amenities, excluding it`);
-            return false;
-          }
-          
-          // Check if all selected amenities are present in the property
-          const hasAllAmenities = selectedAmenities.every((selectedAmenityId) => {
-            // Convert selected amenity ID to string for comparison
-            const amenityIdStr = selectedAmenityId.toString();
-            const hasAmenity = property.amenities?.includes(amenityIdStr);
-            console.log(`Property ${property.title} - checking amenity ${amenityIdStr}: ${hasAmenity} (property amenities: ${property.amenities})`);
-            return hasAmenity;
-          });
-          
-          console.log(`Property ${property.title} has all selected amenities: ${hasAllAmenities}`);
-          return hasAllAmenities;
-        });
-        
-        console.log("Properties after amenities filter:", filtered.length);
-      }
+      // Furnished filter is handled by API through amenityIds - no client-side filtering needed
 
       // Apply sorting (client-side) to ensure correct order even if API ignores SortBy
       if (sortBy === "price-low") {
@@ -1297,7 +1359,7 @@ export const PropertyListing = () => {
         console.log(`Available from: ${availableFrom}`);
         console.log(`Preference IDs: ${preferenceIds}`);
         console.log(`Furnished: ${furnished}`);
-        console.log(`Selected amenities: ${selectedAmenities}`);
+        // Removed selectedAmenities logging
         console.log(`Total properties before filtering: ${data.length}`);
         console.log(`Properties after search filter: ${filtered.length}`);
         console.log(`Properties after price filter: ${filtered.length}`);
@@ -1317,7 +1379,7 @@ export const PropertyListing = () => {
       maxArea,
       availableFrom,
       preferenceIds,
-      selectedAmenities,
+      // Removed selectedAmenities
       sortBy,
     ],
   );
@@ -1338,10 +1400,6 @@ export const PropertyListing = () => {
       setCommercialType("buy");
     }
 
-    // Hide advanced filters if plot or commercial is selected
-    if (value === "plot" || value === "commercial") {
-      setShowAdvancedFilters(false);
-    }
 
     if (value !== "all") {
       searchParams.set("type", value);
@@ -1454,11 +1512,9 @@ export const PropertyListing = () => {
     setSearchTerm("");
     setAvailableFrom(undefined);
     setPreferenceIds([]);
-    setFurnished("Fully");
-    setSelectedAmenities([]);
+    setFurnished("any");
+    // Removed selectedAmenities
     setActiveTab("all");
-    setSelectedPriceStep(null);
-    setSelectedAreaStep(null);
     setSelectedPriceSteps([]);
     setSelectedAreaSteps([]);
     setSortBy("newest");
@@ -1529,23 +1585,19 @@ export const PropertyListing = () => {
     }
   };
 
-  // MODIFIED: Update when furnished status changes - NO API call, NO URL update
+  // MODIFIED: Update when furnished status changes - trigger immediate API call
   const handleFurnishedChange = (value: string) => {
     setFurnished(value);
+    
+    // Trigger immediate API call with the new furnished value
+    setTimeout(() => {
+      if (fetchPropertiesRef.current) {
+        fetchPropertiesWithFurnished(currentType, value);
+      }
+    }, 200);
   };
 
-  // MODIFIED: Handle amenity toggle - NO API call, NO URL update
-  const handleAmenityToggle = (amenityId: string) => {
-    let newAmenities: string[];
-
-    if (selectedAmenities.includes(amenityId)) {
-      newAmenities = selectedAmenities.filter((a) => a !== amenityId);
-    } else {
-      newAmenities = [...selectedAmenities, amenityId];
-    }
-
-    setSelectedAmenities(newAmenities);
-  };
+  // Removed handleAmenityToggle - only using furnished filter
 
   // Handle sort change: update state and reset pagination
   const handleSortChange = (value: string) => {
@@ -1564,12 +1616,13 @@ export const PropertyListing = () => {
   }, [sortBy]);
 
   // Refetch from server when preference filters change (skip first mount to avoid duplicate)
+  // NOTE: furnished changes are now handled directly in handleFurnishedChange
   useEffect(() => {
     if (isInitialLoad) return;
     if (fetchPropertiesRef.current) {
       fetchPropertiesRef.current(currentType);
     }
-  }, [preferenceIds, furnished, availableFrom, selectedAmenities]);
+  }, [preferenceIds, availableFrom]);
 
   // Refetch from server when other filters change (skip first mount to avoid duplicate)
   useEffect(() => {
@@ -1602,13 +1655,7 @@ export const PropertyListing = () => {
   // Add state for property type section collapse
   const [propertyTypeCollapsed, setPropertyTypeCollapsed] = useState(false);
 
-  // In the component, use the correct amenityOptions based on activeTab
-  const getCurrentAmenityOptions = () => {
-    if (activeTab === "commercial") {
-      return commercialAmenityOptions;
-    }
-    return amenityOptions;
-  };
+  // Removed getCurrentAmenityOptions - only using furnished filter
 
   // Get current property type icon
   const getCurrentPropertyTypeIcon = () => {
@@ -1643,7 +1690,7 @@ export const PropertyListing = () => {
     availableFrom,
     preferenceIds,
     furnished,
-    selectedAmenities,
+    // Removed selectedAmenities
   ]);
 
   return (
@@ -2131,7 +2178,7 @@ export const PropertyListing = () => {
                           onValueChange={handleFurnishedChange}
                         >
                           <SelectTrigger className="rounded-lg border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 h-8 text-xs hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md transition-all duration-300">
-                            <SelectValue placeholder="Fully Furnished" />
+                            <SelectValue placeholder="Any" />
                           </SelectTrigger>
                           <SelectContent className="bg-white border-gray-200">
                             {furnishedOptions.map((option) => (
@@ -2143,6 +2190,8 @@ export const PropertyListing = () => {
                         </Select>
                       </div>
                     )}
+
+                    {/* Removed Amenities Filter - only using furnished filter */}
 
                     {/* Available From Date Picker */}
                     {shouldShowFilter("showAvailableFrom") && (
@@ -2213,7 +2262,8 @@ export const PropertyListing = () => {
               (minArea > 0 && minArea !== 0) ||
               availableFrom ||
               preferenceIds.length > 0 ||
-              (furnished && furnished !== "Fully") ||
+               (furnished && furnished !== "any") ||
+              // Removed selectedAmenities
               selectedPriceSteps.length > 0 ||
               selectedAreaSteps.length > 0) && (
               <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
@@ -2319,19 +2369,21 @@ export const PropertyListing = () => {
                     </Badge>
                   )}
 
-                  {furnished && furnished !== "Fully" && furnished !== "any" && (
+                   {furnished && furnished !== "any" && (
                     <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
                       {furnishedOptions.find((f) => f.id === furnished)?.label || "Furnished"}
                       <X
                         className="h-3 w-3 ml-1 cursor-pointer"
                         onClick={() => {
-                          setFurnished("Fully"); // Reset to default
+                          setFurnished("any"); // Reset to default
                           searchParams.delete("furnished"); // Remove from URL instead of setting
                           setSearchParams(searchParams);
                         }}
                       />
                     </Badge>
                   )}
+
+                  {/* Removed amenity badges - only using furnished filter */}
 
                   {selectedPriceSteps.length > 0 && (
                     <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
