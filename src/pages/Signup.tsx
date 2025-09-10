@@ -103,7 +103,7 @@ const Signup = ({ onClose }: SignupProps) => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!name.trim()) {
       toast({
@@ -152,7 +152,7 @@ const Signup = ({ onClose }: SignupProps) => {
 
       if (existingUsers[fullPhoneNumber]) {
         setPhoneError(
-          "This number is already registered. Please login or use another number.",
+          "This number is already registered. Please login or use another number."
         );
         setLoading(false);
         return;
@@ -188,7 +188,6 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-
     } finally {
       setLoading(false);
     }
@@ -202,7 +201,7 @@ const Signup = ({ onClose }: SignupProps) => {
         "+91" + phone,
         name,
         otp,
-        userType.toString(),
+        userType.toString()
       );
 
       if (result.success) {
@@ -227,7 +226,6 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-
     } finally {
       setLoading(false);
     }
@@ -256,7 +254,6 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-
     }
 
     return Promise.resolve();
@@ -275,7 +272,8 @@ const Signup = ({ onClose }: SignupProps) => {
     setUserType(parseInt(value));
   };
 
-  const isFormValid = name.trim() !== "" && phone.length === 10 && userType > 0 && termsAccepted;
+  const isFormValid =
+    name.trim() !== "" && phone.length === 10 && userType > 0 && termsAccepted;
 
   const popupClasses = isVisible
     ? "opacity-100 translate-y-0"
@@ -339,7 +337,10 @@ const Signup = ({ onClose }: SignupProps) => {
                 <form onSubmit={handleFormSubmit} className="space-y-4">
                   {/* Full Name Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2 text-sm font-medium">
+                    <Label
+                      htmlFor="name"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
                       <User className="h-4 w-4 text-blue-500" />
                       Full Name
                     </Label>
@@ -356,7 +357,10 @@ const Signup = ({ onClose }: SignupProps) => {
 
                   {/* Phone Number Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                    <Label
+                      htmlFor="phone"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
                     </Label>
@@ -366,7 +370,8 @@ const Signup = ({ onClose }: SignupProps) => {
                         onChange={(val) => setPhone(val.slice(0, 10))}
                         onComplete={() => {
                           // Focus on user type select when phone is complete
-                          const userTypeSelect = document.getElementById('userType');
+                          const userTypeSelect =
+                            document.getElementById("userType");
                           if (userTypeSelect) {
                             userTypeSelect.focus();
                           }
@@ -380,9 +385,11 @@ const Signup = ({ onClose }: SignupProps) => {
 
                   {/* User Type Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="userType" className="flex items-center gap-2 text-sm font-medium">
-                      <Shield className="h-4 w-4 text-blue-500" />
-                      I am a
+                    <Label
+                      htmlFor="userType"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
+                      <Shield className="h-4 w-4 text-blue-500" />I am a
                     </Label>
                     <Select
                       value={userType > 0 ? userType.toString() : ""}
@@ -406,7 +413,9 @@ const Signup = ({ onClose }: SignupProps) => {
                     <Checkbox
                       id="terms"
                       checked={termsAccepted}
-                      onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setTermsAccepted(checked === true)
+                      }
                       className="mt-1"
                     />
                     <div className="space-y-1">
