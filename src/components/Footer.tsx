@@ -19,8 +19,13 @@ export function Footer() {
   const navigate = useNavigate();
 
   const handleCityClick = (cityName: string) => {
+    // Navigate to properties page with search parameter
     navigate(`/properties?search=${encodeURIComponent(cityName)}`);
-    window.scrollTo({ top: 250, behavior: "smooth" }); // Scroll to top after navigation
+    
+    // Scroll to top after a short delay to ensure navigation is complete
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 100);
   };
 
   return (
