@@ -373,7 +373,7 @@ const NewLanching = () => {
       // For now, we'll simulate the email sending
       const emailData = {
         to: `${offerFormData.selectedBuilder.toLowerCase().replace(/\s+/g, '')}@example.com`,
-        cc: "Support@homeyatra.com",
+        cc: "support@homeyatra.com",
         subject: `Interest in ${offerFormData.selectedProject} - ${offerFormData.selectedBuilder}`,
         body: `
           Customer Interest Details:
@@ -461,7 +461,7 @@ const NewLanching = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Mail className="h-5 w-5 text-white animate-bounce" />
-                  <span className="text-white font-bold text-sm">📧 Email Support@homeyatra.com for Best Deals</span>
+                  <span className="text-white font-bold text-sm">📧 Email support@homeyatra.com for Best Deals</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="h-5 w-5 text-white animate-pulse" />
@@ -496,7 +496,7 @@ const NewLanching = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Mail className="h-5 w-5 text-white animate-bounce" />
-                  <span className="text-white font-bold text-sm">📧 Email Support@homeyatra.com for Best Deals</span>
+                  <span className="text-white font-bold text-sm">📧 Email support@homeyatra.com for Best Deals</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="h-5 w-5 text-white animate-pulse" />

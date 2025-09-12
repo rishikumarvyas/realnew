@@ -120,9 +120,9 @@ export function ContactUs() {
             </div>
             <h3 className="font-bold text-xl mb-3 text-gray-800">Email Us</h3>
             <p className="text-gray-600">
-              General Inquiries: Support@homeyatra.com
+              General Inquiries: support@homeyatra.com
               <br />
-              Support: Support@homeyatra.com
+              Support: support@homeyatra.com
             </p>
           </div>
 

@@ -202,7 +202,7 @@ export function Footer() {
               </li>
               <li className="flex items-center">
                 <Mail className="text-orange-600 mr-3" size={18} />
-                <span className="text-gray-800">Support@homeyatra.com</span>
+                <span className="text-gray-800">support@homeyatra.com</span>
               </li>
               <li className="flex items-center">
                 <Clock className="text-orange-600 mr-3" size={18} />

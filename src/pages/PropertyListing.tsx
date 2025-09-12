@@ -586,15 +586,15 @@ export const PropertyListing = () => {
       }
       // Removed regular amenities - only furnished filter uses amenityIds
 
-      
-      
 
+      
+      
 
       const response = await axiosInstance.post<ApiResponse>(
         "/api/Account/GetProperty",
         requestPayload,
       );
-
+      
 
       // Check if we have properties in the response
       if (
@@ -703,6 +703,13 @@ export const PropertyListing = () => {
       // Build filter options with the provided furnished value
       const filterOptions = {
         searchTerm: searchQuery || "",
+        minPrice: priceRange[0] || 0,
+        maxPrice: priceRange[1] > 0 ? priceRange[1] : 0,
+        minBedrooms: minBedrooms || 0,
+        minBathrooms: minBathrooms || 0,
+        minBalcony: minBalcony || 0,
+        minArea: minArea || 0,
+        maxArea: maxArea || 0,
         availableFrom: availableFrom ? availableFrom.toISOString() : undefined,
         preferenceIds: preferenceIds,
         furnished: furnishedParam, // Use the provided furnished value
@@ -738,12 +745,13 @@ export const PropertyListing = () => {
         accountId: "string",
         searchTerm: filterOptions.searchTerm,
         StatusId: 2,
-        minPrice: 0,
-        maxPrice: 0,
-        bedroom: 0,
-        balcony: 0,
-        minArea: 0,
-        maxArea: 0,
+        minPrice: filterOptions.minPrice,
+        maxPrice: filterOptions.maxPrice,
+        bedroom: filterOptions.minBedrooms,
+        bathroom: filterOptions.minBathrooms,
+        balcony: filterOptions.minBalcony,
+        minArea: filterOptions.minArea,
+        maxArea: filterOptions.maxArea,
         pageNumber: pageNumber,
         pageSize: pageSize,
         SortBy: sortBy,
@@ -1038,9 +1046,31 @@ export const PropertyListing = () => {
   useEffect(() => {
     const typeParam = searchParams.get("type") || "all";
     
-    // Sync tab with URL
+    // Sync tab with URL and reset filters when type changes from external navigation
     if (typeParam !== activeTab) {
       setActiveTab(typeParam);
+      
+      // Reset all filters when tab changes from external navigation (navbar)
+      setSearchQuery("");
+      setSearchTerm("");
+      setPriceRange([0, 0]);
+      setMinBedrooms(0);
+      setMinBathrooms(0);
+      setMinBalcony(0);
+      setMinArea(0);
+      setMaxArea(0);
+      setSelectedPriceSteps([]);
+      setSelectedAreaSteps([]);
+      setAvailableFrom(undefined);
+      setPreferenceIds([]);
+      setFurnished("any");
+      setSortBy("newest");
+      setSortOrder("desc");
+      
+      // Reset commercial type when switching away from commercial tab
+      if (typeParam !== "commercial") {
+        setCommercialType("buy");
+      }
     }
 
     // Always fetch on first mount, even if URL type equals default
@@ -1061,6 +1091,33 @@ export const PropertyListing = () => {
       setCurrentType(typeParam);
     }
   }, [searchParams, isInitialLoad, currentType, shouldFetchNewData]);
+
+  // Handle commercialType URL parameter changes from external navigation
+  useEffect(() => {
+    const urlCommercialType = searchParams.get("commercialType") as "buy" | "rent" | null;
+    
+    // Only handle commercial type changes when we're on the commercial tab
+    if (activeTab === "commercial" && urlCommercialType && urlCommercialType !== commercialType) {
+      setCommercialType(urlCommercialType);
+      
+      // Reset all filters when commercial type changes from external navigation
+      setSearchQuery("");
+      setSearchTerm("");
+      setPriceRange([0, 0]);
+      setMinBedrooms(0);
+      setMinBathrooms(0);
+      setMinBalcony(0);
+      setMinArea(0);
+      setMaxArea(0);
+      setSelectedPriceSteps([]);
+      setSelectedAreaSteps([]);
+      setAvailableFrom(undefined);
+      setPreferenceIds([]);
+      setFurnished("any");
+      setSortBy("newest");
+      setSortOrder("desc");
+    }
+  }, [searchParams, activeTab, commercialType]);
 
   // Sync `search` URL param into local search state so external links (e.g., Footer cities)
   // immediately filter the listings by city/locality/society.
@@ -1198,48 +1255,45 @@ export const PropertyListing = () => {
         );
       }
 
-      // Apply bedroom filter - FIXED: Only apply if minBedrooms is set
+      // Apply bedroom filter - FIXED: Show exactly what you select
       if (minBedrooms > 0) {
         filtered = filtered.filter(
           (property) => {
-            const bedroomMatch = property.bedrooms >= minBedrooms;
-            
-            // Debug: Log bedroom filtering for Pune
-            if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(`Bedroom filter - Property: ${property.title}, Bedrooms: ${property.bedrooms}, Min: ${minBedrooms}, Match: ${bedroomMatch}`);
-            }
+            // If 5+ is selected (value = 5), show 5 or more
+            // Otherwise, show exactly the selected number
+            const bedroomMatch = minBedrooms === 5 
+              ? property.bedrooms >= 5 
+              : property.bedrooms === minBedrooms;
             
             return bedroomMatch;
           }
         );
       }
 
-      // Apply bathroom filter - FIXED: Only apply if minBathrooms is set
+      // Apply bathroom filter - FIXED: Show exactly what you select
       if (minBathrooms > 0) {
         filtered = filtered.filter(
           (property) => {
-            const bathroomMatch = property.bathrooms >= minBathrooms;
-            
-            // Debug: Log bathroom filtering for Pune
-            if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(`Bathroom filter - Property: ${property.title}, Bathrooms: ${property.bathrooms}, Min: ${minBathrooms}, Match: ${bathroomMatch}`);
-            }
+            // If 5+ is selected (value = 5), show 5 or more
+            // Otherwise, show exactly the selected number
+            const bathroomMatch = minBathrooms === 5 
+              ? property.bathrooms >= 5 
+              : property.bathrooms === minBathrooms;
             
             return bathroomMatch;
           }
         );
       }
 
-      // Apply balcony filter - FIXED: Only apply if minBalcony is set
+      // Apply balcony filter - FIXED: Show exactly what you select
       if (minBalcony > 0) {
         filtered = filtered.filter(
           (property) => {
-            const balconyMatch = property.balcony >= minBalcony;
-            
-            // Debug: Log balcony filtering for Pune
-            if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(`Balcony filter - Property: ${property.title}, Balcony: ${property.balcony}, Min: ${minBalcony}, Match: ${balconyMatch}`);
-            }
+            // If 5+ is selected (value = 5), show 5 or more
+            // Otherwise, show exactly the selected number
+            const balconyMatch = minBalcony === 5 
+              ? property.balcony >= 5 
+              : property.balcony === minBalcony;
             
             return balconyMatch;
           }
@@ -1391,7 +1445,7 @@ export const PropertyListing = () => {
     }
   }, [properties, applyFilters]); // Only depend on properties, not individual filter states
 
-  // MODIFIED: Handle tab change and update URL - ONLY trigger API call on property type change
+  // MODIFIED: Handle tab change and update URL - Reset filters when changing tabs
   const handleTabChange = (value: string) => {
     setActiveTab(value);
 
@@ -1400,6 +1454,22 @@ export const PropertyListing = () => {
       setCommercialType("buy");
     }
 
+    // Reset all filters when changing tabs
+    setSearchQuery("");
+    setSearchTerm("");
+    setPriceRange([0, 0]);
+    setMinBedrooms(0);
+    setMinBathrooms(0);
+    setMinBalcony(0);
+    setMinArea(0);
+    setMaxArea(0);
+    setSelectedPriceSteps([]);
+    setSelectedAreaSteps([]);
+    setAvailableFrom(undefined);
+    setPreferenceIds([]);
+    setFurnished("any");
+    setSortBy("newest");
+    setSortOrder("desc");
 
     if (value !== "all") {
       searchParams.set("type", value);
@@ -1413,13 +1483,64 @@ export const PropertyListing = () => {
       searchParams.delete("commercialType");
     }
 
+    // Clear all filter-related URL parameters
+    searchParams.delete("search");
+    searchParams.delete("minPrice");
+    searchParams.delete("maxPrice");
+    searchParams.delete("minBedrooms");
+    searchParams.delete("minBathrooms");
+    searchParams.delete("minBalcony");
+    searchParams.delete("minArea");
+    searchParams.delete("maxArea");
+    searchParams.delete("priceSteps");
+    searchParams.delete("areaSteps");
+    searchParams.delete("availableFrom");
+    searchParams.delete("preferenceIds");
+    searchParams.delete("furnished");
+    searchParams.delete("sortBy");
+
     setSearchParams(searchParams);
   };
 
-  // MODIFIED: Add handler for commercial type change - ONLY trigger API call on commercial type change
+  // MODIFIED: Add handler for commercial type change - Reset filters when changing commercial type
   const handleCommercialTypeChange = (value: "buy" | "rent") => {
     setCommercialType(value);
+    
+    // Reset all filters when changing commercial type
+    setSearchQuery("");
+    setSearchTerm("");
+    setPriceRange([0, 0]);
+    setMinBedrooms(0);
+    setMinBathrooms(0);
+    setMinBalcony(0);
+    setMinArea(0);
+    setMaxArea(0);
+    setSelectedPriceSteps([]);
+    setSelectedAreaSteps([]);
+    setAvailableFrom(undefined);
+    setPreferenceIds([]);
+    setFurnished("any");
+    setSortBy("newest");
+    setSortOrder("desc");
+    
     searchParams.set("commercialType", value);
+    
+    // Clear all filter-related URL parameters
+    searchParams.delete("search");
+    searchParams.delete("minPrice");
+    searchParams.delete("maxPrice");
+    searchParams.delete("minBedrooms");
+    searchParams.delete("minBathrooms");
+    searchParams.delete("minBalcony");
+    searchParams.delete("minArea");
+    searchParams.delete("maxArea");
+    searchParams.delete("priceSteps");
+    searchParams.delete("areaSteps");
+    searchParams.delete("availableFrom");
+    searchParams.delete("preferenceIds");
+    searchParams.delete("furnished");
+    searchParams.delete("sortBy");
+    
     setSearchParams(searchParams);
   };
 

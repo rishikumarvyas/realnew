@@ -690,10 +690,10 @@ export default function AboutUs() {
                 Send us an email and we'll respond within 24 hours
               </p>
               <a
-                href="mailto:Support@homeyatra.com"
+                href="mailto:support@homeyatra.com"
                 className="text-xl font-semibold hover:text-blue-200 transition-colors"
               >
-                Support@homeyatra.com
+                support@homeyatra.com
               </a>
             </div>
 

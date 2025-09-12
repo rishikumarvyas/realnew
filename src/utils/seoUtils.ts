@@ -34,7 +34,7 @@ export const getHomePageSEO = (): SEOConfig => ({
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer service",
-      "email": "Support@homeyatra.com",
+      "email": "support@homeyatra.com",
       "availableLanguage": ["English", "Hindi"]
     },
     "sameAs": [
@@ -114,7 +114,7 @@ export const getPropertyDetailSEO = (property: any): SEOConfig => {
         "seller": {
           "@type": "Organization",
           "name": "HomeYatra",
-          "email": "Support@homeyatra.com"
+          "email": "support@homeyatra.com"
         }
       },
       "aggregateRating": {
