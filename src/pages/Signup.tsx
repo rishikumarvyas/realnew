@@ -73,34 +73,6 @@ const Signup = ({ onClose }: SignupProps) => {
     }, 300);
   };
 
-  const sendTermsAcceptance = async (userData: {
-    phone: string;
-    name: string;
-    userTypeId: string;
-  }) => {
-    try {
-      const payload = {
-        phone: `+91${userData.phone}`,
-        templateId: 0, // As per image
-        message: "Terms and Conditions accepted during signup.",
-        action: "terms_accepted",
-        name: userData.name,
-        userTypeId: userData.userTypeId,
-        isTermsConditionsAccepted: true,
-      };
-
-      await axiosInstance.post("/api/Message/Send", payload);
-    } catch (error) {
-      // We can show a toast here, but let's not block the signup flow
-      toast({
-        title: "Terms Acceptance Failed",
-        description:
-          "Could not record your terms acceptance, but you can continue.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -145,47 +117,38 @@ const Signup = ({ onClose }: SignupProps) => {
     setPhoneError(null);
 
     try {
-      // Check if the user already exists
-      const users = localStorage.getItem("homeYatra_users");
-      const existingUsers = users ? JSON.parse(users) : {};
-      const fullPhoneNumber = "+91" + phone;
-
-      if (existingUsers[fullPhoneNumber]) {
-        setPhoneError(
-          "This number is already registered. Please login or use another number."
-        );
-        setLoading(false);
-        return;
-      }
-
-      // Send terms acceptance in the background (fire and forget)
-      sendTermsAcceptance({
-        phone: phone,
+      const payload = {
+        phone: `+91${phone}`,
+        templateId: 3,
+        message: "Terms and Conditions accepted during signup.",
+        action: "signup",
         name: name,
         userTypeId: userType.toString(),
-      });
+        isTermsConditionsAccepted: termsAccepted,
+      };
+      const responseOtp = await axiosInstance.post(
+        "/api/Message/Send",
+        payload
+      );
 
-      // Request OTP
-      const success = await requestOtp("+91" + phone);
-
-      if (success) {
+      if (
+        responseOtp?.data?.statusCode === 200 &&
+        responseOtp?.data?.message != null &&
+        responseOtp?.data?.message != undefined &&
+        responseOtp?.data?.message != ""
+      ) {
         toast({
           title: "OTP Sent",
           description: "A verification code has been sent to your phone.",
         });
         setStep("otp");
-      } else {
-        toast({
-          title: "Failed to Send OTP",
-          description:
-            "There was an error sending the verification code. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description:
+          error?.response?.data?.message ||
+          "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -233,25 +196,36 @@ const Signup = ({ onClose }: SignupProps) => {
 
   const handleResendOtp = async () => {
     try {
-      const success = await requestOtp("+91" + phone);
-
-      if (success) {
+      const payload = {
+        phone: `+91${phone}`,
+        templateId: 3,
+        message: "Terms and Conditions accepted during signup.",
+        action: "signup",
+        name: name,
+        userTypeId: userType.toString(),
+        isTermsConditionsAccepted: termsAccepted,
+      };
+      const responseOtp = await axiosInstance.post(
+        "/api/Message/Send",
+        payload
+      );
+      if (
+        responseOtp?.data?.statusCode === 200 &&
+        responseOtp?.data?.message != null &&
+        responseOtp?.data?.message != undefined &&
+        responseOtp?.data?.message != ""
+      ) {
         toast({
           title: "OTP Sent",
           description: "A new verification code has been sent to your phone.",
         });
-      } else {
-        toast({
-          title: "Failed to Send OTP",
-          description:
-            "There was an error sending the verification code. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Error while resending OTP",
+        description:
+          error?.response?.data?.message ||
+          "There was an error resending the verification code. Please try again.",
         variant: "destructive",
       });
     }
