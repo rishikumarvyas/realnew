@@ -73,7 +73,7 @@ const PostProperty = () => {
   const [isOCApproved, setIsOCApproved] = useState<string>("");
   const [isNA, setIsNA] = useState<string>("");
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined,
+    undefined
   );
   const [ageOfProperty, setAgeOfProperty] = useState("");
   const [ageError, setAgeError] = useState("");
@@ -84,7 +84,7 @@ const PostProperty = () => {
       setCityLoading(true);
       axios
         .get(
-          `https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=City&parentTableName=State&parentField=StateId&parentId=${selectedStateId}`,
+          `https://homeyatraapi.azurewebsites.net/api/Generic/GetActiveRecords?tableName=City&parentTableName=State&parentField=StateId&parentId=${selectedStateId}`
         )
         .then((res) => {
           if (res?.data?.statusCode === 200 && res?.data?.data?.length > 0) {
@@ -113,13 +113,10 @@ const PostProperty = () => {
   const [preferenceStates, setPreferenceStates] = useState<
     Record<string, boolean>
   >(
-    preferenceOptions.reduce(
-      (acc, option) => {
-        acc[option.id] = false;
-        return acc;
-      },
-      {} as Record<string, boolean>,
-    ),
+    preferenceOptions.reduce((acc, option) => {
+      acc[option.id] = false;
+      return acc;
+    }, {} as Record<string, boolean>)
   );
 
   // Helper for category logic
@@ -132,7 +129,7 @@ const PostProperty = () => {
 
   const checkBoxAmenities: Amenity[] = isShop
     ? getAmenity().checkBoxAmenities.filter((item) =>
-        new Set(["1", "6", "7", "8"]).has(item.id),
+        new Set(["1", "6", "7", "8"]).has(item.id)
       )
     : getAmenity().checkBoxAmenities;
   const radioButtonAmenities: Amenity[] = getAmenity().radioButtonAmenities;
@@ -203,7 +200,7 @@ const PostProperty = () => {
         }
       }
     } catch (error) {
-      
+      console.error(error);
     }
   };
 
@@ -338,7 +335,8 @@ const PostProperty = () => {
       return;
     }
 
-    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+    // Skip age validation for Plots (age field is not shown for Plot)
+    if (!isPlot && (ageOfProperty === "" || /\D/.test(ageOfProperty))) {
       setAgeError("Please enter a valid number (years only)");
       toast({
         title: "Invalid Age of Property",
@@ -434,7 +432,10 @@ const PostProperty = () => {
       formData.append("StateId", selectedStateId.toString());
       formData.append("Locality", locality.toString());
       formData.append("UserTypeId", userTypeId.toString());
-      formData.append("Age", ageOfProperty);
+      // Only include Age for non-plot categories
+      if (!isPlot && ageOfProperty !== "") {
+        formData.append("Age", ageOfProperty);
+      }
 
       // Add amenities
       amenityIds.forEach((id) => {
@@ -468,7 +469,7 @@ const PostProperty = () => {
         formData.append(`Images[${index}].File`, image);
         formData.append(
           `Images[${index}].IsMain`,
-          index === mainImageIndex ? "true" : "false",
+          index === mainImageIndex ? "true" : "false"
         );
       });
 
@@ -481,7 +482,7 @@ const PostProperty = () => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        },
+        }
       );
 
       const result = response.data;
@@ -511,13 +512,13 @@ const PostProperty = () => {
 
       toast({
         title: "Success!",
-        description: "Property posted successfully. It will be reviewed by our team.",
+        description:
+          "Property posted successfully. It will be reviewed by our team.",
       });
 
       // Navigate to the Dashboard page with the PropertyId
       navigate(`/dashboard?newPropertyId=${newPropertyId}`);
     } catch (error) {
-
       toast({
         title: "Failed to Post Property",
         description:

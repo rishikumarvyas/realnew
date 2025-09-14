@@ -73,37 +73,9 @@ const Signup = ({ onClose }: SignupProps) => {
     }, 300);
   };
 
-  const sendTermsAcceptance = async (userData: {
-    phone: string;
-    name: string;
-    userTypeId: string;
-  }) => {
-    try {
-      const payload = {
-        phone: `+91${userData.phone}`,
-        templateId: 0, // As per image
-        message: "Terms and Conditions accepted during signup.",
-        action: "terms_accepted",
-        name: userData.name,
-        userTypeId: userData.userTypeId,
-        isTermsConditionsAccepted: true,
-      };
-
-      await axiosInstance.post("/api/Message/Send", payload);
-    } catch (error) {
-      // We can show a toast here, but let's not block the signup flow
-      toast({
-        title: "Terms Acceptance Failed",
-        description:
-          "Could not record your terms acceptance, but you can continue.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!name.trim()) {
       toast({
@@ -145,50 +117,40 @@ const Signup = ({ onClose }: SignupProps) => {
     setPhoneError(null);
 
     try {
-      // Check if the user already exists
-      const users = localStorage.getItem("homeYatra_users");
-      const existingUsers = users ? JSON.parse(users) : {};
-      const fullPhoneNumber = "+91" + phone;
-
-      if (existingUsers[fullPhoneNumber]) {
-        setPhoneError(
-          "This number is already registered. Please login or use another number.",
-        );
-        setLoading(false);
-        return;
-      }
-
-      // Send terms acceptance in the background (fire and forget)
-      sendTermsAcceptance({
-        phone: phone,
+      const payload = {
+        phone: `+91${phone}`,
+        templateId: 3,
+        message: "Terms and Conditions accepted during signup.",
+        action: "signup",
         name: name,
         userTypeId: userType.toString(),
-      });
+        isTermsConditionsAccepted: termsAccepted,
+      };
+      const responseOtp = await axiosInstance.post(
+        "/api/Message/Send",
+        payload
+      );
 
-      // Request OTP
-      const success = await requestOtp("+91" + phone);
-
-      if (success) {
+      if (
+        responseOtp?.data?.statusCode === 200 &&
+        responseOtp?.data?.message != null &&
+        responseOtp?.data?.message != undefined &&
+        responseOtp?.data?.message != ""
+      ) {
         toast({
           title: "OTP Sent",
           description: "A verification code has been sent to your phone.",
         });
         setStep("otp");
-      } else {
-        toast({
-          title: "Failed to Send OTP",
-          description:
-            "There was an error sending the verification code. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description:
+          error?.response?.data?.message ||
+          "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-
     } finally {
       setLoading(false);
     }
@@ -202,7 +164,7 @@ const Signup = ({ onClose }: SignupProps) => {
         "+91" + phone,
         name,
         otp,
-        userType.toString(),
+        userType.toString()
       );
 
       if (result.success) {
@@ -227,7 +189,6 @@ const Signup = ({ onClose }: SignupProps) => {
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
-
     } finally {
       setLoading(false);
     }
@@ -235,28 +196,38 @@ const Signup = ({ onClose }: SignupProps) => {
 
   const handleResendOtp = async () => {
     try {
-      const success = await requestOtp("+91" + phone);
-
-      if (success) {
+      const payload = {
+        phone: `+91${phone}`,
+        templateId: 3,
+        message: "Terms and Conditions accepted during signup.",
+        action: "signup",
+        name: name,
+        userTypeId: userType.toString(),
+        isTermsConditionsAccepted: termsAccepted,
+      };
+      const responseOtp = await axiosInstance.post(
+        "/api/Message/Send",
+        payload
+      );
+      if (
+        responseOtp?.data?.statusCode === 200 &&
+        responseOtp?.data?.message != null &&
+        responseOtp?.data?.message != undefined &&
+        responseOtp?.data?.message != ""
+      ) {
         toast({
           title: "OTP Sent",
           description: "A new verification code has been sent to your phone.",
         });
-      } else {
-        toast({
-          title: "Failed to Send OTP",
-          description:
-            "There was an error sending the verification code. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Error while resending OTP",
+        description:
+          error?.response?.data?.message ||
+          "There was an error resending the verification code. Please try again.",
         variant: "destructive",
       });
-
     }
 
     return Promise.resolve();
@@ -275,7 +246,8 @@ const Signup = ({ onClose }: SignupProps) => {
     setUserType(parseInt(value));
   };
 
-  const isFormValid = name.trim() !== "" && phone.length === 10 && userType > 0 && termsAccepted;
+  const isFormValid =
+    name.trim() !== "" && phone.length === 10 && userType > 0 && termsAccepted;
 
   const popupClasses = isVisible
     ? "opacity-100 translate-y-0"
@@ -339,7 +311,10 @@ const Signup = ({ onClose }: SignupProps) => {
                 <form onSubmit={handleFormSubmit} className="space-y-4">
                   {/* Full Name Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="flex items-center gap-2 text-sm font-medium">
+                    <Label
+                      htmlFor="name"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
                       <User className="h-4 w-4 text-blue-500" />
                       Full Name
                     </Label>
@@ -356,7 +331,10 @@ const Signup = ({ onClose }: SignupProps) => {
 
                   {/* Phone Number Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                    <Label
+                      htmlFor="phone"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
                     </Label>
@@ -366,7 +344,8 @@ const Signup = ({ onClose }: SignupProps) => {
                         onChange={(val) => setPhone(val.slice(0, 10))}
                         onComplete={() => {
                           // Focus on user type select when phone is complete
-                          const userTypeSelect = document.getElementById('userType');
+                          const userTypeSelect =
+                            document.getElementById("userType");
                           if (userTypeSelect) {
                             userTypeSelect.focus();
                           }
@@ -380,9 +359,11 @@ const Signup = ({ onClose }: SignupProps) => {
 
                   {/* User Type Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="userType" className="flex items-center gap-2 text-sm font-medium">
-                      <Shield className="h-4 w-4 text-blue-500" />
-                      I am a
+                    <Label
+                      htmlFor="userType"
+                      className="flex items-center gap-2 text-sm font-medium"
+                    >
+                      <Shield className="h-4 w-4 text-blue-500" />I am a
                     </Label>
                     <Select
                       value={userType > 0 ? userType.toString() : ""}
@@ -406,7 +387,9 @@ const Signup = ({ onClose }: SignupProps) => {
                     <Checkbox
                       id="terms"
                       checked={termsAccepted}
-                      onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setTermsAccepted(checked === true)
+                      }
                       className="mt-1"
                     />
                     <div className="space-y-1">
