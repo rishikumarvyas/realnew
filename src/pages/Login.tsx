@@ -151,7 +151,7 @@ const Login = ({ onClose }) => {
           {/* Close button */}
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10 p-1"
+            className="absolute top-6 sm:top-8 right-4 sm:right-8 text-gray-500 hover:text-gray-700 z-10 p-1"
           >
             <X className="h-5 w-5" />
           </button>

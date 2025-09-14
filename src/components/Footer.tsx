@@ -19,8 +19,13 @@ export function Footer() {
   const navigate = useNavigate();
 
   const handleCityClick = (cityName: string) => {
+    // Navigate to properties page with search parameter
     navigate(`/properties?search=${encodeURIComponent(cityName)}`);
-    window.scrollTo({ top: 250, behavior: "smooth" }); // Scroll to top after navigation
+    
+    // Scroll to top after a short delay to ensure navigation is complete
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 100);
   };
 
   return (
@@ -197,7 +202,7 @@ export function Footer() {
               </li>
               <li className="flex items-center">
                 <Mail className="text-orange-600 mr-3" size={18} />
-                <span className="text-gray-800">Support@homeyatra.com</span>
+                <span className="text-gray-800">support@homeyatra.com</span>
               </li>
               <li className="flex items-center">
                 <Clock className="text-orange-600 mr-3" size={18} />

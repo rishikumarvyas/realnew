@@ -20,6 +20,7 @@ export interface PropertyCardProps {
   // Added other missing fields for consistency
   availableFrom?: string;
   preferenceId?: number;
+  preferenceIds?: string | number[];
   amenities?: string[];
   furnished?: string;
   isLike?: boolean;
