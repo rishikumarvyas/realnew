@@ -106,6 +106,13 @@ const PropertyDetail = () => {
 
           // OPTIMIZED: Fetch similar properties in background to avoid blocking UI
           setTimeout(() => {
+            console.log("Starting similar properties fetch for:", propertyData.city);
+            console.log("Current property data:", {
+              id: propertyData.propertyId,
+              city: propertyData.city,
+              state: propertyData.state,
+              title: propertyData.title
+            });
             fetchSimilarProperties(
               propertyData.city,
               propertyData.propertyType
@@ -162,44 +169,87 @@ const PropertyDetail = () => {
 
   // Fetch similar properties based on location and property type
   const fetchSimilarProperties = async (city: string, propertyType: string) => {
-    if (!city) return;
+    if (!city) {
+      console.log("No city provided for similar properties");
+      return;
+    }
 
     setLoadingSimilar(true);
     try {
-      // Fetch properties from the same city using API
-      const response = await axiosInstance.post("/api/Account/GetProperty", {
+      console.log("Fetching similar properties for city:", city);
+      
+      // Use exact same API call structure as PropertyListing
+      const requestPayload = {
         superCategoryId: 0, // Get all categories
-        propertyTypeIds: [], // Get all property types
-        propertyFor: 0, // Get both buy and rent
-        accountId: "string",
-        searchTerm: city, // Search by city name
-        StatusId: 2,
+        accountId: "string", // Match PropertyListing
+        searchTerm: "", // No search term, get all properties
+        StatusId: 2, // CRITICAL: This was missing!
         minPrice: 0,
-        maxPrice: 100000000, // High max price to get all properties
+        maxPrice: 0, // 0 means no price filter
         bedroom: 0,
         bathroom: 0,
         balcony: 0,
         minArea: 0,
-        maxArea: 10000,
-        availableFrom: undefined,
-        preferenceId: undefined,
-        furnished: undefined,
-        amenities: undefined,
-        pageNumber: 0,
-        pageSize: 50, // Get more properties to filter from
+        maxArea: 0, // 0 means no area filter
+        pageNumber: 1, // API uses 1-based indexing
+        pageSize: -1, // Get all properties like PropertyListing
         SortBy: "",
         SortOrder: "desc",
-      });
+      };
+      
+      console.log("Similar properties API request payload:", requestPayload);
+      const response = await axiosInstance.post("/api/Account/GetProperty", requestPayload);
 
       if (response.data.statusCode === 200 && response.data.propertyInfo) {
+        console.log("API response received:", response.data.propertyInfo.length, "properties");
+        console.log("All properties from API:", response.data.propertyInfo.map(p => ({ id: p.propertyId, city: p.city, title: p.title })));
+        
+        // Debug: Check if any properties have "pune" in title or city
+        const puneProperties = response.data.propertyInfo.filter(p => 
+          p.title?.toLowerCase().includes('pune') || p.city?.toLowerCase().includes('pune')
+        );
+        console.log("Properties with 'pune' in title or city:", puneProperties.length);
+        console.log("Pune properties details:", puneProperties.map(p => ({ id: p.propertyId, city: p.city, title: p.title })));
+        
         // Filter properties from the same city and exclude current property
         const currentPropertyId = property?.propertyId || id;
+        console.log("Current property ID:", currentPropertyId);
+        console.log("Searching for city:", city);
+        
+        // Use exact same filtering logic as PropertyListing page
         const cityProperties = response.data.propertyInfo.filter(
-          (prop: any) => prop.propertyId !== currentPropertyId
+          (prop: any) => {
+            console.log(`Checking property ${prop.propertyId}: city="${prop.city}", title="${prop.title}", currentId="${currentPropertyId}"`);
+            
+            // Exclude current property
+            if (prop.propertyId === currentPropertyId) {
+              console.log(`Excluding current property: ${prop.propertyId}`);
+              return false;
+            }
+            
+            // Use exact same search logic as PropertyListing page
+            const searchLower = city.toLowerCase().trim();
+            const titleMatch = prop.title?.toLowerCase().includes(searchLower) || false;
+            const locationMatch = prop.city?.toLowerCase().includes(searchLower) || false;
+            
+            console.log(`Search match for ${prop.propertyId}: title="${titleMatch}", location="${locationMatch}"`);
+            return titleMatch || locationMatch;
+          }
         );
 
+        console.log("Filtered properties for city:", cityProperties.length);
+        console.log("City properties:", cityProperties.map(p => ({ id: p.propertyId, city: p.city, title: p.title })));
+        
+        // Debug: Show what we're searching for
+        console.log("Search term being used:", `"${city}"`);
+        console.log("Search term lowercase:", `"${city.toLowerCase().trim()}"`);
+
+        // Use the filtered city properties
+        let propertiesToUse = cityProperties;
+        console.log("Properties to use:", propertiesToUse.length);
+
         // Transform the data to match PropertyCard format
-        const transformedProperties = cityProperties
+        const transformedProperties = propertiesToUse
           .slice(0, 6)
           .map((prop: any) => {
             let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
@@ -256,11 +306,16 @@ const PropertyDetail = () => {
               status: prop.superCategory,
             };
           });
+        
+        console.log("Transformed properties:", transformedProperties.length);
         setSimilarProperties(transformedProperties);
       } else {
+        console.log("API response error or no properties:", response.data);
         setSimilarProperties([]);
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Error fetching similar properties:", err);
+      console.error("Error details:", err.response?.data || err.message);
       setSimilarProperties([]);
     } finally {
       setLoadingSimilar(false);
