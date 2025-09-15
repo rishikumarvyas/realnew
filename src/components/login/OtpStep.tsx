@@ -84,7 +84,7 @@ export const OtpStep = ({
         <p className="text-sm text-gray-600">
           A 6-digit code has been sent to
         </p>
-        <p className="font-semibold text-base sm:text-lg text-gray-800">{phone}</p>
+        <p className="font-semibold text-base text-gray-800 bg-gray-50 px-4 py-2 rounded-lg">{phone}</p>
       </div>
       
       <div className="space-y-6">
@@ -98,26 +98,40 @@ export const OtpStep = ({
         <Button
           ref={verifyButtonRef}
           onClick={handleOtpSubmit}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg h-12 sm:h-14 text-base sm:text-lg font-medium"
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl h-12 text-base font-semibold rounded-xl"
           disabled={loading || otpValue.length !== 6}
         >
-          {loading ? "Verifying..." : "Verify & Login"}
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Verifying...
+            </div>
+          ) : (
+            "Verify & Continue"
+          )}
         </Button>
       </div>
       
       <div className="text-center pt-2">
         {resendTimeout ? (
           <p className="text-sm text-gray-500">
-            Resend code in <span className="font-medium">{timeLeft}s</span>
+            Resend code in <span className="font-semibold text-blue-600">{timeLeft}s</span>
           </p>
         ) : (
           <Button
             variant="link"
             onClick={handleResendOtp}
             disabled={isResending}
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
+            className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
           >
-            {isResending ? "Resending..." : "Resend Code"}
+            {isResending ? (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+                Resending...
+              </div>
+            ) : (
+              "Resend Code"
+            )}
           </Button>
         )}
       </div>

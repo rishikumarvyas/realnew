@@ -132,7 +132,7 @@ const Login = ({ onClose }) => {
     <div className="fixed inset-0 flex items-center justify-center z-[60] p-4">
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${backdropClasses}`}
         onClick={handleClose}
       ></div>
 
@@ -140,55 +140,55 @@ const Login = ({ onClose }) => {
       <div
         className={`w-full max-w-sm sm:max-w-md z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
       >
-        <Card className="w-full shadow-xl border-none overflow-hidden">
-          {/* House icon at the top */}
-          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-3 shadow-lg">
+        <Card className="w-full shadow-2xl border-0 overflow-hidden bg-white/95 backdrop-blur-md">
+          {/* Close button - positioned at top right corner */}
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-gray-100/80 hover:bg-gray-200/80 transition-all duration-200 group"
+          >
+            <X className="h-4 w-4 text-gray-600 group-hover:text-gray-800" />
+          </button>
+
+          {/* House icon integrated within the form */}
+          <div className="flex justify-center pt-6 pb-2">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-full p-3 shadow-lg">
               <Home className="h-5 w-5 text-white" />
             </div>
           </div>
 
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            className="absolute top-6 sm:top-8 right-4 sm:right-8 text-gray-500 hover:text-gray-700 z-10 p-1"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          <CardHeader className="relative pt-12 px-4 sm:px-6">
+          <CardHeader className="relative pt-2 pb-3 px-6">
             {step === "otp" && (
               <Button
                 variant="ghost"
-                className="p-0 h-8 w-8 absolute left-4 top-4"
+                className="p-2 h-10 w-10 absolute left-4 top-2 rounded-full hover:bg-gray-100 transition-colors"
                 onClick={() => setStep("phone")}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            <CardTitle className="text-center text-xl sm:text-2xl bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent font-bold">
-              Login
+            <CardTitle className="text-center text-xl bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent font-bold mb-1">
+              Welcome Back
             </CardTitle>
-            <CardDescription className="text-center text-sm sm:text-base">
+            <CardDescription className="text-center text-gray-600 text-sm">
               {step === "phone"
-                ? "Enter your phone number"
+                ? "Enter your phone number to continue"
                 : "Enter the verification code sent to your phone"}
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="px-4 sm:px-6 pb-6">
+          <CardContent className="px-6 pb-4">
             {step === "phone" ? (
               <form
                 onSubmit={handlePhoneSubmit}
                 className="transition-all duration-300"
               >
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
                     </Label>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {/* Phone Number Input Boxes with inline country code */}
                       <div className="flex justify-center">
                         <PhoneInput
@@ -205,11 +205,18 @@ const Login = ({ onClose }) => {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg h-12 sm:h-14 text-base sm:text-lg font-medium"
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl h-10 text-sm font-semibold rounded-lg"
                     disabled={loading || phone.length !== 10}
                     ref={continueBtnRef}
                   >
-                    {loading ? "Sending OTP..." : "Continue"}
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Sending OTP...
+                      </div>
+                    ) : (
+                      "Continue"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -223,12 +230,12 @@ const Login = ({ onClose }) => {
             )}
           </CardContent>
 
-          <CardFooter className="flex justify-center border-t p-4 sm:p-6 px-4 sm:px-6">
-            <div className="text-sm text-gray-500 text-center">
+          <CardFooter className="flex justify-center border-t border-gray-100 p-4">
+            <div className="text-sm text-gray-600 text-center">
               Don't have an account?{" "}
               <button
                 onClick={handleSwitchToSignup}
-                className="text-blue-600 hover:underline font-medium cursor-pointer"
+                className="text-blue-600 hover:text-blue-700 font-semibold cursor-pointer transition-colors"
               >
                 Sign up
               </button>

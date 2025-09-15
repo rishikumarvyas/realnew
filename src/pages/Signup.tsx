@@ -259,61 +259,61 @@ const Signup = ({ onClose }: SignupProps) => {
 
   return (
     <>
-      <div className="fixed inset-0 flex items-center justify-center z-[60]">
+      <div className="fixed inset-0 flex items-center justify-center z-[60] p-4">
         {/* Backdrop */}
         <div
-          className={`fixed inset-0 bg-black transition-opacity duration-300 ${backdropClasses}`}
+          className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${backdropClasses}`}
           onClick={handleClose}
         ></div>
 
         {/* Popup card */}
         <div
-          className={`w-full max-w-md px-4 z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
+          className={`w-full max-w-md z-10 transition-all duration-500 ease-out transform ${popupClasses}`}
         >
-          <Card className="w-full shadow-xl border-none overflow-hidden mt-8 sm:mt-12">
-            {/* House icon at the top */}
-            <div className="absolute top-3 left-1/2 transform -translate-x-1/2">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-3 shadow-lg">
+          <Card className="w-full shadow-2xl border-0 overflow-hidden bg-white/95 backdrop-blur-md">
+            {/* Close button - positioned at top right corner */}
+            <button
+              onClick={handleClose}
+              className="absolute top-4 right-4 z-20 p-2 rounded-full bg-gray-100/80 hover:bg-gray-200/80 transition-all duration-200 group"
+            >
+              <X className="h-4 w-4 text-gray-600 group-hover:text-gray-800" />
+            </button>
+
+            {/* House icon integrated within the form */}
+            <div className="flex justify-center pt-6 pb-2">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-full p-3 shadow-lg">
                 <Home className="h-5 w-5 text-white" />
               </div>
             </div>
 
-            {/* Close button */}
-            <button
-              onClick={handleClose}
-              className="absolute top-10 sm:top-12 right-4 sm:right-8 text-gray-500 hover:text-gray-700 z-10"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <CardHeader className="relative pt-14 pb-3 px-6 sm:px-8">
+            <CardHeader className="relative pt-2 pb-3 px-6">
               {step === "otp" && (
                 <Button
                   variant="ghost"
-                  className="p-0 h-8 w-8 absolute left-4 top-4"
+                  className="p-2 h-10 w-10 absolute left-4 top-2 rounded-full hover:bg-gray-100 transition-colors"
                   onClick={handleBackToForm}
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              <CardTitle className="text-center text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-                Sign up
+              <CardTitle className="text-center text-xl bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent font-bold mb-1">
+                Join HomeYatra
               </CardTitle>
-              <CardDescription className="text-center text-sm mt-1">
+              <CardDescription className="text-center text-gray-600 text-sm">
                 {step === "form"
-                  ? "Create an account"
+                  ? "Create your account to get started"
                   : `Enter the verification code sent to +91 ${phone}`}
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="px-6 sm:px-8 py-2 pb-6">
+            <CardContent className="px-6 pb-4">
               {step === "form" ? (
                 <form onSubmit={handleFormSubmit} className="space-y-4">
                   {/* Full Name Input */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label
                       htmlFor="name"
-                      className="flex items-center gap-2 text-sm font-medium"
+                      className="flex items-center gap-2 text-sm font-semibold text-gray-700"
                     >
                       <User className="h-4 w-4 text-blue-500" />
                       Full Name
@@ -324,16 +324,16 @@ const Signup = ({ onClose }: SignupProps) => {
                       placeholder="Enter your full name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="h-11"
+                      className="h-10 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       autoComplete="name"
                     />
                   </div>
 
                   {/* Phone Number Input */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label
                       htmlFor="phone"
-                      className="flex items-center gap-2 text-sm font-medium"
+                      className="flex items-center gap-2 text-sm font-semibold text-gray-700"
                     >
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
@@ -358,10 +358,10 @@ const Signup = ({ onClose }: SignupProps) => {
                   </div>
 
                   {/* User Type Selection */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label
                       htmlFor="userType"
-                      className="flex items-center gap-2 text-sm font-medium"
+                      className="flex items-center gap-2 text-sm font-semibold text-gray-700"
                     >
                       <Shield className="h-4 w-4 text-blue-500" />I am a
                     </Label>
@@ -369,10 +369,10 @@ const Signup = ({ onClose }: SignupProps) => {
                       value={userType > 0 ? userType.toString() : ""}
                       onValueChange={handleUserTypeChange}
                     >
-                      <SelectTrigger id="userType" className="h-11">
+                      <SelectTrigger id="userType" className="h-10 rounded-lg border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                         <SelectValue placeholder="Select your user type" />
                       </SelectTrigger>
-                      <SelectContent className="z-[70] bg-white border border-gray-200 shadow-lg">
+                      <SelectContent className="z-[70] bg-white border border-gray-200 shadow-lg rounded-lg">
                         {USER_TYPES.map((type) => (
                           <SelectItem key={type.id} value={type.id.toString()}>
                             {type.name}
@@ -383,23 +383,23 @@ const Signup = ({ onClose }: SignupProps) => {
                   </div>
 
                   {/* Terms & Conditions */}
-                  <div className="flex items-start space-x-3 pt-2">
+                  <div className="flex items-start space-x-2 pt-1">
                     <Checkbox
                       id="terms"
                       checked={termsAccepted}
                       onCheckedChange={(checked) =>
                         setTermsAccepted(checked === true)
                       }
-                      className="mt-1"
+                      className="mt-0.5"
                     />
-                    <div className="space-y-1">
+                    <div>
                       <Label
                         htmlFor="terms"
                         className="text-xs text-gray-700 cursor-pointer leading-relaxed"
                       >
                         I have read and agree to the{" "}
                         <span
-                          className="font-semibold text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                          className="font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer transition-colors"
                           onClick={handleTermsClick}
                         >
                           Terms & Conditions
@@ -412,14 +412,21 @@ const Signup = ({ onClose }: SignupProps) => {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    className={`w-full h-11 text-base font-medium transition-all duration-300 ${
+                    className={`w-full h-10 text-sm font-semibold transition-all duration-300 rounded-lg ${
                       isFormValid && !loading
-                        ? "bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 shadow-md hover:shadow-lg"
+                        ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg hover:shadow-xl"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                     disabled={!isFormValid || loading}
                   >
-                    {loading ? "Processing..." : "Continue with OTP"}
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Processing...
+                      </div>
+                    ) : (
+                      "Continue with OTP"
+                    )}
                   </Button>
                 </form>
               ) : (
@@ -432,12 +439,12 @@ const Signup = ({ onClose }: SignupProps) => {
               )}
             </CardContent>
 
-            <CardFooter className="flex justify-center border-t p-3 px-6 sm:px-8">
-              <div className="text-sm text-gray-500">
+            <CardFooter className="flex justify-center border-t border-gray-100 p-4">
+              <div className="text-sm text-gray-600">
                 Already have an account?{" "}
                 <button
                   onClick={handleSwitchToLogin}
-                  className="text-blue-600 hover:underline font-medium cursor-pointer"
+                  className="text-blue-600 hover:text-blue-700 font-semibold cursor-pointer transition-colors"
                 >
                   Log in
                 </button>
