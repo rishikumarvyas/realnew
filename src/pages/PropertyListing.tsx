@@ -99,7 +99,6 @@ const preferenceOptions = [
   { id: "3", label: "Girls" },
   { id: "6", label: "Student" },
   { id: "5", label: "Company" },
-  { id: "4", label: "Anyone" },
 ];
 
 // Furnished status options
@@ -1227,27 +1226,15 @@ export const PropertyListing = () => {
 
       // Apply area range filter - FIXED: Only apply if area range is set
       if (minArea > 0 || maxArea > 0) {
-      const effectiveMaxArea = maxArea && maxArea > 0 ? maxArea : Number.MAX_SAFE_INTEGER;
-      filtered = filtered.filter(
+        filtered = filtered.filter(
           (property) => {
-            // For rent properties, check if area is above minimum threshold
-            if (currentTypeParam === "rent" && minArea > 0) {
-              const areaInRange = property.area >= minArea;
-              
-              // Debug: Log area filtering for Pune
-              if (searchQuery && searchQuery.toLowerCase() === "pune") {
-                console.log(`Area filter (rent) - Property: ${property.title}, Area: ${property.area}, Min: ${minArea}, InRange: ${areaInRange}`);
-              }
-              
-              return areaInRange;
-            }
-            
-            // For other cases, use normal range filter
-            const areaInRange = property.area >= minArea && property.area <= effectiveMaxArea;
+            // Check if maxArea is set to a reasonable value (not the default reset value of 0)
+            const hasMaxAreaFilter = maxArea > 0;
+            const areaInRange = property.area >= minArea && (!hasMaxAreaFilter || property.area <= maxArea);
             
             // Debug: Log area filtering for Pune
             if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(`Area filter - Property: ${property.title}, Area: ${property.area}, Range: [${minArea}, ${effectiveMaxArea}], InRange: ${areaInRange}`);
+              console.log(`Area filter - Property: ${property.title}, Area: ${property.area}, Range: [${minArea}, ${hasMaxAreaFilter ? maxArea : 'no max'}], InRange: ${areaInRange}`);
             }
             
             return areaInRange;
@@ -1581,7 +1568,7 @@ export const PropertyListing = () => {
     }
   };
 
-  // MODIFIED: Handle area step selection (multi-select) - NO API call, NO URL update
+  // MODIFIED: Handle area step selection (multi-select) - Trigger API call when all steps cleared
   const handleAreaStepChange = (stepId: string) => {
     let newSelectedAreaSteps: string[];
 
@@ -1607,9 +1594,15 @@ export const PropertyListing = () => {
       setMinArea(minArea);
       setMaxArea(maxArea);
     } else {
-      // Reset to default range
+      // Reset to default range - use 0 to indicate no filter
       setMinArea(0);
-      setMaxArea(5000);
+      setMaxArea(0);
+      
+      // Trigger API call to fetch fresh data when all area steps are cleared
+      const currentTab = searchParams.get("type") || activeTab;
+      if (fetchPropertiesRef.current) {
+        fetchPropertiesRef.current(currentTab);
+      }
     }
   };
 
@@ -1621,8 +1614,11 @@ export const PropertyListing = () => {
     }
   };
 
-  // MODIFIED: Reset all filters to default values - NO API call, NO URL update
+  // MODIFIED: Reset all filters to default values and fetch fresh data
   const resetFilters = () => {
+    // Get current tab from URL or state to preserve it
+    const currentTab = searchParams.get("type") || activeTab;
+    
     setPriceRange([0, 0]); // Reset to no price filter
     setMinBedrooms(0);
     setMinBathrooms(0);
@@ -1635,14 +1631,37 @@ export const PropertyListing = () => {
     setPreferenceIds([]);
     setFurnished("any");
     // Removed selectedAmenities
-    setActiveTab("all");
+    // Don't change the active tab - keep current tab
     setSelectedPriceSteps([]);
     setSelectedAreaSteps([]);
-    setSortBy("newest");
     
-    // Only clear URL parameters, don't set new ones
-    const newSearchParams = new URLSearchParams();
+    // Clear all filter-related URL parameters but keep the current type
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete("search");
+    newSearchParams.delete("minPrice");
+    newSearchParams.delete("maxPrice");
+    newSearchParams.delete("minBedrooms");
+    newSearchParams.delete("minBathrooms");
+    newSearchParams.delete("minBalcony");
+    newSearchParams.delete("minArea");
+    newSearchParams.delete("maxArea");
+    newSearchParams.delete("availableFrom");
+    newSearchParams.delete("preferenceIds");
+    newSearchParams.delete("furnished");
+    newSearchParams.delete("sortBy");
+    newSearchParams.delete("commercialType");
+    // Keep the current type instead of setting to "all"
+    if (currentTab && currentTab !== "all") {
+      newSearchParams.set("type", currentTab);
+    } else {
+      newSearchParams.delete("type");
+    }
     setSearchParams(newSearchParams);
+    
+    // Fetch fresh data for the current tab
+    if (fetchPropertiesRef.current) {
+      fetchPropertiesRef.current(currentTab);
+    }
   };
 
   // MODIFIED: Handle price range change - NO API call, NO URL update
@@ -1896,11 +1915,11 @@ export const PropertyListing = () => {
 
       <div className="w-full px-4 py-8">
         {/* Mobile filter toggle button - only visible on mobile */}
-        <div className="md:hidden mb-4">
+        <div className="md:hidden mb-4 flex gap-2">
           <Button
             onClick={toggleMobileFilters}
             variant="outline"
-            className="w-full flex items-center justify-between py-6 text-base"
+            className="flex-1 flex items-center justify-between py-6 text-base"
           >
             <span className="flex items-center gap-2">
               <FilterX className="h-5 w-5" />
@@ -1911,6 +1930,13 @@ export const PropertyListing = () => {
             ) : (
               <ChevronDown className="h-5 w-5" />
             )}
+          </Button>
+          <Button
+            onClick={resetFilters}
+            variant="outline"
+            className="px-4 py-6 text-base bg-gradient-to-r from-red-50 to-orange-50 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-300 hover:text-red-800 transition-all duration-300"
+          >
+            <FilterX className="h-5 w-5" />
           </Button>
         </div>
 
@@ -2052,8 +2078,6 @@ export const PropertyListing = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Removed extra sidebar header with FilterX icon */}
 
                     {/* Price Range Section */}
                     {shouldShowFilter("showPrice") && (
@@ -2380,7 +2404,7 @@ export const PropertyListing = () => {
               minBedrooms > 0 ||
               minBathrooms > 0 ||
               minBalcony > 0 ||
-              (minArea > 0 && minArea !== 0) ||
+              minArea > 0 ||
               availableFrom ||
               preferenceIds.length > 0 ||
                (furnished && furnished !== "any") ||
@@ -2448,15 +2472,24 @@ export const PropertyListing = () => {
                     </Badge>
                   )}
 
-                  {minArea > 0 && minArea !== 0 && (
+                  {minArea > 0 && (
                     <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
                       {minArea}+ sq.ft
                       <X
                         className="h-3 w-3 ml-1 cursor-pointer"
                         onClick={() => {
                           setMinArea(0);
+                          setMaxArea(0);
+                          setSelectedAreaSteps([]);
                           searchParams.delete("minArea");
+                          searchParams.delete("maxArea");
                           setSearchParams(searchParams);
+                          
+                          // Trigger API call to fetch fresh data
+                          const currentTab = searchParams.get("type") || activeTab;
+                          if (fetchPropertiesRef.current) {
+                            fetchPropertiesRef.current(currentTab);
+                          }
                         }}
                       />
                     </Badge>
@@ -2531,14 +2564,33 @@ export const PropertyListing = () => {
                         className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600"
                         onClick={() => {
                           setSelectedAreaSteps([]);
+                          setMinArea(0);
+                          setMaxArea(0);
                           searchParams.delete("areaSteps");
                           searchParams.delete("minArea");
                           searchParams.delete("maxArea");
                           setSearchParams(searchParams);
+                          
+                          // Trigger API call to fetch fresh data
+                          const currentTab = searchParams.get("type") || activeTab;
+                          if (fetchPropertiesRef.current) {
+                            fetchPropertiesRef.current(currentTab);
+                          }
                         }}
                       />
                     </Badge>
                   )}
+
+                  {/* Clear All Filters Button - appears when any filters are active */}
+                  <Button
+                    onClick={resetFilters}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 bg-gradient-to-r from-red-50 to-orange-50 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-300 hover:text-red-800 transition-all duration-300 shadow-sm hover:shadow-md ml-2"
+                  >
+                    <FilterX className="h-3 w-3" />
+                    Clear All
+                  </Button>
 
 
                 </div>

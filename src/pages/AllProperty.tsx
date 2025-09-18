@@ -170,22 +170,22 @@ const AllProperty = () => {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 bg-gray-50">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-primary mb-3">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 bg-gray-50">
+      <div className="text-center mb-8 sm:mb-10">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-2 sm:mb-3">
           Find Your Perfect Property
         </h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto px-4">
           Discover active properties that fit your lifestyle and budget
         </p>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">
+      <div className="mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
           {loading ? (
             <span className="flex items-center">
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Loading active properties...
+              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
+              <span className="text-sm sm:text-base">Loading active properties...</span>
             </span>
           ) : (
             "Active Properties"
@@ -217,24 +217,24 @@ const AllProperty = () => {
         </div>
       )}
 
-      {/* Results grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Results grid - improved responsive layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
         {loading
-          ? // Loading skeletons
+          ? // Loading skeletons - show 3 for desktop, 2 for mobile
             Array(6)
               .fill(0)
               .map((_, index) => (
                 <Card
                   key={index}
-                  className="overflow-hidden shadow-md rounded-lg"
+                  className="overflow-hidden shadow-md rounded-xl sm:rounded-2xl"
                 >
-                  <div className="h-48 bg-gray-200 animate-pulse" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4" />
+                  <div className="h-48 sm:h-56 md:h-64 bg-gray-200 animate-pulse" />
+                  <div className="p-4 sm:p-5 md:p-6 space-y-2 sm:space-y-3">
+                    <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse w-3/4" />
                     <div className="flex justify-between">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4" />
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4" />
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse w-1/4" />
+                      <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse w-1/4" />
                     </div>
                   </div>
                 </Card>
