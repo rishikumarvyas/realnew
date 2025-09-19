@@ -44,7 +44,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const PostProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, createNotification, refreshNotifications } = useAuth();
 
   // Form states
   const [propertyType, setPropertyType] = useState("");
@@ -178,10 +178,10 @@ const PostProperty = () => {
       if (fileList && fileList.length > 0) {
         const newFiles = Array.from(fileList);
 
-        if (images.length + newFiles.length > 6) {
+        if (images.length + newFiles.length > 10) {
           toast({
-            title: "Maximum 6 images allowed",
-            description: "You can upload up to 6 images for a property.",
+            title: "Maximum 10 images allowed",
+            description: "You can upload up to 10 images for a property.",
             variant: "destructive",
           });
           return;
@@ -335,7 +335,8 @@ const PostProperty = () => {
       return;
     }
 
-    if (ageOfProperty === "" || /\D/.test(ageOfProperty)) {
+    // Skip age validation for Plots (age field is not shown for Plot)
+    if (!isPlot && (ageOfProperty === "" || /\D/.test(ageOfProperty))) {
       setAgeError("Please enter a valid number (years only)");
       toast({
         title: "Invalid Age of Property",
@@ -431,7 +432,10 @@ const PostProperty = () => {
       formData.append("StateId", selectedStateId.toString());
       formData.append("Locality", locality.toString());
       formData.append("UserTypeId", userTypeId.toString());
-      formData.append("Age", ageOfProperty);
+      // Only include Age for non-plot categories
+      if (!isPlot && ageOfProperty !== "") {
+        formData.append("Age", ageOfProperty);
+      }
 
       // Add amenities
       amenityIds.forEach((id) => {
@@ -496,17 +500,25 @@ const PostProperty = () => {
         return;
       }
 
-      console.log("New Property ID from API response:", newPropertyId);
+      // Create notification for property posting
+      await createNotification(
+        `Your property "${title}" has been posted successfully and is pending approval`,
+        "property",
+        newPropertyId
+      );
+
+      // Refresh notifications to update count immediately
+      await refreshNotifications();
 
       toast({
-        title: "Property Posted Successfully!",
-        description: "Your property has been submitted for review.",
+        title: "Success!",
+        description:
+          "Property posted successfully. It will be reviewed by our team.",
       });
 
       // Navigate to the Dashboard page with the PropertyId
       navigate(`/dashboard?newPropertyId=${newPropertyId}`);
     } catch (error) {
-      console.error("Error posting property:", error);
       toast({
         title: "Failed to Post Property",
         description:
@@ -1236,7 +1248,7 @@ const PostProperty = () => {
                     <p className="font-medium">Image Guidelines:</p>
                     <ul className="list-disc list-inside space-y-1 mt-1">
                       <li>
-                        Upload up to 6 high-quality images of your property
+                        Upload up to 10 high-quality images of your property
                       </li>
                       <li>At least one image is required</li>
                       <li>Maximum file size: 5MB per image</li>
@@ -1287,7 +1299,7 @@ const PostProperty = () => {
                     </div>
                   </div>
                 ))}
-                {imageURLs.length < 6 && (
+                {imageURLs.length < 10 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                     <input
                       type="file"
@@ -1300,7 +1312,7 @@ const PostProperty = () => {
                       Upload Image
                     </span>
                     <span className="text-xs text-gray-500 mt-1">
-                      {imageURLs.length}/6 images
+                      {imageURLs.length}/10 images
                     </span>
                   </label>
                 )}

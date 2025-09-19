@@ -64,7 +64,6 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
 
   try {
     // Log the property for debugging
-    console.log(`Processing property ${propertyId}:`, property);
 
     // Check if the property has imageDetails array
     if (
@@ -72,13 +71,9 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
       Array.isArray(property.imageDetails) &&
       property.imageDetails.length > 0
     ) {
-      console.log(
-        `Property ${propertyId} has ${property.imageDetails.length} images`
-      );
-
       // Try to find main image first
       const mainImageObj = property.imageDetails.find(
-        (img: any) => img.isMainImage === true
+        (img: any) => img.isMainImage === true,
       );
 
       if (mainImageObj) {
@@ -88,13 +83,11 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
           mainImageObj.url ||
           mainImageObj.path ||
           mainImage;
-        console.log(`Using main image for property ${propertyId}:`, mainImage);
       } else {
         // Use first image as fallback
         const firstImg = property.imageDetails[0];
         mainImage =
           firstImg.imageUrl || firstImg.url || firstImg.path || mainImage;
-        console.log(`Using first image for property ${propertyId}:`, mainImage);
       }
     }
     // Check if there's a mainImageDetail object
@@ -104,15 +97,10 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
         property.mainImageDetail.imageUrl ||
         property.mainImageDetail.path ||
         mainImage;
-      console.log(
-        `Using mainImageDetail for property ${propertyId}:`,
-        mainImage
-      );
     }
     // Check if there's a simple image property
     else if (property.image) {
       mainImage = property.image;
-      console.log(`Using direct image property for ${propertyId}:`, mainImage);
     }
 
     // If the image URL doesn't start with http or https, it might be a relative path
@@ -122,16 +110,15 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
         mainImage = "/" + mainImage;
       }
       mainImage = `https://homeyatraapi.azurewebsites.net${mainImage}`;
-      console.log(`Converted relative path to absolute URL: ${mainImage}`);
     }
 
     // Extra check to ensure image URL is valid
     if (mainImage && !mainImage.match(/^(https?:\/\/)/)) {
-      console.warn(`Invalid image URL format: ${mainImage}, using fallback`);
+
       mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
     }
   } catch (error) {
-    console.error("Error processing image for property:", error);
+
     mainImage = "https://via.placeholder.com/300x200?text=Property+Image";
   }
 
@@ -147,8 +134,8 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
       property.superCategory?.toLowerCase() === "buy"
         ? "buy"
         : property.superCategory?.toLowerCase() === "rent"
-        ? "rent"
-        : "sell",
+          ? "rent"
+          : "sell",
     bedrooms: property.bedroom || 0,
     bathrooms: property.bathroom || 0,
     area: property.area || 0,
@@ -158,65 +145,12 @@ const convertToPropertyCard = (property: any): DashboardProperty => {
   };
 };
 
-const mockMessages = [
-  {
-    id: "msg1",
-    propertyId: "prop1",
-    propertyTitle: "Modern 3BHK with Sea View",
-    sender: "Priya Sharma",
-    message:
-      "Hello, I'm interested in your property. Is it still available? I would like to schedule a visit this weekend.",
-    date: "2025-01-15T14:30:00",
-    read: false,
-  },
-  {
-    id: "msg2",
-    propertyId: "prop1",
-    propertyTitle: "Modern 3BHK with Sea View",
-    sender: "Vikram Singh",
-    message:
-      "Hi, I have some questions about the amenities in your property. Could you please provide more details?",
-    date: "2025-01-14T10:15:00",
-    read: true,
-  },
-];
 
-// Mock properties for fallback when API fails
-const mockProperties = [
-  {
-    propertyId: "prop1",
-    title: "Modern 3BHK with Sea View",
-    price: 25000,
-    address: "Marine Drive",
-    city: "Mumbai",
-    superCategory: "Rent",
-    bedroom: 3,
-    bathroom: 2,
-    area: 1500,
-    mainImageDetail: {
-      url: "https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80",
-    },
-  },
-  {
-    propertyId: "prop2",
-    title: "Spacious Bungalow",
-    price: 9500000,
-    address: "Koregaon Park",
-    city: "Pune",
-    superCategory: "Buy",
-    bedroom: 4,
-    bathroom: 3,
-    area: 2800,
-    mainImageDetail: {
-      url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80",
-    },
-  },
-];
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("properties");
   const [properties, setProperties] = useState<DashboardProperty[]>([]);
-  const [messages, setMessages] = useState<typeof mockMessages>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userName, setUserName] = useState<string>("User");
   const [likeCount, setLikeCount] = useState<number>(0);
@@ -237,7 +171,7 @@ const Dashboard = () => {
   // Add state for all properties and liked properties from all
   const [allProperties, setAllProperties] = useState<any[]>([]);
   const [likedPropertiesFromAll, setLikedPropertiesFromAll] = useState<any[]>(
-    []
+    [],
   );
 
   // Add new state for liked properties by me
@@ -249,20 +183,13 @@ const Dashboard = () => {
   const getNewPropertyIdFromQuery = () => {
     const params = new URLSearchParams(location.search);
     const newPropertyId = params.get("newPropertyId");
-    console.log("Extracted Property ID from URL:", newPropertyId);
+
     return newPropertyId || "";
   };
 
   const newPropertyId = getNewPropertyIdFromQuery();
 
-  useEffect(() => {
-    if (user?.name) {
-      setUserName(user.name);
-    }
-    if (user?.isActive !== undefined) {
-      setAccountIsActive(user.isActive);
-    }
-  }, [user]);
+  // Removed redundant useEffect - user data is set from API call in fetchUserProperties
 
   useEffect(() => {
     const fetchUserProperties = async () => {
@@ -280,12 +207,12 @@ const Dashboard = () => {
             `/api/Account/GetUserDetails`,
             {
               params: { userId: user?.userId }, // Pass query parameters correctly
-            }
+            },
           );
 
           if (!(response?.data?.statusCode === 200)) {
             throw new Error(
-              `Failed to fetch user details: ${response?.data?.statusCode}`
+              `Failed to fetch user details: ${response?.data?.statusCode}`,
             );
           }
 
@@ -305,28 +232,25 @@ const Dashboard = () => {
           }
 
           if (data.statusCode === 200 && Array.isArray(data.userDetails)) {
-            console.log("First property from API:", data.userDetails[0]);
             const formattedProperties = data.userDetails.map(
-              convertToPropertyCard
+              convertToPropertyCard,
             );
-            console.log("Formatted properties:", formattedProperties);
+
             setProperties(formattedProperties);
 
             // Filter liked properties from userDetails
             const likedProps = data.userDetails.filter(
-              (p: any) => p.isLiked === true
+              (p: any) => p.isLiked === true,
             );
             setLikedPropertiesFromAll(likedProps);
           } else {
             throw new Error("No property data received from API");
           }
         } catch (apiError) {
-          console.error("API error, using mock data:", apiError);
-          // Mock data for testing when API is unavailable
-          const formattedProperties = mockProperties.map(convertToPropertyCard);
-          setProperties(formattedProperties);
-          setLikeCount(1); // Default like count for mock data
-          setLikedPropertiesFromAll([]); // Reset liked properties on error
+  
+          setProperties([]);
+          setLikeCount(0);
+          setLikedPropertiesFromAll([]);
         }
 
         if (newPropertyId) {
@@ -336,21 +260,19 @@ const Dashboard = () => {
           });
         }
       } catch (error) {
-        console.error("Error fetching user properties:", error);
+
         toast({
           title: "Error",
           description:
             "Failed to load your properties. Please try again later.",
           variant: "destructive",
         });
-        // Ensure we have at least some properties to display
-        const formattedProperties = mockProperties.map(convertToPropertyCard);
-        setProperties(formattedProperties);
-        setLikeCount(0); // Reset like count on error
-        setLikedPropertiesFromAll([]); // Reset liked properties on error
+        setProperties([]);
+        setLikeCount(0);
+        setLikedPropertiesFromAll([]);
       } finally {
         setLoading(false);
-        setMessages(mockMessages);
+        setMessages([]);
       }
     };
 
@@ -370,7 +292,7 @@ const Dashboard = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       // Update local state
@@ -381,7 +303,7 @@ const Dashboard = () => {
         description: "Your account has been successfully activated.",
       });
     } catch (error) {
-      console.error("Error activating account:", error);
+
       toast({
         title: "Error",
         description: "Failed to activate account. Please try again later.",
@@ -400,7 +322,7 @@ const Dashboard = () => {
 
       // Make API call to deactivate the account using axiosInstance
       const response = await axiosInstance.delete(
-        `/api/Account/DeactivateAccount?userid=${userId}`
+        `/api/Account/DeactivateAccount?userid=${userId}`,
       );
 
       // Update local state
@@ -411,7 +333,7 @@ const Dashboard = () => {
         description: "Your account has been deactivated successfully.",
       });
     } catch (error) {
-      console.error("Error deactivating account:", error);
+
       toast({
         title: "Error",
         description: "Failed to deactivate account. Please try again later.",
@@ -430,7 +352,7 @@ const Dashboard = () => {
 
       // Make API call to delete the account using axiosInstance
       const response = await axiosInstance.delete(
-        `/api/Account/DeleteAccount?userid=${userId}`
+        `/api/Account/DeleteAccount?userid=${userId}`,
       );
 
       toast({
@@ -444,7 +366,7 @@ const Dashboard = () => {
       }
       navigate("/");
     } catch (error) {
-      console.error("Error deleting account:", error);
+
       toast({
         title: "Error",
         description: "Failed to delete account. Please try again later.",
@@ -458,8 +380,6 @@ const Dashboard = () => {
 
   // Updated to use axiosInstance for property deletion
   const handleDeleteProperty = async (id: string) => {
-    console.log("Deleting property with ID:", id);
-
     if (!id) {
       toast({
         title: "Error",
@@ -477,10 +397,8 @@ const Dashboard = () => {
 
       // Send the ID to the API using axiosInstance
       const response = await axiosInstance.delete(
-        `/api/Account/DeleteProperty?propertyId=${id}`
+        `/api/Account/DeleteProperty?propertyId=${id}`,
       );
-
-      console.log("Delete response:", response.data);
 
       if (response.data.statusCode === 200) {
         // Update the UI by removing the deleted property
@@ -493,7 +411,7 @@ const Dashboard = () => {
         throw new Error(response.data.message || "Failed to delete property");
       }
     } catch (error) {
-      console.error("Error deleting property:", error);
+
       toast({
         title: "Error",
         description: "Failed to delete property. Please try again later.",
@@ -507,7 +425,7 @@ const Dashboard = () => {
   // Function to mark a message as read
   const markMessageAsRead = (id: string) => {
     setMessages(
-      messages.map((msg) => (msg.id === id ? { ...msg, read: true } : msg))
+      messages.map((msg) => (msg.id === id ? { ...msg, read: true } : msg)),
     );
   };
 
@@ -544,10 +462,10 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center">
-              <Home className="w-5 h-5 text-blue-600 mr-2" />
-              <span className="text-3xl font-bold">{properties.length}</span>
-            </div>
+                          <div className="flex items-center">
+                <Home className="w-5 h-5 text-blue-600 mr-2" />
+                <span className="text-3xl font-bold">{properties.length}</span>
+              </div>
           </CardContent>
         </Card>
 
@@ -609,32 +527,22 @@ const Dashboard = () => {
           if (val === "likedByMe" && likedPropertiesByMe.length === 0) {
             setLoadingLikedByMe(true);
             try {
-              console.log("Calling /api/Account/GetLikedPropertiesByUser...");
               const response = await axiosInstance.get(
-                "/api/Account/GetLikedPropertiesByUser"
+                "/api/Account/GetLikedPropertiesByUser",
               );
-              console.log("API response:", response.data);
 
               if (
                 response.data.statusCode === 200 &&
                 Array.isArray(response.data.propertyInfo)
               ) {
-                console.log(
-                  "Liked properties array:",
-                  response.data.propertyInfo
-                );
                 setLikedPropertiesByMe(response.data.propertyInfo);
                 if (response.data.propertyInfo.length === 0) {
-                  console.log("No liked properties found for this user.");
                 }
               } else {
-                console.log(
-                  "API did not return propertyInfo array or statusCode is not 200."
-                );
                 setLikedPropertiesByMe([]);
               }
             } catch (e) {
-              console.error("Error fetching liked properties by me:", e);
+        
               setLikedPropertiesByMe([]);
             } finally {
               setLoadingLikedByMe(false);
@@ -740,8 +648,8 @@ const Dashboard = () => {
                           {property.type === "buy"
                             ? "For Sale"
                             : property.type === "rent"
-                            ? "For Rent"
-                            : "Selling"}
+                              ? "For Rent"
+                              : "Selling"}
                         </span>
                       </td>
                       <td className="py-4 px-4 hidden lg:table-cell">
@@ -750,15 +658,15 @@ const Dashboard = () => {
                             property.status === "active"
                               ? "bg-green-100 text-green-800"
                               : property.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-gray-100 text-gray-800"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
                           }`}
                         >
                           {property.status === "active"
                             ? "Active"
                             : property.status === "pending"
-                            ? "Pending"
-                            : "Inactive"}
+                              ? "Pending"
+                              : "Inactive"}
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
@@ -882,9 +790,9 @@ const Dashboard = () => {
                               property.superCategory?.toLowerCase() === "buy"
                                 ? "bg-green-100 text-green-800"
                                 : property.superCategory?.toLowerCase() ===
-                                  "rent"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
+                                    "rent"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
                             }`}
                           >
                             {property.superCategory || "Not specified"}
@@ -1153,9 +1061,9 @@ const Dashboard = () => {
                               property.superCategory?.toLowerCase() === "buy"
                                 ? "bg-green-100 text-green-800"
                                 : property.superCategory?.toLowerCase() ===
-                                  "rent"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
+                                    "rent"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
                             }`}
                           >
                             {property.superCategory || "Not specified"}

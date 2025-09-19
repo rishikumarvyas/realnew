@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -22,7 +22,7 @@ export const ImageGalleryDialog: React.FC<ImageGalleryDialogProps> = ({
   initialIndex = 0,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  
+
   // Reset index when dialog opens with a different initial index
   useEffect(() => {
     if (open) {
@@ -48,16 +48,6 @@ export const ImageGalleryDialog: React.FC<ImageGalleryDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl w-11/12 p-0 bg-black text-white">
         <div className="relative h-[80vh] flex flex-col">
-          {/* Close button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 z-50 text-white bg-black/50 hover:bg-black/70 rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-
           {/* Image counter */}
           <div className="absolute top-4 left-4 z-50 bg-black/50 text-white text-sm px-3 py-1 rounded-full">
             {currentIndex + 1} / {images.length}
@@ -82,7 +72,7 @@ export const ImageGalleryDialog: React.FC<ImageGalleryDialogProps> = ({
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
-            
+
             <Button
               variant="ghost"
               size="icon"
@@ -100,7 +90,9 @@ export const ImageGalleryDialog: React.FC<ImageGalleryDialogProps> = ({
                 <div
                   key={image.imageId || index}
                   className={`w-16 h-12 cursor-pointer border-2 transition-all ${
-                    index === currentIndex ? 'border-white' : 'border-transparent opacity-70 hover:opacity-100'
+                    index === currentIndex
+                      ? "border-white"
+                      : "border-transparent opacity-70 hover:opacity-100"
                   }`}
                   onClick={() => handleThumbnailClick(index)}
                 >

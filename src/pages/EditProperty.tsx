@@ -72,7 +72,7 @@ const EditProperty = () => {
   const [isReraApproved, setIsReraApproved] = useState<string>("");
   const [isOCApproved, setIsOCApproved] = useState<string>("");
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined
+    undefined,
   );
   const [priceValidation, setPriceValidation] = useState(true);
   const [price, setPrice] = useState("");
@@ -98,7 +98,7 @@ const EditProperty = () => {
 
         // Use axiosInstance instead of direct axios call
         const response = await axiosInstance.get(
-          `/api/Account/GetPropertyDetails?propertyId=${propertyId}`
+          `/api/Account/GetPropertyDetails?propertyId=${propertyId}`,
         );
         if (
           response?.data?.statusCode === 200 &&
@@ -112,17 +112,17 @@ const EditProperty = () => {
             property?.amenityDetails.length > 0
           ) {
             const prevSelectedIds = property?.amenityDetails?.map(
-              (item) => item?.amenityId
+              (item) => item?.amenityId,
             );
             setSelectedCheckboxes(
               prevSelectedIds?.filter((id) =>
-                checkBoxAmenities?.some((amenity) => amenity?.id === id)
-              )
+                checkBoxAmenities?.some((amenity) => amenity?.id === id),
+              ),
             );
             setSelectedRadio(
               prevSelectedIds?.find((id) =>
-                radioAmenities?.some((amenity) => amenity?.id === id)
-              ) || ""
+                radioAmenities?.some((amenity) => amenity?.id === id),
+              ) || "",
             );
           }
           // Set initial images and image URLs
@@ -134,12 +134,12 @@ const EditProperty = () => {
                 return new File([blob], "example.jpg", {
                   type: "image/jpeg",
                 });
-              })
+              }),
             );
             setOldImageURLs(property?.imageDetails.map((img) => img.imageUrl));
             setImageURLs(property?.imageDetails.map((img) => img.imageUrl));
             setMainImageIndex(
-              property?.imageDetails.findIndex((img) => img.isMainImage)
+              property?.imageDetails.findIndex((img) => img.isMainImage),
             );
           }
 
@@ -154,7 +154,7 @@ const EditProperty = () => {
           setAvailableFrom(
             property.availableFrom
               ? new Date(property.availableFrom)
-              : undefined
+              : undefined,
           ); // Convert string date to Date object
 
           // Set initial form data
@@ -187,7 +187,7 @@ const EditProperty = () => {
           throw new Error("Property data not found or invalid");
         }
       } catch (error) {
-        console.error("Error fetching property details:", error);
+  
         toast({
           title: "Error",
           description:
@@ -215,10 +215,13 @@ const EditProperty = () => {
   const [preferenceStates, setPreferenceStates] = useState<
     Record<string, boolean>
   >(
-    preferenceOptions.reduce((acc, option) => {
-      acc[option.id] = false;
-      return acc;
-    }, {} as Record<string, boolean>)
+    preferenceOptions.reduce(
+      (acc, option) => {
+        acc[option.id] = false;
+        return acc;
+      },
+      {} as Record<string, boolean>,
+    ),
   );
 
   // Add validation for age of property (positive integer)
@@ -248,14 +251,14 @@ const EditProperty = () => {
 
   const checkBoxAmenities: Amenity[] = isShop
     ? getAmenity().checkBoxAmenities.filter((item) =>
-        new Set(["1", "6", "7", "8"]).has(item.id)
+        new Set(["1", "6", "7", "8"]).has(item.id),
       )
     : getAmenity().checkBoxAmenities;
   const radioAmenities: Amenity[] = getAmenity().radioButtonAmenities;
   // Handle checkbox Amenity selection
   const handleCheckboxChange = (id) => {
     setSelectedCheckboxes((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
   // Handle radio button Amenity selection
@@ -298,7 +301,7 @@ const EditProperty = () => {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -329,10 +332,10 @@ const EditProperty = () => {
       if (fileList && fileList.length > 0) {
         const newFiles = Array.from(fileList);
 
-        if (images.length + newFiles.length > 6) {
+        if (images.length + newFiles.length > 10) {
           toast({
-            title: "Maximum 6 images allowed",
-            description: "You can upload up to 6 images for a property.",
+            title: "Maximum 10 images allowed",
+            description: "You can upload up to 10 images for a property.",
             variant: "destructive",
           });
           return;
@@ -353,7 +356,7 @@ const EditProperty = () => {
         }
       }
     } catch (error) {
-      console.error(error);
+      
     }
   };
 
@@ -477,14 +480,14 @@ const EditProperty = () => {
 
           formDataObj.append(
             `Images[${idx}].IsMain`,
-            isMain ? "true" : "false"
+            isMain ? "true" : "false",
           );
         }
         if (isOld) {
           formDataObj.append(`Images[${idx}].ImageUrl`, url);
           formDataObj.append(
             `Images[${idx}].IsMain`,
-            isMain ? "true" : "false"
+            isMain ? "true" : "false",
           );
         }
       });
@@ -532,7 +535,7 @@ const EditProperty = () => {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       if (response.status === 200) {
@@ -545,7 +548,7 @@ const EditProperty = () => {
         throw new Error(response.data.message || "Failed to update property");
       }
     } catch (error) {
-      console.error("Error updating property:", error);
+
       toast({
         title: "Update Error",
         description: "Failed to update property. Please try again later.",
@@ -641,14 +644,14 @@ const EditProperty = () => {
                       formData.propertyTypeId === "1"
                         ? "Flat"
                         : formData.propertyTypeId === "2"
-                        ? "Shop"
-                        : formData.propertyTypeId === "3"
-                        ? "House"
-                        : formData.propertyTypeId === "4"
-                        ? "Plot"
-                        : formData.propertyTypeId === "5"
-                        ? "Bunglow"
-                        : formData.propertyType
+                          ? "Shop"
+                          : formData.propertyTypeId === "3"
+                            ? "House"
+                            : formData.propertyTypeId === "4"
+                              ? "Plot"
+                              : formData.propertyTypeId === "5"
+                                ? "Bunglow"
+                                : formData.propertyType
                     }
                     className="border-blue-200 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
                     readOnly
@@ -669,8 +672,8 @@ const EditProperty = () => {
                       formData.superCategoryId === "2"
                         ? "Rent"
                         : formData.superCategoryId === "1"
-                        ? "Sell"
-                        : ""
+                          ? "Sell"
+                          : ""
                     }
                     className="border-blue-200 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
                     readOnly
@@ -1224,7 +1227,7 @@ const EditProperty = () => {
                     <p className="font-medium">Image Guidelines:</p>
                     <ul className="list-disc list-inside space-y-1 mt-1">
                       <li>
-                        Upload up to 6 high-quality images of your property
+                        Upload up to 10 high-quality images of your property
                       </li>
                       <li>At least one image is required</li>
                       <li>Maximum file size: 5MB per image</li>
@@ -1276,7 +1279,7 @@ const EditProperty = () => {
                     </div>
                   </div>
                 ))}
-                {imageURLs.length < 6 && (
+                {imageURLs.length < 10 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                     <input
                       type="file"
@@ -1289,7 +1292,7 @@ const EditProperty = () => {
                       Upload Image
                     </span>
                     <span className="text-xs text-gray-500 mt-1">
-                      {imageURLs.length}/6 images
+                      {imageURLs.length}/10 images
                     </span>
                   </label>
                 )}

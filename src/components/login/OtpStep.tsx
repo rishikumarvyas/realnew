@@ -17,9 +17,9 @@ export const OtpStep = ({
   loading,
 }: OtpStepProps) => {
   const [otpValue, setOtpValue] = useState("");
-  const [resendTimeout, setResendTimeout] = useState(true); // Start with timeout active
+  const [resendTimeout, setResendTimeout] = useState(true);
   const [timeLeft, setTimeLeft] = useState(60);
-  const [isResending, setIsResending] = useState(false); // Separate loading state for resend
+  const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
   const verifyButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -58,10 +58,10 @@ export const OtpStep = ({
 
   const handleResendOtp = async () => {
     try {
-      setIsResending(true); // Show loading state for resend button only
+      setIsResending(true);
       await onResendOtp();
-      setResendTimeout(true); // Restart timeout
-      setTimeLeft(60); // Reset timer to 60 seconds
+      setResendTimeout(true);
+      setTimeLeft(60);
 
       toast({
         title: "OTP Resent",
@@ -80,37 +80,58 @@ export const OtpStep = ({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2 text-center">
-        <p className="text-sm text-gray-500">
-          A 6-digit code has been sent to your phone
+      <div className="space-y-3 text-center">
+        <p className="text-sm text-gray-600">
+          A 6-digit code has been sent to
         </p>
-        <p className="font-medium">{phone}</p>
+        <p className="font-semibold text-base text-gray-800 bg-gray-50 px-4 py-2 rounded-lg">{phone}</p>
       </div>
-      <OtpInput
-        value={otpValue}
-        onChange={setOtpValue}
-        className="mb-6"
-        verifyButtonRef={verifyButtonRef}
-      />
-      <Button
-        ref={verifyButtonRef}
-        onClick={handleOtpSubmit}
-        className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500"
-        disabled={loading || otpValue.length !== 6}
-      >
-        {loading ? "Verifying..." : "Verify & Login"}
-      </Button>
-      <div className="text-center mt-4">
+      
+      <div className="space-y-6">
+        <OtpInput
+          value={otpValue}
+          onChange={setOtpValue}
+          className="mb-4"
+          verifyButtonRef={verifyButtonRef}
+        />
+        
+        <Button
+          ref={verifyButtonRef}
+          onClick={handleOtpSubmit}
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-300 shadow-lg hover:shadow-xl h-12 text-base font-semibold rounded-xl"
+          disabled={loading || otpValue.length !== 6}
+        >
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Verifying...
+            </div>
+          ) : (
+            "Verify & Continue"
+          )}
+        </Button>
+      </div>
+      
+      <div className="text-center pt-2">
         {resendTimeout ? (
-          <p className="text-sm text-gray-500">Resend code in {timeLeft}s</p>
+          <p className="text-sm text-gray-500">
+            Resend code in <span className="font-semibold text-blue-600">{timeLeft}s</span>
+          </p>
         ) : (
           <Button
             variant="link"
             onClick={handleResendOtp}
             disabled={isResending}
-            className="text-blue-600"
+            className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
           >
-            {isResending ? "Resending..." : "Resend Code"}
+            {isResending ? (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+                Resending...
+              </div>
+            ) : (
+              "Resend Code"
+            )}
           </Button>
         )}
       </div>
