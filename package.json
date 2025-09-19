@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "build:azure": "vite build && echo '✅ Build completed for Azure deployment'",
+    "build:production": "vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
-    "clean": "rm -rf node_modules"
+    "clean": "rm -rf node_modules",
+    "deploy:azure": "npm run build:azure && echo '🚀 Ready for Azure deployment - upload dist/ folder to Azure App Service'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
