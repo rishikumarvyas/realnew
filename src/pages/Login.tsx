@@ -184,7 +184,10 @@ const Login = ({ onClose }) => {
               >
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Label
+                      htmlFor="phone"
+                      className="flex items-center gap-2 text-sm font-semibold text-gray-700"
+                    >
                       <Phone className="h-4 w-4 text-blue-500" />
                       Phone Number
                     </Label>
