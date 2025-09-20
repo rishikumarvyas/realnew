@@ -62,7 +62,7 @@ const Login = ({ onClose }) => {
     setLoading(true);
 
     try {
-      const success = await requestOtp(phone);
+      const { success, message } = await requestOtp(phone);
 
       if (success) {
         toast({
@@ -73,19 +73,48 @@ const Login = ({ onClose }) => {
       } else {
         toast({
           title: "Failed to Send OTP",
-          description: "Your number is not registered. Please sign up first.",
+          description:
+            message || "Your number is not registered. Please sign up first.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+  const handleResendOtp = async () => {
+    try {
+      const { success, message } = await requestOtp(phone);
+
+      if (success) {
+        toast({
+          title: "OTP Sent",
+          description: "A verification code has been sent to your phone.",
+        });
+        setStep("otp");
+      } else {
+        toast({
+          title: "Failed to ReSend OTP",
+          description:
+            message || "Your number is not registered. Please sign up first.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error || "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+
+    return Promise.resolve();
   };
 
   const handleOtpSubmit = async (otpValue) => {
@@ -227,7 +256,7 @@ const Login = ({ onClose }) => {
               <OtpStep
                 phone={phone}
                 onSubmit={handleOtpSubmit}
-                onResendOtp={handlePhoneSubmit}
+                onResendOtp={handleResendOtp}
                 loading={loading}
               />
             )}
