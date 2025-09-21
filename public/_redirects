@@ -1,1 +1,18 @@
+# Netlify-style redirects for SPA routing
+# This file provides a backup solution for SPA routing
+# Azure App Service will use web.config, but this can be used for other hosting providers
+
+# Redirect all routes to index.html for client-side routing
 /*    /index.html   200
+
+# Specific redirects for common routes (optional)
+/properties/*    /index.html   200
+/dashboard/*    /index.html   200
+/admin/*        /index.html   200
+/post-property  /index.html   200
+/builderpost/*  /index.html   200
+/newlanching/*  /index.html   200
+/contactus      /index.html   200
+/about          /index.html   200
+/terms          /index.html   200
+/privacy        /index.html   200
