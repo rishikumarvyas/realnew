@@ -23,6 +23,7 @@ import {
   Store,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import hy from "../Images/hy1-removebg-preview.png";
 
@@ -30,6 +31,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout, openLoginModal, openSignupModal } =
     useAuth();
+  const { toast } = useToast();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,7 +41,22 @@ export function Navbar() {
   const currentType = queryParams.get("type") || "";
 
   const handleLogout = () => {
+    // Perform logout, clear caches, notify user and navigate home
     logout();
+    try {
+      // Clear local and session storage to remove cached data
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      // ignore storage errors
+    }
+
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+    });
+
+    navigate("/");
     setIsOpen(false);
   };
 
@@ -107,7 +124,7 @@ export function Navbar() {
                     "text-gray-800 px-3 py-2 text-sm font-medium border-b-2 transition-all duration-200",
                     isActive("/properties", type)
                       ? "text-blue-600 border-blue-600"
-                      : "hover:text-blue-600 hover:border-blue-600 border-transparent",
+                      : "hover:text-blue-600 hover:border-blue-600 border-transparent"
                   )}
                 >
                   {label}
@@ -117,7 +134,7 @@ export function Navbar() {
                 <Link
                   to="/newlanching"
                   className={cn(
-                    "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200",
+                    "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
                   )}
                 >
                   New Launching
@@ -276,7 +293,7 @@ export function Navbar() {
                 to={`/properties?type=${type}`}
                 className={cn(
                   "flex flex-col items-center justify-center p-4 rounded-xl transition-colors",
-                  bgColor,
+                  bgColor
                 )}
                 onClick={() => setIsOpen(false)}
               >

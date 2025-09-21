@@ -36,7 +36,9 @@ interface AuthContextType {
   openSignupModal: () => void;
   closeAuthModal: () => void;
   // Auth functions
-  requestOtp: (phoneNumber: string) => Promise<boolean>;
+  requestOtp: (
+    phoneNumber: string
+  ) => Promise<{ success: boolean; message?: string }>;
   login: (
     phoneNumber: string,
     otp: string
@@ -138,32 +140,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     loadAuth();
   }, []);
 
-  const requestOtp = async (phoneNumber: string): Promise<boolean> => {
+  const requestOtp = async (
+    phoneNumber: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      if (!formattedPhone) return false;
+      if (!formattedPhone)
+        return { success: false, message: "Invalid phone number" };
 
       const responseOtp = await axiosInstance.post(`/api/Message/Send`, {
         phone: formattedPhone,
         templateId: 3,
         message: "Your OTP for Home Yatra login is: {{otp}}",
-        action: "HomeYatra",
+        action: "login",
         name: "HomeYatra",
         userTypeId: "0",
       });
-
       if (
         responseOtp?.data?.statusCode === 200 &&
         responseOtp?.data?.message != null &&
         responseOtp?.data?.message != undefined &&
         responseOtp?.data?.message != ""
       ) {
-        return true;
+        return { success: true };
       } else {
-        return false;
+        return {
+          success: false,
+          message: responseOtp?.data?.message || "Failed to send OTP",
+        };
       }
     } catch (error) {
-      return false;
+      return {
+        success: false,
+        message:
+          (axios.isAxiosError(error)
+            ? error.response?.data?.message
+            : String(error)) || "Network error",
+      };
     }
   };
 
