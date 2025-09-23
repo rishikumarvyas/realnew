@@ -113,7 +113,7 @@ const AllProperty = () => {
           headers: {
             "Content-Type": "application/json",
           },
-        },
+        }
       );
 
       // API will return only StatusId = 2 properties, no need for client-side filtering
@@ -140,12 +140,11 @@ const AllProperty = () => {
           furnished: prop.furnished,
           likeCount: prop.likeCount || 0,
           statusId: prop.statusId,
-        }),
+        })
       );
 
       setProperties(transformedData);
     } catch (err) {
-
       setError("Unable to load properties. Please try again later.");
 
       // API failed - no fallback to mock data
@@ -185,7 +184,9 @@ const AllProperty = () => {
           {loading ? (
             <span className="flex items-center">
               <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin" />
-              <span className="text-sm sm:text-base">Loading active properties...</span>
+              <span className="text-sm sm:text-base">
+                Loading active properties...
+              </span>
             </span>
           ) : (
             "Active Properties"
