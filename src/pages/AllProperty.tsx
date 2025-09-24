@@ -70,7 +70,7 @@ interface FilterOptions {
 const AllProperty = () => {
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
   const [pageNumber, setPageNumber] = useState<number>(1);
-  const pageSize = 20; // fetch 20 properties per request
+  const pageSize = 9; // fetch 9 properties per request
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
