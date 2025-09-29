@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import NotificationIcon from "@/components/NotificationIcon";
+import AddBuilderModal from "@/components/AddBuilderModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ import {
   KeyRound,
   LandPlot,
   Store,
+  Hammer,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +31,7 @@ import hy from "../Images/hy1-removebg-preview.png";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showAddBuilderModal, setShowAddBuilderModal] = useState(false);
   const { user, isAuthenticated, logout, openLoginModal, openSignupModal } =
     useAuth();
   const { toast } = useToast();
@@ -74,6 +77,11 @@ export function Navbar() {
     if (location.pathname !== "/post-property") {
       navigate("/post-property");
     }
+    setIsOpen(false);
+  };
+
+  const handleAddBuilderClick = () => {
+    setShowAddBuilderModal(true);
     setIsOpen(false);
   };
 
@@ -140,17 +148,6 @@ export function Navbar() {
                   New Launching
                 </Link>
               )}
-              {/* Builder Project button only for builder role */}
-              {user?.role === "Builder" && (
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/builderpost")}
-                  className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full mr-2"
-                >
-                  <Home className="h-4 w-4 mr-1" />
-                  Builder Project
-                </Button>
-              )}
             </div>
           </div>
 
@@ -176,6 +173,17 @@ export function Navbar() {
                     <PlusCircle className="h-4 w-4 mr-1" />
                     Post Property
                   </Button>
+                  {/* Post Project button only for builder role */}
+                  {user?.role === "Builder" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/builderpost")}
+                      className="flex items-center gap-1 bg-green-600 text-white hover:bg-green-700 rounded-full"
+                    >
+                      <PlusCircle className="h-4 w-4 mr-1" />
+                      Post Project
+                    </Button>
+                  )}
                   <NotificationIcon />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -206,6 +214,20 @@ export function Navbar() {
                           Dashboard
                         </Link>
                       </DropdownMenuItem>
+
+                      {/* Add Builder option for admin users */}
+                      {(user?.role === "Admin" || user?.role === "admin" || user?.userType === "Admin") && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={handleAddBuilderClick}
+                            className="cursor-pointer hover:bg-green-50 flex items-center py-1"
+                          >
+                            <Hammer className="mr-2 h-4 w-4 text-green-500" />
+                            <span className="text-green-600">Add Builder</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
 
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -311,18 +333,29 @@ export function Navbar() {
             {isAuthenticated ? (
               <>
                 {/* Primary Actions */}
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Link
                     to="/post-property"
                     onClick={() => {
                       handlePostPropertyClick();
                       setIsOpen(false);
                     }}
-                    className="flex items-center justify-center p-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-full transition-all shadow-md min-h-[40px] max-w-[220px] mx-auto"
+                    className="flex items-center justify-center p-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-full transition-all shadow-md min-h-[40px]"
                   >
                     <PlusCircle className="w-5 h-5 mr-2" />
-                    <span>Post Your Property</span>
+                    <span>Post Property</span>
                   </Link>
+                  {/* Post Project button for builder role */}
+                  {user?.role === "Builder" && (
+                    <Link
+                      to="/builderpost"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center p-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full transition-all shadow-md min-h-[40px]"
+                    >
+                      <PlusCircle className="w-5 h-5 mr-2" />
+                      <span>Post Project</span>
+                    </Link>
+                  )}
                 </div>
 
                 {/* Secondary Actions */}
@@ -353,15 +386,13 @@ export function Navbar() {
                     Launching
                   </Link>
                 )}
-                {user?.role === "Builder" && (
-                  <Link
-                    to="/builderpost"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                {(user?.role === "Admin" || user?.role === "admin" || user?.userType === "Admin") && (
+                  <button
+                    onClick={handleAddBuilderClick}
+                    className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md w-full text-left"
                   >
-                    <Building className="w-5 h-5 mr-3 text-gray-500" /> Builder
-                    Project
-                  </Link>
+                    <Hammer className="w-5 h-5 mr-3 text-green-500" /> Add Builder
+                  </button>
                 )}
 
                 <div className="flex justify-center py-2 relative">
@@ -400,6 +431,12 @@ export function Navbar() {
           </div>
         </div>
       </div>
+      
+      {/* Add Builder Modal */}
+      <AddBuilderModal
+        isOpen={showAddBuilderModal}
+        onClose={() => setShowAddBuilderModal(false)}
+      />
     </nav>
   );
 }
