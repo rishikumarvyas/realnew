@@ -123,9 +123,9 @@ const commercialAmenityOptions = [
 // Configuration for furnished amenity IDs - easily changeable
 // These IDs are sent in the API request as amenityIds array
 const FURNISHED_AMENITY_IDS = {
-  "Fully": "10", // Fully Furnished - change this ID as needed
-  "Semi": "11",  // Semi Furnished - change this ID as needed
-  "Not": "12"    // Unfurnished - change this ID as needed
+  Fully: "10", // Fully Furnished - change this ID as needed
+  Semi: "11", // Semi Furnished - change this ID as needed
+  Not: "12", // Unfurnished - change this ID as needed
 };
 
 // Only furnished filter - no regular amenity filter needed
@@ -231,7 +231,7 @@ export const PropertyListing = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // SEO configuration
   const type = searchParams.get("type") || "all";
   const city = searchParams.get("city") || "";
@@ -251,7 +251,9 @@ export const PropertyListing = () => {
   const [sortOrder, setSortOrder] = useState<string>("desc");
 
   // Map UI sort option to API sort parameters
-  const getApiSort = (uiSort: string): { apiSortBy: string; apiSortOrder: string } => {
+  const getApiSort = (
+    uiSort: string
+  ): { apiSortBy: string; apiSortOrder: string } => {
     switch (uiSort) {
       case "price-low":
         return { apiSortBy: "price", apiSortOrder: "asc" };
@@ -273,16 +275,18 @@ export const PropertyListing = () => {
 
   // NEW: Track if this is the initial load
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  
+
   // NEW: Track the last property type that was fetched
   const [lastFetchedType, setLastFetchedType] = useState<string>("all");
-  
+
   // NEW: Use state to track the current type to avoid dependency issues
   const [currentType, setCurrentType] = useState<string>("all");
-  
+
   // Use ref to store fetchProperties function to avoid dependency issues
-  const fetchPropertiesRef = useRef<((typeParam: string) => Promise<void>) | null>(null);
-  
+  const fetchPropertiesRef = useRef<
+    ((typeParam: string) => Promise<void>) | null
+  >(null);
+
   // Add flag to prevent multiple API calls
   const isFetchingRef = useRef<boolean>(false);
 
@@ -391,14 +395,11 @@ export const PropertyListing = () => {
 
   // Advanced filter states
   const [availableFrom, setAvailableFrom] = useState<Date | undefined>(
-    undefined,
+    undefined
   );
   const [preferenceIds, setPreferenceIds] = useState<string[]>([]); // Empty array by default
   const [furnished, setFurnished] = useState<string>("any"); // Default to "Any"
   // Removed selectedAmenities - only using furnished filter
-
-
-
 
   // Fetch suggestions from API with debounce
   useEffect(() => {
@@ -406,14 +407,13 @@ export const PropertyListing = () => {
       if (searchTerm.trim().length > 1) {
         axiosInstance
           .get(
-            `/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`,
+            `/api/account/suggestions?term=${encodeURIComponent(searchTerm)}`
           )
           .then((res) => {
             setSuggestions(res.data);
             setShowSuggestions(true);
           })
           .catch((err) => {
-      
             setSuggestions([]);
           });
       } else {
@@ -447,7 +447,6 @@ export const PropertyListing = () => {
     setSearchQuery(suggestion);
   };
 
-
   // Toggle mobile filters
   const toggleMobileFilters = () => {
     setMobileFiltersVisible(!mobileFiltersVisible);
@@ -457,26 +456,27 @@ export const PropertyListing = () => {
   const shouldFetchNewData = (currentType: string) => {
     // Always fetch on initial load
     if (isInitialLoad) return true;
-    
+
     // Fetch if property type changed
     if (currentType !== lastFetchedType) return true;
-    
+
     // Fetch if commercial type changed (for commercial properties)
-    if (currentType === "commercial" && commercialType !== lastFetchedType) return true;
-    
+    if (currentType === "commercial" && commercialType !== lastFetchedType)
+      return true;
+
     return false;
   };
 
-    // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
-  const fetchProperties = useCallback(async (typeParam: string = "all") => {
-    // Prevent multiple simultaneous API calls
-    if (isFetchingRef.current) {
-      return;
-    }
-    
-    
-    isFetchingRef.current = true;
-    setLoading(true);
+  // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
+  const fetchProperties = useCallback(
+    async (typeParam: string = "all") => {
+      // Prevent multiple simultaneous API calls
+      if (isFetchingRef.current) {
+        return;
+      }
+
+      isFetchingRef.current = true;
+      setLoading(true);
       try {
         // Get the current type from parameter only, not from searchParams
         const currentTypeParam = typeParam;
@@ -491,14 +491,19 @@ export const PropertyListing = () => {
           minBalcony: minBalcony || 0, // Use current balcony
           minArea: minArea || 0, // Use current area
           maxArea: maxArea || 0, // Use current max area
-          availableFrom: availableFrom ? availableFrom.toISOString() : undefined, // Send availableFrom to API
+          availableFrom: availableFrom
+            ? availableFrom.toISOString()
+            : undefined, // Send availableFrom to API
           preferenceIds: preferenceIds || [], // Use current preferences
           furnished: furnished || undefined, // Use current furnished status
           // Removed amenities - only using furnished filter
         };
-        
+
         console.log("availableFrom state:", availableFrom);
-        console.log("filterOptions.availableFrom:", filterOptions.availableFrom);
+        console.log(
+          "filterOptions.availableFrom:",
+          filterOptions.availableFrom
+        );
 
         // FIXED: Use current URL type parameter instead of state
         const typeConfig =
@@ -508,530 +513,591 @@ export const PropertyListing = () => {
         let propertyTypeIds = typeConfig.propertyTypeIds || [];
         let propertyFor = typeConfig.propertyFor;
 
-  
-
-      // Special handling for different property types
-      if (currentTypeParam === "plot") {
-        // Plot: Only buy (superCategoryId: 1, propertyType: 4)
-        superCategoryId = 1;
-        propertyTypeIds = [4];
-      } else if (currentTypeParam === "commercial") {
-        // Commercial: Can be both buy and rent (includes shop)
-        superCategoryId = 0; // Don't filter by superCategory to get both
-        propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
-      }
-
-      // Pagination params - Use defaults to avoid searchParams dependency
-      let pageSize = -1;
-      let pageNumber = 0;
-
-      if (currentTypeParam !== "all") {
-        pageSize = 10;
-        pageNumber = 0; // Always start from page 1
-      }
-
-      // Derive API sort parameters from UI state
-      const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
-
-      // Prepare request payload - MODIFIED: Use default values, not URL filter values
-      const requestPayload: any = {
-        superCategoryId,
-        accountId: "string",
-        searchTerm: searchQuery || "", // Ensure searchTerm is always a string
-        minPrice: filterOptions.minPrice, // Use default 0
-        maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
-        bedroom: filterOptions.minBedrooms, // Use default 0
-        bathroom: filterOptions.minBathrooms, // Use default 0
-        balcony: filterOptions.minBalcony, // Use default 0
-        minArea: filterOptions.minArea, // Use default 0
-        maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0, // Only use maxArea if it's set
-        pageNumber,
-        pageSize,
-        // Add sorting parameters
-        SortBy: apiSortBy,
-        SortOrder: apiSortOrder,
-      };
-
-      // Only add propertyTypeIds if it's not empty
-      if (propertyTypeIds.length > 0) {
-        requestPayload.propertyTypeIds = propertyTypeIds;
-      }
-
-      // Only add propertyFor if it's defined
-      if (propertyFor !== undefined) {
-        requestPayload.propertyFor = propertyFor;
-      }
-
-      // Only add optional parameters if they have values
-      if (filterOptions.availableFrom) {
-        requestPayload.availableFrom = filterOptions.availableFrom;
-      }
-      if (filterOptions.preferenceIds && filterOptions.preferenceIds.length > 0) {
-        requestPayload.preferenceIds = filterOptions.preferenceIds.map(id => parseInt(id, 10));
-      }
-      // Add furnished filter to request payload as amenityIds
-      if (filterOptions.furnished && filterOptions.furnished !== "any") {
-        // Use the configurable furnished amenity IDs
-        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
-        if (amenityId) {
-          // Set amenityIds array with the selected furnished amenity ID
-          requestPayload.amenityIds = [amenityId];
-          console.log("Adding furnished as amenityId to request:", amenityId, "for furnished:", filterOptions.furnished);
-          console.log("Current amenityIds array:", requestPayload.amenityIds);
+        // Special handling for different property types
+        if (currentTypeParam === "plot") {
+          // Plot: Only buy (superCategoryId: 1, propertyType: 4)
+          superCategoryId = 1;
+          propertyTypeIds = [4];
+        } else if (currentTypeParam === "commercial") {
+          // Commercial: Can be both buy and rent (includes shop)
+          superCategoryId = 0; // Don't filter by superCategory to get both
+          propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
         }
-      } else {
-        // If furnished is "any", don't send amenityIds (show all properties)
-        delete requestPayload.amenityIds;
-      }
-      // Removed regular amenities - only furnished filter uses amenityIds
 
+        // Pagination params - Use defaults to avoid searchParams dependency
+        let pageSize = -1;
+        let pageNumber = 0;
 
-      
-      
+        if (currentTypeParam !== "all") {
+          pageSize = 10;
+          pageNumber = 0; // Always start from page 1
+        }
 
-      const response = await axiosInstance.post<ApiResponse>(
-        "/api/Account/GetProperty",
-        requestPayload,
-      );
-      
+        // Derive API sort parameters from UI state
+        const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
 
-      // Check if we have properties in the response
-      if (
-        !response.data.propertyInfo ||
-        response.data.propertyInfo.length === 0
-      ) {
+        // Prepare request payload - MODIFIED: Use default values, not URL filter values
+        const requestPayload: any = {
+          superCategoryId,
+          accountId: "string",
+          searchTerm: searchQuery || "", // Ensure searchTerm is always a string
+          minPrice: filterOptions.minPrice, // Use default 0
+          maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
+          bedroom: filterOptions.minBedrooms, // Use default 0
+          bathroom: filterOptions.minBathrooms, // Use default 0
+          balcony: filterOptions.minBalcony, // Use default 0
+          minArea: filterOptions.minArea, // Use default 0
+          maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0, // Only use maxArea if it's set
+          pageNumber,
+          pageSize,
+          // Add sorting parameters
+          SortBy: apiSortBy,
+          SortOrder: apiSortOrder,
+        };
+
+        // Only add propertyTypeIds if it's not empty
+        if (propertyTypeIds.length > 0) {
+          requestPayload.propertyTypeIds = propertyTypeIds;
+        }
+
+        // Only add propertyFor if it's defined
+        if (propertyFor !== undefined) {
+          requestPayload.propertyFor = propertyFor;
+        }
+
+        // Only add optional parameters if they have values
+        if (filterOptions.availableFrom) {
+          requestPayload.availableFrom = filterOptions.availableFrom;
+        }
+        if (
+          filterOptions.preferenceIds &&
+          filterOptions.preferenceIds.length > 0
+        ) {
+          requestPayload.preferenceIds = filterOptions.preferenceIds.map((id) =>
+            parseInt(id, 10)
+          );
+        }
+        // Add furnished filter to request payload as amenityIds
+        if (filterOptions.furnished && filterOptions.furnished !== "any") {
+          // Use the configurable furnished amenity IDs
+          const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+          if (amenityId) {
+            // Set amenityIds array with the selected furnished amenity ID
+            requestPayload.amenityIds = [amenityId];
+            console.log(
+              "Adding furnished as amenityId to request:",
+              amenityId,
+              "for furnished:",
+              filterOptions.furnished
+            );
+            console.log("Current amenityIds array:", requestPayload.amenityIds);
+          }
+        } else {
+          // If furnished is "any", don't send amenityIds (show all properties)
+          delete requestPayload.amenityIds;
+        }
+        // Removed regular amenities - only furnished filter uses amenityIds
+
+        const response = await axiosInstance.post<ApiResponse>(
+          "/api/Account/GetProperty",
+          requestPayload
+        );
+
+        // Check if we have properties in the response
+        if (
+          !response.data.propertyInfo ||
+          response.data.propertyInfo.length === 0
+        ) {
+          setProperties([]);
+          setFilteredProperties([]);
+          return;
+        }
+
+        // Transform API data with proper type mapping - Updated to merge shop/commercial
+        const transformedData = response.data.propertyInfo.map(
+          (prop): PropertyCardProps => {
+            let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
+
+            const superCategoryLower = prop.superCategory?.toLowerCase() || "";
+            const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
+
+            // Map based on API requirements - Updated logic
+            if (
+              prop.propertyType === "4" ||
+              propertyTypeLower.includes("plot")
+            ) {
+              type = "plot";
+            } else if (
+              prop.propertyType === "2" ||
+              prop.propertyType === "7" ||
+              propertyTypeLower.includes("shop") ||
+              propertyTypeLower.includes("commercial")
+            ) {
+              type = "commercial";
+            } else if (
+              superCategoryLower.includes("rent") ||
+              prop.superCategory === "2"
+            ) {
+              type = "rent";
+            } else if (
+              superCategoryLower.includes("sell") ||
+              superCategoryLower.includes("buy") ||
+              prop.superCategory === "1"
+            ) {
+              type = "buy";
+            }
+
+            return {
+              id: prop.propertyId,
+              title: prop.title,
+              price: prop.price,
+              location: prop.city,
+              type: type,
+              bedrooms: prop.bedroom,
+              bathrooms: prop.bathroom,
+              balcony: prop.balcony,
+              area: prop.area,
+              image:
+                prop.mainImageUrl ||
+                "https://via.placeholder.com/400x300?text=No+Image",
+              availableFrom: prop.availableFrom,
+              preferenceId: prop.preferenceId,
+              preferenceIds: prop.preferenceIds,
+              // Removed amenities - only using furnished filter
+              furnished: prop.furnished,
+              likeCount: prop.likeCount || 0,
+              isLike: prop.isLike ?? false,
+              propertyType: prop.propertyType,
+              status: prop.superCategory,
+            };
+          }
+        );
+
+        setProperties(transformedData);
+      } catch (err) {
+        // Handle 404 error specifically
+        if (err.response?.status === 404) {
+          setError(
+            "No properties found with the current filters. Try adjusting your search criteria."
+          );
+        } else {
+          setError("Unable to load properties. Please try again later.");
+        }
+
+        // Set empty arrays to show no properties
         setProperties([]);
         setFilteredProperties([]);
-        return;
+      } finally {
+        setLoading(false);
+        isFetchingRef.current = false;
       }
-
-      // Transform API data with proper type mapping - Updated to merge shop/commercial
-      const transformedData = response.data.propertyInfo.map(
-        (prop): PropertyCardProps => {
-          let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
-
-          const superCategoryLower = prop.superCategory?.toLowerCase() || "";
-          const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
-
-          // Map based on API requirements - Updated logic
-          if (prop.propertyType === "4" || propertyTypeLower.includes("plot")) {
-            type = "plot";
-          } else if (
-            prop.propertyType === "2" ||
-            prop.propertyType === "7" ||
-            propertyTypeLower.includes("shop") ||
-            propertyTypeLower.includes("commercial")
-          ) {
-            type = "commercial";
-          } else if (
-            superCategoryLower.includes("rent") ||
-            prop.superCategory === "2"
-          ) {
-            type = "rent";
-          } else if (
-            superCategoryLower.includes("sell") ||
-            superCategoryLower.includes("buy") ||
-            prop.superCategory === "1"
-          ) {
-            type = "buy";
-          }
-
-          return {
-            id: prop.propertyId,
-            title: prop.title,
-            price: prop.price,
-            location: prop.city,
-            type: type,
-            bedrooms: prop.bedroom,
-            bathrooms: prop.bathroom,
-            balcony: prop.balcony,
-            area: prop.area,
-            image:
-              prop.mainImageUrl ||
-              "https://via.placeholder.com/400x300?text=No+Image",
-            availableFrom: prop.availableFrom,
-            preferenceId: prop.preferenceId,
-            preferenceIds: prop.preferenceIds,
-             // Removed amenities - only using furnished filter
-            furnished: prop.furnished,
-            likeCount: prop.likeCount || 0,
-            isLike: prop.isLike ?? false,
-            propertyType: prop.propertyType,
-            status: prop.superCategory,
-          };
-        },
-      );
-
-      setProperties(transformedData);
-
-    } catch (err) {
-      
-
-      
-      // Handle 404 error specifically
-      if (err.response?.status === 404) {
-
-        setError("No properties found with the current filters. Try adjusting your search criteria.");
-      } else {
-        setError("Unable to load properties. Please try again later.");
-      }
-      
-      
-
-      // Set empty arrays to show no properties
-      setProperties([]);
-      setFilteredProperties([]);
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, [sortBy]); // Depend on sortBy so API receives latest SortBy/SortOrder
+    },
+    [sortBy]
+  ); // Depend on sortBy so API receives latest SortBy/SortOrder
 
   // Store fetchProperties in ref to avoid dependency issues
   fetchPropertiesRef.current = fetchProperties;
 
   // Create a version of fetchProperties that accepts furnished as parameter
-  const fetchPropertiesWithFurnished = useCallback(async (typeParam: string, furnishedParam: string) => {
-    // Set loading state for this specific call
-    setLoading(true);
-    
-    try {
-      // Get the current type from parameter only, not from searchParams
-      const currentTypeParam = typeParam;
-      
-      // Build filter options with the provided furnished value
-      const filterOptions = {
-        searchTerm: searchQuery || "",
-        minPrice: priceRange[0] || 0,
-        maxPrice: priceRange[1] > 0 ? priceRange[1] : 0,
-        minBedrooms: minBedrooms || 0,
-        minBathrooms: minBathrooms || 0,
-        minBalcony: minBalcony || 0,
-        minArea: minArea || 0,
-        maxArea: maxArea || 0,
-        availableFrom: availableFrom ? availableFrom.toISOString() : undefined,
-        preferenceIds: preferenceIds,
-        furnished: furnishedParam, // Use the provided furnished value
-      };
+  const fetchPropertiesWithFurnished = useCallback(
+    async (typeParam: string, furnishedParam: string) => {
+      // Set loading state for this specific call
+      setLoading(true);
 
-      // FIXED: Use current URL type parameter instead of state
-      const typeConfig =
-        propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+      try {
+        // Get the current type from parameter only, not from searchParams
+        const currentTypeParam = typeParam;
 
-      let superCategoryId = typeConfig.superCategoryId;
-      let propertyTypeIds = typeConfig.propertyTypeIds || [];
-      let propertyFor = typeConfig.propertyFor;
+        // Build filter options with the provided furnished value
+        const filterOptions = {
+          searchTerm: searchQuery || "",
+          minPrice: priceRange[0] || 0,
+          maxPrice: priceRange[1] > 0 ? priceRange[1] : 0,
+          minBedrooms: minBedrooms || 0,
+          minBathrooms: minBathrooms || 0,
+          minBalcony: minBalcony || 0,
+          minArea: minArea || 0,
+          maxArea: maxArea || 0,
+          availableFrom: availableFrom
+            ? availableFrom.toISOString()
+            : undefined,
+          preferenceIds: preferenceIds,
+          furnished: furnishedParam, // Use the provided furnished value
+        };
 
-      // Special handling for different property types
-      if (currentTypeParam === "plot") {
-        // Plot: Only buy (superCategoryId: 1, propertyType: 4)
-        superCategoryId = 1;
-        propertyTypeIds = [4];
-      } else if (currentTypeParam === "commercial") {
-        // Commercial: Can be both buy and rent (includes shop)
-        superCategoryId = 0; // Don't filter by superCategory to get both
-        propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
-      }
+        // FIXED: Use current URL type parameter instead of state
+        const typeConfig =
+          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
 
-      // Pagination params - Use defaults to avoid searchParams dependency
-      const pageNumber = 1;
-      const pageSize = -1;
+        let superCategoryId = typeConfig.superCategoryId;
+        let propertyTypeIds = typeConfig.propertyTypeIds || [];
+        let propertyFor = typeConfig.propertyFor;
 
-      // Build request payload
-      const requestPayload: any = {
-        superCategoryId: superCategoryId,
-        propertyTypeIds: propertyTypeIds,
-        accountId: "string",
-        searchTerm: filterOptions.searchTerm,
-        StatusId: 2,
-        minPrice: filterOptions.minPrice,
-        maxPrice: filterOptions.maxPrice,
-        bedroom: filterOptions.minBedrooms,
-        bathroom: filterOptions.minBathrooms,
-        balcony: filterOptions.minBalcony,
-        minArea: filterOptions.minArea,
-        maxArea: filterOptions.maxArea,
-        pageNumber: pageNumber,
-        pageSize: pageSize,
-        SortBy: sortBy,
-        SortOrder: sortOrder,
-      };
-
-      // Add availableFrom if provided
-      if (filterOptions.availableFrom) {
-        requestPayload.availableFrom = filterOptions.availableFrom;
-      }
-      if (filterOptions.preferenceIds && filterOptions.preferenceIds.length > 0) {
-        requestPayload.preferenceIds = filterOptions.preferenceIds.map(id => parseInt(id, 10));
-      }
-      
-      // Add furnished filter to request payload as amenityIds
-      if (filterOptions.furnished && filterOptions.furnished !== "any") {
-        // Use the configurable furnished amenity IDs
-        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
-        if (amenityId) {
-          // Set amenityIds array with the selected furnished amenity ID
-          requestPayload.amenityIds = [amenityId];
+        // Special handling for different property types
+        if (currentTypeParam === "plot") {
+          // Plot: Only buy (superCategoryId: 1, propertyType: 4)
+          superCategoryId = 1;
+          propertyTypeIds = [4];
+        } else if (currentTypeParam === "commercial") {
+          // Commercial: Can be both buy and rent (includes shop)
+          superCategoryId = 0; // Don't filter by superCategory to get both
+          propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
         }
-      } else {
-        // If furnished is "any", don't send amenityIds (show all properties)
-        delete requestPayload.amenityIds;
-      }
 
-      const response = await axiosInstance.post<ApiResponse>(
-        "/api/Account/GetProperty",
-        requestPayload,
-      );
+        // Pagination params - Use defaults to avoid searchParams dependency
+        const pageNumber = 1;
+        const pageSize = -1;
 
-      // Transform the data to match PropertyCardProps interface
-      const transformedData: PropertyCardProps[] = response.data.propertyInfo.map((prop) => ({
-        id: prop.propertyId,
-        title: prop.title,
-        price: prop.price,
-        location: prop.city,
-        image: prop.mainImageUrl,
-        type: prop.superCategory.toLowerCase(),
-        propertyType: prop.propertyType,
-        area: prop.area,
-        bedrooms: prop.bedroom,
-        bathrooms: prop.bathroom,
-        balcony: prop.balcony,
-        availableFrom: prop.availableFrom,
-        preferenceId: prop.preferenceId,
-        preferenceIds: prop.preferenceIds,
-        amenities: prop.amenities || prop.amenityIds,
-        furnished: prop.furnished,
-        isLike: false,
-        likeCount: prop.likeCount || 0,
-      }));
+        // Build request payload
+        const requestPayload: any = {
+          superCategoryId: superCategoryId,
+          propertyTypeIds: propertyTypeIds,
+          accountId: "string",
+          searchTerm: filterOptions.searchTerm,
+          StatusId: 2,
+          minPrice: filterOptions.minPrice,
+          maxPrice: filterOptions.maxPrice,
+          bedroom: filterOptions.minBedrooms,
+          bathroom: filterOptions.minBathrooms,
+          balcony: filterOptions.minBalcony,
+          minArea: filterOptions.minArea,
+          maxArea: filterOptions.maxArea,
+          pageNumber: pageNumber,
+          pageSize: pageSize,
+          SortBy: sortBy,
+          SortOrder: sortOrder,
+        };
 
-      setProperties(transformedData);
-      setFilteredProperties(transformedData);
-    } catch (error) {
-      console.error("Error fetching properties:", error);
-      setError("Failed to fetch properties");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery, availableFrom, preferenceIds, sortBy, sortOrder]);
-
-  // Create a version of fetchProperties that accepts availableFrom as parameter
-  const fetchPropertiesWithDate = useCallback(async (typeParam: string, dateParam: Date) => {
-    // Set loading state for this specific call
-    setLoading(true);
-    
-    try {
-      // Get the current type from parameter only, not from searchParams
-      const currentTypeParam = typeParam;
-
-      // Use current filter state values for API call, but override availableFrom with the passed date
-      const filterOptions: FilterOptions = {
-        searchTerm: searchQuery || "", // Use current search query
-        minPrice: priceRange[0] || 0, // Use current price range
-        maxPrice: priceRange[1] > 0 ? priceRange[1] : 0, // Only use maxPrice if it's set (not default)
-        minBedrooms: minBedrooms || 0, // Use current bedrooms
-        minBathrooms: minBathrooms || 0, // Use current bathrooms
-        minBalcony: minBalcony || 0, // Use current balcony
-        minArea: minArea || 0, // Use current area
-        maxArea: maxArea || 0, // Use current max area
-        availableFrom: dateParam ? dateParam.toISOString() : undefined, // Use the passed date parameter
-        preferenceIds: preferenceIds || [], // Use current preferences
-        furnished: furnished || undefined, // Use current furnished status
-         // Removed amenities - only using furnished filter
-      };
-      
-
-      // FIXED: Use current URL type parameter instead of state
-      const typeConfig =
-        propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
-
-      let superCategoryId = typeConfig.superCategoryId;
-      let propertyTypeIds = typeConfig.propertyTypeIds || [];
-      let propertyFor = typeConfig.propertyFor;
-
-      // Special handling for different property types
-      if (currentTypeParam === "plot") {
-        // Plot: Only buy (superCategoryId: 1, propertyType: 4)
-        superCategoryId = 1;
-        propertyTypeIds = [4];
-      } else if (currentTypeParam === "commercial") {
-        // Commercial: Can be both buy and rent (includes shop)
-        superCategoryId = 0; // Don't filter by superCategory to get both
-        propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
-      }
-
-      // Pagination params - Use defaults to avoid searchParams dependency
-      let pageSize = -1;
-      let pageNumber = 0;
-
-      if (currentTypeParam !== "all") {
-        pageSize = 10;
-        pageNumber = 0; // Always start from page 1
-      }
-
-      // Derive API sort parameters from UI state
-      const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
-
-      // Prepare request payload - MODIFIED: Use default values, not URL filter values
-      const requestPayload: any = {
-        superCategoryId,
-        accountId: "string",
-        searchTerm: searchQuery || "", // Ensure searchTerm is always a string
-        minPrice: filterOptions.minPrice, // Use default 0
-        maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
-        bedroom: filterOptions.minBedrooms, // Use default 0
-        bathroom: filterOptions.minBathrooms, // Use default 0
-        balcony: filterOptions.minBalcony, // Use default 0
-        minArea: filterOptions.minArea, // Use default 0
-        maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0, // Only use maxArea if it's set
-        pageNumber,
-        pageSize,
-        // Add sorting parameters
-        SortBy: apiSortBy,
-        SortOrder: apiSortOrder,
-      };
-
-      // Only add propertyTypeIds if it's not empty
-      if (propertyTypeIds.length > 0) {
-        requestPayload.propertyTypeIds = propertyTypeIds;
-      }
-
-      // Only add propertyFor if it's defined
-      if (propertyFor !== undefined) {
-        requestPayload.propertyFor = propertyFor;
-      }
-
-      // Only add optional parameters if they have values
-      if (filterOptions.availableFrom) {
-        requestPayload.availableFrom = filterOptions.availableFrom;
-      }
-      if (filterOptions.preferenceIds && filterOptions.preferenceIds.length > 0) {
-        requestPayload.preferenceIds = filterOptions.preferenceIds.map(id => parseInt(id, 10));
-      }
-      // Add furnished filter to request payload as amenityIds
-      if (filterOptions.furnished && filterOptions.furnished !== "any") {
-        // Use the configurable furnished amenity IDs
-        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
-        if (amenityId) {
-          // Set amenityIds array with the selected furnished amenity ID
-          requestPayload.amenityIds = [amenityId];
-          console.log("Adding furnished as amenityId to request:", amenityId, "for furnished:", filterOptions.furnished);
-          console.log("Current amenityIds array:", requestPayload.amenityIds);
+        // Add availableFrom if provided
+        if (filterOptions.availableFrom) {
+          requestPayload.availableFrom = filterOptions.availableFrom;
         }
-      } else {
-        // If furnished is "any", don't send amenityIds (show all properties)
-        delete requestPayload.amenityIds;
-      }
-      // Removed regular amenities - only furnished filter uses amenityIds
-
-      
-      const response = await axiosInstance.post<ApiResponse>(
-        "/api/Account/GetProperty",
-        requestPayload,
-      );
-      
-      // Debug: Log preferenceId and amenities data from API response
-      if (response.data.propertyInfo && response.data.propertyInfo.length > 0) {
-        console.log("fetchPropertiesWithDate - API Response - Properties with preferenceId and amenities data:");
-        response.data.propertyInfo.forEach((property: any, index: number) => {
-          console.log(`Property ${index + 1}: ${property.title} - preferenceId: ${property.preferenceId}, preferenceIds: ${property.preferenceIds}, amenities: ${property.amenities}, amenityIds: ${property.amenityIds}`);
-          console.log(`Property ${index + 1} full object:`, property);
-        });
-        
-        // Debug: Check if API is filtering correctly for furnished
-        if (requestPayload.amenityIds && requestPayload.amenityIds.includes("10")) {
-          console.log("🔍 FURNISHED FILTER DEBUG (fetchPropertiesWithDate):");
-          console.log("Requested amenityIds:", requestPayload.amenityIds);
-          console.log("Expected: Only fully furnished properties (amenity ID 10)");
-          console.log("Actual properties returned:", response.data.propertyInfo.length);
-          console.log("This means the API is correctly filtering based on furnished status!");
+        if (
+          filterOptions.preferenceIds &&
+          filterOptions.preferenceIds.length > 0
+        ) {
+          requestPayload.preferenceIds = filterOptions.preferenceIds.map((id) =>
+            parseInt(id, 10)
+          );
         }
-      }
 
-      // Check if we have properties in the response
-      if (
-        !response.data.propertyInfo ||
-        response.data.propertyInfo.length === 0
-      ) {
-        setProperties([]);
-        setFilteredProperties([]);
-        return;
-      }
-
-      // Transform API data with proper type mapping - Updated to merge shop/commercial
-      const transformedData = response.data.propertyInfo.map(
-        (prop): PropertyCardProps => {
-          let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
-
-          const superCategoryLower = prop.superCategory?.toLowerCase() || "";
-          const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
-
-          // Map based on API requirements - Updated logic
-          if (prop.propertyType === "4" || propertyTypeLower.includes("plot")) {
-            type = "plot";
-          } else if (
-            prop.propertyType === "2" ||
-            prop.propertyType === "7" ||
-            propertyTypeLower.includes("shop") ||
-            propertyTypeLower.includes("commercial")
-          ) {
-            type = "commercial";
-          } else if (
-            superCategoryLower.includes("rent") ||
-            prop.superCategory === "2"
-          ) {
-            type = "rent";
-          } else if (
-            superCategoryLower.includes("sell") ||
-            superCategoryLower.includes("buy") ||
-            prop.superCategory === "1"
-          ) {
-            type = "buy";
+        // Add furnished filter to request payload as amenityIds
+        if (filterOptions.furnished && filterOptions.furnished !== "any") {
+          // Use the configurable furnished amenity IDs
+          const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+          if (amenityId) {
+            // Set amenityIds array with the selected furnished amenity ID
+            requestPayload.amenityIds = [amenityId];
           }
+        } else {
+          // If furnished is "any", don't send amenityIds (show all properties)
+          delete requestPayload.amenityIds;
+        }
 
-          return {
+        const response = await axiosInstance.post<ApiResponse>(
+          "/api/Account/GetProperty",
+          requestPayload
+        );
+
+        // Transform the data to match PropertyCardProps interface
+        const transformedData: PropertyCardProps[] =
+          response.data.propertyInfo.map((prop) => ({
             id: prop.propertyId,
             title: prop.title,
             price: prop.price,
             location: prop.city,
-            type: type,
+            image: prop.mainImageUrl,
+            type: prop.superCategory.toLowerCase(),
+            propertyType: prop.propertyType,
+            area: prop.area,
             bedrooms: prop.bedroom,
             bathrooms: prop.bathroom,
             balcony: prop.balcony,
-            area: prop.area,
-            image:
-              prop.mainImageUrl ||
-              "https://via.placeholder.com/400x300?text=No+Image",
             availableFrom: prop.availableFrom,
             preferenceId: prop.preferenceId,
             preferenceIds: prop.preferenceIds,
-             // Removed amenities - only using furnished filter
+            amenities: prop.amenities || prop.amenityIds,
             furnished: prop.furnished,
+            isLike: false,
             likeCount: prop.likeCount || 0,
-            isLike: prop.isLike ?? false,
-            propertyType: prop.propertyType,
-            status: prop.superCategory,
-          };
-        },
-      );
+          }));
 
-      setProperties(transformedData);
-
-    } catch (err) {
-      // Handle 404 error specifically
-      if (err.response?.status === 404) {
-        setError("No properties found with the current filters. Try adjusting your search criteria.");
-      } else {
-        setError("Unable to load properties. Please try again later.");
+        setProperties(transformedData);
+        setFilteredProperties(transformedData);
+      } catch (error) {
+        console.error("Error fetching properties:", error);
+        setError("Failed to fetch properties");
+      } finally {
+        setLoading(false);
       }
+    },
+    [searchQuery, availableFrom, preferenceIds, sortBy, sortOrder]
+  );
 
-      // Set empty arrays to show no properties
-      setProperties([]);
-      setFilteredProperties([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery, priceRange, minBedrooms, minBathrooms, minBalcony, minArea, maxArea, preferenceIds, furnished, sortBy]);
+  // Create a version of fetchProperties that accepts availableFrom as parameter
+  const fetchPropertiesWithDate = useCallback(
+    async (typeParam: string, dateParam: Date) => {
+      // Set loading state for this specific call
+      setLoading(true);
+
+      try {
+        // Get the current type from parameter only, not from searchParams
+        const currentTypeParam = typeParam;
+
+        // Use current filter state values for API call, but override availableFrom with the passed date
+        const filterOptions: FilterOptions = {
+          searchTerm: searchQuery || "", // Use current search query
+          minPrice: priceRange[0] || 0, // Use current price range
+          maxPrice: priceRange[1] > 0 ? priceRange[1] : 0, // Only use maxPrice if it's set (not default)
+          minBedrooms: minBedrooms || 0, // Use current bedrooms
+          minBathrooms: minBathrooms || 0, // Use current bathrooms
+          minBalcony: minBalcony || 0, // Use current balcony
+          minArea: minArea || 0, // Use current area
+          maxArea: maxArea || 0, // Use current max area
+          availableFrom: dateParam ? dateParam.toISOString() : undefined, // Use the passed date parameter
+          preferenceIds: preferenceIds || [], // Use current preferences
+          furnished: furnished || undefined, // Use current furnished status
+          // Removed amenities - only using furnished filter
+        };
+
+        // FIXED: Use current URL type parameter instead of state
+        const typeConfig =
+          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+
+        let superCategoryId = typeConfig.superCategoryId;
+        let propertyTypeIds = typeConfig.propertyTypeIds || [];
+        let propertyFor = typeConfig.propertyFor;
+
+        // Special handling for different property types
+        if (currentTypeParam === "plot") {
+          // Plot: Only buy (superCategoryId: 1, propertyType: 4)
+          superCategoryId = 1;
+          propertyTypeIds = [4];
+        } else if (currentTypeParam === "commercial") {
+          // Commercial: Can be both buy and rent (includes shop)
+          superCategoryId = 0; // Don't filter by superCategory to get both
+          propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
+        }
+
+        // Pagination params - Use defaults to avoid searchParams dependency
+        let pageSize = -1;
+        let pageNumber = 0;
+
+        if (currentTypeParam !== "all") {
+          pageSize = 10;
+          pageNumber = 0; // Always start from page 1
+        }
+
+        // Derive API sort parameters from UI state
+        const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
+
+        // Prepare request payload - MODIFIED: Use default values, not URL filter values
+        const requestPayload: any = {
+          superCategoryId,
+          accountId: "string",
+          searchTerm: searchQuery || "", // Ensure searchTerm is always a string
+          minPrice: filterOptions.minPrice, // Use default 0
+          maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
+          bedroom: filterOptions.minBedrooms, // Use default 0
+          bathroom: filterOptions.minBathrooms, // Use default 0
+          balcony: filterOptions.minBalcony, // Use default 0
+          minArea: filterOptions.minArea, // Use default 0
+          maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0, // Only use maxArea if it's set
+          pageNumber,
+          pageSize,
+          // Add sorting parameters
+          SortBy: apiSortBy,
+          SortOrder: apiSortOrder,
+        };
+
+        // Only add propertyTypeIds if it's not empty
+        if (propertyTypeIds.length > 0) {
+          requestPayload.propertyTypeIds = propertyTypeIds;
+        }
+
+        // Only add propertyFor if it's defined
+        if (propertyFor !== undefined) {
+          requestPayload.propertyFor = propertyFor;
+        }
+
+        // Only add optional parameters if they have values
+        if (filterOptions.availableFrom) {
+          requestPayload.availableFrom = filterOptions.availableFrom;
+        }
+        if (
+          filterOptions.preferenceIds &&
+          filterOptions.preferenceIds.length > 0
+        ) {
+          requestPayload.preferenceIds = filterOptions.preferenceIds.map((id) =>
+            parseInt(id, 10)
+          );
+        }
+        // Add furnished filter to request payload as amenityIds
+        if (filterOptions.furnished && filterOptions.furnished !== "any") {
+          // Use the configurable furnished amenity IDs
+          const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+          if (amenityId) {
+            // Set amenityIds array with the selected furnished amenity ID
+            requestPayload.amenityIds = [amenityId];
+            console.log(
+              "Adding furnished as amenityId to request:",
+              amenityId,
+              "for furnished:",
+              filterOptions.furnished
+            );
+            console.log("Current amenityIds array:", requestPayload.amenityIds);
+          }
+        } else {
+          // If furnished is "any", don't send amenityIds (show all properties)
+          delete requestPayload.amenityIds;
+        }
+        // Removed regular amenities - only furnished filter uses amenityIds
+
+        const response = await axiosInstance.post<ApiResponse>(
+          "/api/Account/GetProperty",
+          requestPayload
+        );
+
+        // Debug: Log preferenceId and amenities data from API response
+        if (
+          response.data.propertyInfo &&
+          response.data.propertyInfo.length > 0
+        ) {
+          console.log(
+            "fetchPropertiesWithDate - API Response - Properties with preferenceId and amenities data:"
+          );
+          response.data.propertyInfo.forEach((property: any, index: number) => {
+            console.log(
+              `Property ${index + 1}: ${property.title} - preferenceId: ${
+                property.preferenceId
+              }, preferenceIds: ${property.preferenceIds}, amenities: ${
+                property.amenities
+              }, amenityIds: ${property.amenityIds}`
+            );
+            console.log(`Property ${index + 1} full object:`, property);
+          });
+
+          // Debug: Check if API is filtering correctly for furnished
+          if (
+            requestPayload.amenityIds &&
+            requestPayload.amenityIds.includes("10")
+          ) {
+            console.log("🔍 FURNISHED FILTER DEBUG (fetchPropertiesWithDate):");
+            console.log("Requested amenityIds:", requestPayload.amenityIds);
+            console.log(
+              "Expected: Only fully furnished properties (amenity ID 10)"
+            );
+            console.log(
+              "Actual properties returned:",
+              response.data.propertyInfo.length
+            );
+            console.log(
+              "This means the API is correctly filtering based on furnished status!"
+            );
+          }
+        }
+
+        // Check if we have properties in the response
+        if (
+          !response.data.propertyInfo ||
+          response.data.propertyInfo.length === 0
+        ) {
+          setProperties([]);
+          setFilteredProperties([]);
+          return;
+        }
+
+        // Transform API data with proper type mapping - Updated to merge shop/commercial
+        const transformedData = response.data.propertyInfo.map(
+          (prop): PropertyCardProps => {
+            let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
+
+            const superCategoryLower = prop.superCategory?.toLowerCase() || "";
+            const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
+
+            // Map based on API requirements - Updated logic
+            if (
+              prop.propertyType === "4" ||
+              propertyTypeLower.includes("plot")
+            ) {
+              type = "plot";
+            } else if (
+              prop.propertyType === "2" ||
+              prop.propertyType === "7" ||
+              propertyTypeLower.includes("shop") ||
+              propertyTypeLower.includes("commercial")
+            ) {
+              type = "commercial";
+            } else if (
+              superCategoryLower.includes("rent") ||
+              prop.superCategory === "2"
+            ) {
+              type = "rent";
+            } else if (
+              superCategoryLower.includes("sell") ||
+              superCategoryLower.includes("buy") ||
+              prop.superCategory === "1"
+            ) {
+              type = "buy";
+            }
+
+            return {
+              id: prop.propertyId,
+              title: prop.title,
+              price: prop.price,
+              location: prop.city,
+              type: type,
+              bedrooms: prop.bedroom,
+              bathrooms: prop.bathroom,
+              balcony: prop.balcony,
+              area: prop.area,
+              image:
+                prop.mainImageUrl ||
+                "https://via.placeholder.com/400x300?text=No+Image",
+              availableFrom: prop.availableFrom,
+              preferenceId: prop.preferenceId,
+              preferenceIds: prop.preferenceIds,
+              // Removed amenities - only using furnished filter
+              furnished: prop.furnished,
+              likeCount: prop.likeCount || 0,
+              isLike: prop.isLike ?? false,
+              propertyType: prop.propertyType,
+              status: prop.superCategory,
+            };
+          }
+        );
+
+        setProperties(transformedData);
+      } catch (err) {
+        // Handle 404 error specifically
+        if (err.response?.status === 404) {
+          setError(
+            "No properties found with the current filters. Try adjusting your search criteria."
+          );
+        } else {
+          setError("Unable to load properties. Please try again later.");
+        }
+
+        // Set empty arrays to show no properties
+        setProperties([]);
+        setFilteredProperties([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      searchQuery,
+      priceRange,
+      minBedrooms,
+      minBathrooms,
+      minBalcony,
+      minArea,
+      maxArea,
+      preferenceIds,
+      furnished,
+      sortBy,
+    ]
+  );
 
   // Handle retry button click
   const handleRetry = useCallback(() => {
@@ -1044,11 +1110,11 @@ export const PropertyListing = () => {
   // Ensure initial data fetch and subsequent fetches on type changes
   useEffect(() => {
     const typeParam = searchParams.get("type") || "all";
-    
+
     // Sync tab with URL and reset filters when type changes from external navigation
     if (typeParam !== activeTab) {
       setActiveTab(typeParam);
-      
+
       // Reset all filters when tab changes from external navigation (navbar)
       setSearchQuery("");
       setSearchTerm("");
@@ -1065,7 +1131,7 @@ export const PropertyListing = () => {
       setFurnished("any");
       setSortBy("newest");
       setSortOrder("desc");
-      
+
       // Reset commercial type when switching away from commercial tab
       if (typeParam !== "commercial") {
         setCommercialType("buy");
@@ -1077,7 +1143,7 @@ export const PropertyListing = () => {
       fetchPropertiesRef.current(typeParam);
       setLastFetchedType(typeParam);
       setCurrentType(typeParam);
-        setIsInitialLoad(false);
+      setIsInitialLoad(false);
       return;
     }
 
@@ -1093,12 +1159,19 @@ export const PropertyListing = () => {
 
   // Handle commercialType URL parameter changes from external navigation
   useEffect(() => {
-    const urlCommercialType = searchParams.get("commercialType") as "buy" | "rent" | null;
-    
+    const urlCommercialType = searchParams.get("commercialType") as
+      | "buy"
+      | "rent"
+      | null;
+
     // Only handle commercial type changes when we're on the commercial tab
-    if (activeTab === "commercial" && urlCommercialType && urlCommercialType !== commercialType) {
+    if (
+      activeTab === "commercial" &&
+      urlCommercialType &&
+      urlCommercialType !== commercialType
+    ) {
       setCommercialType(urlCommercialType);
-      
+
       // Reset all filters when commercial type changes from external navigation
       setSearchQuery("");
       setSearchTerm("");
@@ -1126,7 +1199,7 @@ export const PropertyListing = () => {
       setSearchQuery(urlSearch);
       setSearchTerm(urlSearch);
       setCurrentPage(1);
-      
+
       // Trigger a new API call when search parameter changes from external sources
       if (fetchPropertiesRef.current) {
         fetchPropertiesRef.current(currentType);
@@ -1156,7 +1229,7 @@ export const PropertyListing = () => {
           (prop) =>
             prop.type === "plot" ||
             prop.propertyType === "4" ||
-            (prop.propertyType?.toLowerCase() || "").includes("plot"),
+            (prop.propertyType?.toLowerCase() || "").includes("plot")
         );
       } else if (currentTypeParam === "commercial") {
         filtered = filtered.filter(
@@ -1165,224 +1238,279 @@ export const PropertyListing = () => {
             prop.propertyType === "2" ||
             prop.propertyType === "7" ||
             (prop.propertyType?.toLowerCase() || "").includes("commercial") ||
-            (prop.propertyType?.toLowerCase() || "").includes("shop"),
+            (prop.propertyType?.toLowerCase() || "").includes("shop")
         );
       } else if (currentTypeParam !== "all") {
         filtered = filtered.filter(
-          (property) => property.type === currentTypeParam,
+          (property) => property.type === currentTypeParam
         );
       }
 
       // Apply search filter
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase().trim();
-        filtered = filtered.filter(
-          (property) => {
-            const titleMatch = property.title.toLowerCase().includes(searchLower);
-            const locationMatch = property.location.toLowerCase().includes(searchLower);
-            
-      // Debug: Log search matching
-      if (searchLower === "pune" || searchLower === "delhi" || searchLower === "chandigarh") {
-        console.log(`Searching for: ${searchLower}`);
-        console.log(`Property: ${property.title} | Location: ${property.location}`);
-        console.log(`Title Match: ${titleMatch} | Location Match: ${locationMatch}`);
-        console.log(`Property Object:`, property);
-        console.log(`Will be included: ${titleMatch || locationMatch}`);
-      }
-            
-            return titleMatch || locationMatch;
+        filtered = filtered.filter((property) => {
+          const titleMatch = property.title.toLowerCase().includes(searchLower);
+          const locationMatch = property.location
+            .toLowerCase()
+            .includes(searchLower);
+
+          // Debug: Log search matching
+          if (
+            searchLower === "pune" ||
+            searchLower === "delhi" ||
+            searchLower === "chandigarh"
+          ) {
+            console.log(`Searching for: ${searchLower}`);
+            console.log(
+              `Property: ${property.title} | Location: ${property.location}`
+            );
+            console.log(
+              `Title Match: ${titleMatch} | Location Match: ${locationMatch}`
+            );
+            console.log(`Property Object:`, property);
+            console.log(`Will be included: ${titleMatch || locationMatch}`);
           }
-        );
+
+          return titleMatch || locationMatch;
+        });
       }
 
       // Apply price range filter - FIXED: Only apply if price range is set
       if (priceRange[0] > 0 || priceRange[1] > 0) {
-      filtered = filtered.filter(
-          (property) => {
-            // For rent properties, check if price is above minimum threshold
-            if (currentTypeParam === "rent" && priceRange[0] > 0) {
-              const priceInRange = property.price >= priceRange[0];
-              
-              // Debug: Log price filtering for Pune
-              if (searchQuery && searchQuery.toLowerCase() === "pune") {
-                console.log(`Price filter (rent) - Property: ${property.title}, Price: ${property.price}, Min: ${priceRange[0]}, InRange: ${priceInRange}`);
-              }
-              
-              return priceInRange;
-            }
-            
-            // For other cases, use normal range filter
-            const priceInRange = property.price >= priceRange[0] && property.price <= priceRange[1];
-            
+        filtered = filtered.filter((property) => {
+          // For rent properties, check if price is above minimum threshold
+          if (currentTypeParam === "rent" && priceRange[0] > 0) {
+            const priceInRange = property.price >= priceRange[0];
+
             // Debug: Log price filtering for Pune
             if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(`Price filter - Property: ${property.title}, Price: ${property.price}, Range: [${priceRange[0]}, ${priceRange[1]}], InRange: ${priceInRange}`);
+              console.log(
+                `Price filter (rent) - Property: ${property.title}, Price: ${property.price}, Min: ${priceRange[0]}, InRange: ${priceInRange}`
+              );
             }
-            
+
             return priceInRange;
           }
-        );
+
+          // For other cases, use normal range filter
+          const priceInRange =
+            property.price >= priceRange[0] && property.price <= priceRange[1];
+
+          // Debug: Log price filtering for Pune
+          if (searchQuery && searchQuery.toLowerCase() === "pune") {
+            console.log(
+              `Price filter - Property: ${property.title}, Price: ${property.price}, Range: [${priceRange[0]}, ${priceRange[1]}], InRange: ${priceInRange}`
+            );
+          }
+
+          return priceInRange;
+        });
       }
 
       // Apply area range filter - FIXED: Only apply if area range is set
       if (minArea > 0 || maxArea > 0) {
-        filtered = filtered.filter(
-          (property) => {
-            // Check if maxArea is set to a reasonable value (not the default reset value of 0)
-            const hasMaxAreaFilter = maxArea > 0;
-            const areaInRange = property.area >= minArea && (!hasMaxAreaFilter || property.area <= maxArea);
-            
-            // Debug: Log area filtering for Pune
-            if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(`Area filter - Property: ${property.title}, Area: ${property.area}, Range: [${minArea}, ${hasMaxAreaFilter ? maxArea : 'no max'}], InRange: ${areaInRange}`);
-            }
-            
-            return areaInRange;
+        filtered = filtered.filter((property) => {
+          // Check if maxArea is set to a reasonable value (not the default reset value of 0)
+          const hasMaxAreaFilter = maxArea > 0;
+          const areaInRange =
+            property.area >= minArea &&
+            (!hasMaxAreaFilter || property.area <= maxArea);
+
+          // Debug: Log area filtering for Pune
+          if (searchQuery && searchQuery.toLowerCase() === "pune") {
+            console.log(
+              `Area filter - Property: ${property.title}, Area: ${
+                property.area
+              }, Range: [${minArea}, ${
+                hasMaxAreaFilter ? maxArea : "no max"
+              }], InRange: ${areaInRange}`
+            );
           }
-        );
+
+          return areaInRange;
+        });
       }
 
       // Apply bedroom filter - FIXED: Show exactly what you select
       if (minBedrooms > 0) {
-        filtered = filtered.filter(
-          (property) => {
-            // If 5+ is selected (value = 5), show 5 or more
-            // Otherwise, show exactly the selected number
-            const bedroomMatch = minBedrooms === 5 
-              ? property.bedrooms >= 5 
+        filtered = filtered.filter((property) => {
+          // If 5+ is selected (value = 5), show 5 or more
+          // Otherwise, show exactly the selected number
+          const bedroomMatch =
+            minBedrooms === 5
+              ? property.bedrooms >= 5
               : property.bedrooms === minBedrooms;
-            
-            return bedroomMatch;
-          }
-        );
+
+          return bedroomMatch;
+        });
       }
 
       // Apply bathroom filter - FIXED: Show exactly what you select
       if (minBathrooms > 0) {
-        filtered = filtered.filter(
-          (property) => {
-            // If 5+ is selected (value = 5), show 5 or more
-            // Otherwise, show exactly the selected number
-            const bathroomMatch = minBathrooms === 5 
-              ? property.bathrooms >= 5 
+        filtered = filtered.filter((property) => {
+          // If 5+ is selected (value = 5), show 5 or more
+          // Otherwise, show exactly the selected number
+          const bathroomMatch =
+            minBathrooms === 5
+              ? property.bathrooms >= 5
               : property.bathrooms === minBathrooms;
-            
-            return bathroomMatch;
-          }
-        );
+
+          return bathroomMatch;
+        });
       }
 
       // Apply balcony filter - FIXED: Show exactly what you select
       if (minBalcony > 0) {
-        filtered = filtered.filter(
-          (property) => {
-            // If 5+ is selected (value = 5), show 5 or more
-            // Otherwise, show exactly the selected number
-            const balconyMatch = minBalcony === 5 
-              ? property.balcony >= 5 
+        filtered = filtered.filter((property) => {
+          // If 5+ is selected (value = 5), show 5 or more
+          // Otherwise, show exactly the selected number
+          const balconyMatch =
+            minBalcony === 5
+              ? property.balcony >= 5
               : property.balcony === minBalcony;
-            
-            return balconyMatch;
-          }
-        );
+
+          return balconyMatch;
+        });
       }
 
       // Apply availability filter - FIXED: Only apply if availableFrom is set
       if (availableFrom) {
         // Format selected date as YYYY-MM-DD for comparison
-        const formattedSelectedDate = availableFrom.toISOString().split('T')[0];
-        
+        const formattedSelectedDate = availableFrom.toISOString().split("T")[0];
+
         filtered = filtered.filter((property) => {
           if (!property.availableFrom) return true; // Include properties without availability date
-          
+
           // Extract date part from property's availableFrom (could be in various formats)
           let propertyDateStr;
-          if (property.availableFrom.includes('T')) {
+          if (property.availableFrom.includes("T")) {
             // Full ISO format
-            propertyDateStr = property.availableFrom.split('T')[0];
+            propertyDateStr = property.availableFrom.split("T")[0];
           } else {
             // Already in YYYY-MM-DD format
             propertyDateStr = property.availableFrom;
           }
-          
+
           // Compare dates as strings in YYYY-MM-DD format
           const availabilityMatch = propertyDateStr >= formattedSelectedDate;
-          
+
           // Debug: Log availability filtering for Pune
           if (searchQuery && searchQuery.toLowerCase() === "pune") {
-            console.log(`Availability filter - Property: ${property.title}, Available: ${property.availableFrom}, Selected: ${formattedSelectedDate}, Match: ${availabilityMatch}`);
+            console.log(
+              `Availability filter - Property: ${property.title}, Available: ${property.availableFrom}, Selected: ${formattedSelectedDate}, Match: ${availabilityMatch}`
+            );
           }
-          
+
           return availabilityMatch;
         });
       }
 
       // Apply tenant preference filter - ONLY for rent properties and when preferences are selected
       if (preferenceIds.length > 0 && currentTypeParam === "rent") {
-        console.log("Applying preference filter. Selected preferences:", preferenceIds);
-        
+        console.log(
+          "Applying preference filter. Selected preferences:",
+          preferenceIds
+        );
+
         filtered = filtered.filter((property) => {
           // Check both preferenceId and preferenceIds fields
           const propertyPreferenceId = property.preferenceId;
           const propertyPreferenceIds = property.preferenceIds;
-          
-          console.log(`Property: ${property.title} - preferenceId: ${propertyPreferenceId}, preferenceIds: ${JSON.stringify(propertyPreferenceIds)}`);
-          
+
+          console.log(
+            `Property: ${
+              property.title
+            } - preferenceId: ${propertyPreferenceId}, preferenceIds: ${JSON.stringify(
+              propertyPreferenceIds
+            )}`
+          );
+
           // If property doesn't have any preference data, show it (available to all)
           if (!propertyPreferenceId && !propertyPreferenceIds) {
-            console.log(`Property ${property.title}: No preference data, showing (available to all)`);
+            console.log(
+              `Property ${property.title}: No preference data, showing (available to all)`
+            );
             return true;
           }
-          
+
           // Check preferenceId (single value)
           if (propertyPreferenceId) {
-            if (typeof propertyPreferenceId === 'number') {
-              const match = preferenceIds.includes(propertyPreferenceId.toString());
-              console.log(`Property ${property.title}: preferenceId ${propertyPreferenceId} match: ${match}`);
+            if (typeof propertyPreferenceId === "number") {
+              const match = preferenceIds.includes(
+                propertyPreferenceId.toString()
+              );
+              console.log(
+                `Property ${property.title}: preferenceId ${propertyPreferenceId} match: ${match}`
+              );
               return match;
             }
             if (Array.isArray(propertyPreferenceId)) {
-              const match = (propertyPreferenceId as any[]).some((id: any) => 
-              preferenceIds.includes(id.toString())
-            );
-              console.log(`Property ${property.title}: preferenceId array ${JSON.stringify(propertyPreferenceId)} match: ${match}`);
+              const match = (propertyPreferenceId as any[]).some((id: any) =>
+                preferenceIds.includes(id.toString())
+              );
+              console.log(
+                `Property ${
+                  property.title
+                }: preferenceId array ${JSON.stringify(
+                  propertyPreferenceId
+                )} match: ${match}`
+              );
               return match;
             }
           }
-          
+
           // Check preferenceIds (array or comma-separated string)
           if (propertyPreferenceIds) {
             if (Array.isArray(propertyPreferenceIds)) {
               // Handle array format like [2, 4] or [1, 2, 3]
-              const match = propertyPreferenceIds.some((id: any) => 
+              const match = propertyPreferenceIds.some((id: any) =>
                 preferenceIds.includes(id.toString())
               );
-              console.log(`Property ${property.title}: preferenceIds array ${JSON.stringify(propertyPreferenceIds)} match: ${match}`);
+              console.log(
+                `Property ${
+                  property.title
+                }: preferenceIds array ${JSON.stringify(
+                  propertyPreferenceIds
+                )} match: ${match}`
+              );
               return match;
             }
-            if (typeof propertyPreferenceIds === 'string') {
+            if (typeof propertyPreferenceIds === "string") {
               // Handle comma-separated string like "2,4" or "1,2,3"
-              const idsArray = propertyPreferenceIds.split(',').map(id => id.trim());
-              const match = idsArray.some((id: string) => preferenceIds.includes(id));
-              console.log(`Property ${property.title}: preferenceIds string "${propertyPreferenceIds}" match: ${match}`);
+              const idsArray = propertyPreferenceIds
+                .split(",")
+                .map((id) => id.trim());
+              const match = idsArray.some((id: string) =>
+                preferenceIds.includes(id)
+              );
+              console.log(
+                `Property ${property.title}: preferenceIds string "${propertyPreferenceIds}" match: ${match}`
+              );
               return match;
             }
           }
-          
-          console.log(`Property ${property.title}: No match found, filtering out`);
+
+          console.log(
+            `Property ${property.title}: No match found, filtering out`
+          );
           return false;
         });
       }
 
-       // Furnished filter is now handled by API through amenityIds, no client-side filtering needed
+      // Furnished filter is now handled by API through amenityIds, no client-side filtering needed
 
       // Furnished filter is handled by API through amenityIds - no client-side filtering needed
 
       // Apply sorting (client-side) to ensure correct order even if API ignores SortBy
       if (sortBy === "price-low") {
-        filtered = [...filtered].sort((a, b) => (a.price || 0) - (b.price || 0));
+        filtered = [...filtered].sort(
+          (a, b) => (a.price || 0) - (b.price || 0)
+        );
       } else if (sortBy === "price-high") {
-        filtered = [...filtered].sort((a, b) => (b.price || 0) - (a.price || 0));
+        filtered = [...filtered].sort(
+          (a, b) => (b.price || 0) - (a.price || 0)
+        );
       } else if (sortBy === "area-high") {
         filtered = [...filtered].sort((a, b) => (b.area || 0) - (a.area || 0));
       } // "newest" defaults to API order
@@ -1392,9 +1520,12 @@ export const PropertyListing = () => {
         console.log(`Final filtered count for Pune: ${filtered.length}`);
         console.log(`Final filtered properties:`, filtered);
         console.log(`Price range: [${priceRange[0]}, ${priceRange[1]}]`);
-        const debugEffectiveMaxArea = maxArea && maxArea > 0 ? maxArea : Number.MAX_SAFE_INTEGER;
+        const debugEffectiveMaxArea =
+          maxArea && maxArea > 0 ? maxArea : Number.MAX_SAFE_INTEGER;
         console.log(`Area range: [${minArea}, ${debugEffectiveMaxArea}]`);
-        console.log(`Min bedrooms: ${minBedrooms}, Min bathrooms: ${minBathrooms}, Min balcony: ${minBalcony}`);
+        console.log(
+          `Min bedrooms: ${minBedrooms}, Min bathrooms: ${minBathrooms}, Min balcony: ${minBalcony}`
+        );
         console.log(`Current type: ${currentTypeParam}`);
         console.log(`Sort by: ${sortBy}`);
         console.log(`Available from: ${availableFrom}`);
@@ -1422,7 +1553,7 @@ export const PropertyListing = () => {
       preferenceIds,
       // Removed selectedAmenities
       sortBy,
-    ],
+    ]
   );
 
   // OPTIMIZED: Apply filters without triggering new API calls
@@ -1492,7 +1623,7 @@ export const PropertyListing = () => {
   // MODIFIED: Add handler for commercial type change - Reset filters when changing commercial type
   const handleCommercialTypeChange = (value: "buy" | "rent") => {
     setCommercialType(value);
-    
+
     // Reset all filters when changing commercial type
     setSearchQuery("");
     setSearchTerm("");
@@ -1509,9 +1640,9 @@ export const PropertyListing = () => {
     setFurnished("any");
     setSortBy("newest");
     setSortOrder("desc");
-    
+
     searchParams.set("commercialType", value);
-    
+
     // Clear all filter-related URL parameters
     searchParams.delete("search");
     searchParams.delete("minPrice");
@@ -1527,7 +1658,7 @@ export const PropertyListing = () => {
     searchParams.delete("preferenceIds");
     searchParams.delete("furnished");
     searchParams.delete("sortBy");
-    
+
     setSearchParams(searchParams);
   };
 
@@ -1563,7 +1694,9 @@ export const PropertyListing = () => {
       setPriceRange([minPrice, maxPrice]);
     } else {
       // Reset to default range
-      const config = priceRangeConfig[activeTab as keyof typeof priceRangeConfig] || priceRangeConfig.buy;
+      const config =
+        priceRangeConfig[activeTab as keyof typeof priceRangeConfig] ||
+        priceRangeConfig.buy;
       setPriceRange([config.min, config.max]);
     }
   };
@@ -1597,7 +1730,7 @@ export const PropertyListing = () => {
       // Reset to default range - use 0 to indicate no filter
       setMinArea(0);
       setMaxArea(0);
-      
+
       // Trigger API call to fetch fresh data when all area steps are cleared
       const currentTab = searchParams.get("type") || activeTab;
       if (fetchPropertiesRef.current) {
@@ -1618,7 +1751,7 @@ export const PropertyListing = () => {
   const resetFilters = () => {
     // Get current tab from URL or state to preserve it
     const currentTab = searchParams.get("type") || activeTab;
-    
+
     setPriceRange([0, 0]); // Reset to no price filter
     setMinBedrooms(0);
     setMinBathrooms(0);
@@ -1634,7 +1767,7 @@ export const PropertyListing = () => {
     // Don't change the active tab - keep current tab
     setSelectedPriceSteps([]);
     setSelectedAreaSteps([]);
-    
+
     // Clear all filter-related URL parameters but keep the current type
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.delete("search");
@@ -1657,7 +1790,7 @@ export const PropertyListing = () => {
       newSearchParams.delete("type");
     }
     setSearchParams(newSearchParams);
-    
+
     // Fetch fresh data for the current tab
     if (fetchPropertiesRef.current) {
       fetchPropertiesRef.current(currentTab);
@@ -1694,8 +1827,8 @@ export const PropertyListing = () => {
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
       // Set state and trigger API call with the date directly
-    setAvailableFrom(date);
-    
+      setAvailableFrom(date);
+
       // Trigger API call immediately with the date value
       setTimeout(() => {
         if (fetchPropertiesRef.current) {
@@ -1704,7 +1837,7 @@ export const PropertyListing = () => {
       }, 100);
     } else {
       setAvailableFrom(undefined);
-      
+
       // Trigger API call when date is cleared
       setTimeout(() => {
         if (fetchPropertiesRef.current) {
@@ -1718,7 +1851,7 @@ export const PropertyListing = () => {
   const handlePreferenceChange = (value: string) => {
     if (preferenceIds.includes(value)) {
       // Remove if already selected
-      setPreferenceIds(preferenceIds.filter(id => id !== value));
+      setPreferenceIds(preferenceIds.filter((id) => id !== value));
     } else {
       // Add if not selected
       setPreferenceIds([...preferenceIds, value]);
@@ -1728,7 +1861,7 @@ export const PropertyListing = () => {
   // MODIFIED: Update when furnished status changes - trigger immediate API call
   const handleFurnishedChange = (value: string) => {
     setFurnished(value);
-    
+
     // Trigger immediate API call with the new furnished value
     setTimeout(() => {
       if (fetchPropertiesRef.current) {
@@ -1812,7 +1945,7 @@ export const PropertyListing = () => {
   // Slice filteredProperties for current page
   const paginatedProperties = filteredProperties.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+    currentPage * pageSize
   );
 
   useEffect(() => {
@@ -1837,435 +1970,291 @@ export const PropertyListing = () => {
     <>
       <SEOHead {...seoConfig} />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Hero Section with Slider - Compact */}
-      <section className="relative h-96 sm:h-[500px] overflow-hidden">
-        {/* Slider with clearer images */}
-        <div className="absolute inset-0 z-0">
-          <div
-            className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-100"
-            style={{
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
-            }}
-          />
-          {/* Light overlay for text readability */}
-          <div className="absolute inset-0 bg-black/10"></div>
-        </div>
+        {/* Hero Section with Slider - Compact */}
+        <section className="relative h-96 sm:h-[500px] overflow-hidden">
+          {/* Slider with clearer images */}
+          <div className="absolute inset-0 z-0">
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-100"
+              style={{
+                backgroundImage:
+                  "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80')",
+              }}
+            />
+            {/* Light overlay for text readability */}
+            <div className="absolute inset-0 bg-black/10"></div>
+          </div>
 
-        {/* Hero Content - Responsive padding and sizing */}
-        <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 z-10 h-full flex flex-col justify-center items-center">
-          <div className="animate-fade-in text-center w-full">
-            <div className="bg-white/70 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg mx-4 sm:mx-auto">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight text-black">
-                <span>Find Your </span>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
-                  Dream Property
-                </span>
-              </h2>
+          {/* Hero Content - Responsive padding and sizing */}
+          <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 z-10 h-full flex flex-col justify-center items-center">
+            <div className="animate-fade-in text-center w-full">
+              <div className="bg-white/70 backdrop-blur-sm p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl shadow-lg mx-4 sm:mx-auto">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-3 sm:mb-4 tracking-tight text-black">
+                  <span>Find Your </span>
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">
+                    Dream Property
+                  </span>
+                </h2>
 
-              <form
-                onSubmit={handleSearch}
-                className="mt-3 sm:mt-4 relative mx-auto"
-              >
-                <div className="relative flex shadow-xl">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
-                    <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                <form
+                  onSubmit={handleSearch}
+                  className="mt-3 sm:mt-4 relative mx-auto"
+                >
+                  <div className="relative flex shadow-xl">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
+                      <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                    </div>
+                    <Input
+                      type="text"
+                      className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                      placeholder="Search Society, Locality, City, State"
+                      value={searchTerm}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchTerm(value);
+                        debouncedSearch(value);
+                      }}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() =>
+                        setTimeout(() => setShowSuggestions(false), 150)
+                      }
+                    />
+                    <Button
+                      type="submit"
+                      className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+                    >
+                      Search
+                    </Button>
                   </div>
-                  <Input
-                    type="text"
-                    className="block w-full rounded-full pl-10 sm:pl-12 pr-24 sm:pr-28 py-3 sm:py-4 md:py-5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                    placeholder="Search Society, Locality, City, State"
-                    value={searchTerm}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSearchTerm(value);
-                      debouncedSearch(value);
-                    }}
-                    onFocus={() => setShowSuggestions(true)}
-                    onBlur={() =>
-                      setTimeout(() => setShowSuggestions(false), 150)
-                    }
-                  />
-                  <Button
-                    type="submit"
-                    className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
-                  >
-                    Search
-                  </Button>
-                </div>
 
-                {showSuggestions && suggestions.length > 0 && (
-                  <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
-                    {suggestions.map((suggestion, index) => (
-                      <li
-                        key={index}
-                        onMouseDown={() => handleSuggestionClick(suggestion)}
-                        className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                      >
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </form>
+                  {showSuggestions && suggestions.length > 0 && (
+                    <ul className="absolute z-10 bg-white border border-gray-300 rounded-md mt-1 w-full max-h-60 overflow-y-auto shadow-md">
+                      {suggestions.map((suggestion, index) => (
+                        <li
+                          key={index}
+                          onMouseDown={() => handleSuggestionClick(suggestion)}
+                          className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                        >
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="w-full px-4 py-8">
-        {/* Mobile filter toggle button - only visible on mobile */}
-        <div className="md:hidden mb-4 flex gap-2">
-          <Button
-            onClick={toggleMobileFilters}
-            variant="outline"
-            className="flex-1 flex items-center justify-between py-6 text-base"
-          >
-            <span className="flex items-center gap-2">
+        <div className="w-full px-4 py-8">
+          {/* Mobile filter toggle button - only visible on mobile */}
+          <div className="md:hidden mb-4 flex gap-2">
+            <Button
+              onClick={toggleMobileFilters}
+              variant="outline"
+              className="flex-1 flex items-center justify-between py-6 text-base"
+            >
+              <span className="flex items-center gap-2">
+                <FilterX className="h-5 w-5" />
+                Filters
+              </span>
+              {mobileFiltersVisible ? (
+                <ChevronUp className="h-5 w-5" />
+              ) : (
+                <ChevronDown className="h-5 w-5" />
+              )}
+            </Button>
+            <Button
+              onClick={resetFilters}
+              variant="outline"
+              className="px-4 py-6 text-base bg-gradient-to-r from-red-50 to-orange-50 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-300 hover:text-red-800 transition-all duration-300"
+            >
               <FilterX className="h-5 w-5" />
-              Filters
-            </span>
-            {mobileFiltersVisible ? (
-              <ChevronUp className="h-5 w-5" />
-            ) : (
-              <ChevronDown className="h-5 w-5" />
-            )}
-          </Button>
-          <Button
-            onClick={resetFilters}
-            variant="outline"
-            className="px-4 py-6 text-base bg-gradient-to-r from-red-50 to-orange-50 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-300 hover:text-red-800 transition-all duration-300"
-          >
-            <FilterX className="h-5 w-5" />
-          </Button>
-        </div>
+            </Button>
+          </div>
 
-        {/* Main content area with sidebar and property listings using flex */}
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Collapsible Sidebar filters */}
-          <div
-             className={`transition-all duration-500 mb-3 md:mb-0 shrink-0 overflow-hidden flex flex-col
+          {/* Main content area with sidebar and property listings using flex */}
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Collapsible Sidebar filters */}
+            <div
+              className={`transition-all duration-500 mb-3 md:mb-0 shrink-0 overflow-hidden flex flex-col
                ${sidebarVisible ? "w-full md:w-[240px]" : "w-8 md:w-8"}
                bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/40 border-2 border-gray-200/50 relative rounded-xl shadow-md backdrop-blur-sm
               ${!mobileFiltersVisible ? "md:block hidden" : ""}`}
-            style={{
-               minWidth: sidebarVisible ? undefined : "2rem",
-               maxWidth: sidebarVisible ? undefined : "2rem",
-            }}
-          >
-            {/* Sidebar toggle button - only visible on desktop */}
-            <div
-              className="hidden md:flex items-center justify-end h-10 w-full p-1 absolute top-0 right-0 z-50"
+              style={{
+                minWidth: sidebarVisible ? undefined : "2rem",
+                maxWidth: sidebarVisible ? undefined : "2rem",
+              }}
             >
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSidebarVisible(!sidebarVisible)}
-                 className="rounded-full w-6 h-6 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 border-0 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300"
-              >
-                {sidebarVisible ? (
-                  <>
-                    <Minus className="h-3 w-3" />
-                  </>
-                ) : (
-                  <Plus className="h-3 w-3" />
-                )}
-              </Button>
-            </div>
+              {/* Sidebar toggle button - only visible on desktop */}
+              <div className="hidden md:flex items-center justify-end h-10 w-full p-1 absolute top-0 right-0 z-50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSidebarVisible(!sidebarVisible)}
+                  className="rounded-full w-6 h-6 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 border-0 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300"
+                >
+                  {sidebarVisible ? (
+                    <>
+                      <Minus className="h-3 w-3" />
+                    </>
+                  ) : (
+                    <Plus className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
 
-            {/* Sidebar content */}
-            <div
-              className={`flex-1 transition-opacity duration-300 ${
-                sidebarVisible || mobileFiltersVisible
-                  ? "opacity-100"
-                  : "opacity-0 pointer-events-none h-0 overflow-hidden"
-              }`}
-            >
-              {(sidebarVisible || mobileFiltersVisible) && (
-                <div className="p-2">
-                  {/* Filter Card */}
-                  <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border-2 border-gray-200/50 p-3 flex flex-col gap-2 transition-all duration-500 relative overflow-hidden">
-                    {/* Decorative background elements */}
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-100/15 to-indigo-200/15 rounded-full -translate-y-8 translate-x-8 blur-lg"></div>
-                    <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-purple-100/15 to-pink-200/15 rounded-full translate-y-8 -translate-x-8 blur-lg"></div>
-                    {/* Property Type Tabs Section - Collapsible */}
-                    <div className="mb-2 relative">
-                      <div
-                        className="font-bold text-gray-800 text-xs mb-2 flex items-center justify-between cursor-pointer bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 p-2 rounded-lg border-2 border-gray-200/40 backdrop-blur-sm hover:from-blue-100 hover:via-indigo-100 hover:to-purple-100 hover:border-blue-300 hover:shadow-md transition-all duration-300 shadow-sm"
-                        onClick={() =>
-                          setPropertyTypeCollapsed(!propertyTypeCollapsed)
-                        }
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-md flex items-center justify-center shadow-md">
-                            <Home className="h-3 w-3 text-white" />
-                          </div>
-                          <span className="text-xs font-semibold">Property Type</span>
-                        </span>
-                        {propertyTypeCollapsed ? (
-                          <ChevronDown className="h-3 w-3 text-gray-500" />
-                        ) : (
-                          <ChevronUp className="h-3 w-3 text-gray-500" />
-                        )}
-                      </div>
-                      {!propertyTypeCollapsed && (
-                        <div className="flex flex-col gap-1">
-                          {[
-                            { key: "all", label: "All Properties", icon: "🏘️" },
-                            { key: "buy", label: "Buy", icon: "🏠" },
-                            { key: "rent", label: "Rent", icon: "🔑" },
-                            { key: "plot", label: "Plot", icon: "🏞️" },
-                            {
-                              key: "commercial",
-                              label: "Commercial",
-                              icon: "🏢",
-                            },
-                          ].map((tab) => (
-                            <button
-                              key={tab.key}
-                              onClick={() => handleTabChange(tab.key)}
-                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 border backdrop-blur-sm
+              {/* Sidebar content */}
+              <div
+                className={`flex-1 transition-opacity duration-300 ${
+                  sidebarVisible || mobileFiltersVisible
+                    ? "opacity-100"
+                    : "opacity-0 pointer-events-none h-0 overflow-hidden"
+                }`}
+              >
+                {(sidebarVisible || mobileFiltersVisible) && (
+                  <div className="p-2">
+                    {/* Filter Card */}
+                    <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md border-2 border-gray-200/50 p-3 flex flex-col gap-2 transition-all duration-500 relative overflow-hidden">
+                      {/* Decorative background elements */}
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-100/15 to-indigo-200/15 rounded-full -translate-y-8 translate-x-8 blur-lg"></div>
+                      <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-purple-100/15 to-pink-200/15 rounded-full translate-y-8 -translate-x-8 blur-lg"></div>
+                      {/* Property Type Tabs Section - Collapsible */}
+                      <div className="mb-2 relative">
+                        <div
+                          className="font-bold text-gray-800 text-xs mb-2 flex items-center justify-between cursor-pointer bg-gradient-to-r from-blue-50/80 via-indigo-50/80 to-purple-50/80 p-2 rounded-lg border-2 border-gray-200/40 backdrop-blur-sm hover:from-blue-100 hover:via-indigo-100 hover:to-purple-100 hover:border-blue-300 hover:shadow-md transition-all duration-300 shadow-sm"
+                          onClick={() =>
+                            setPropertyTypeCollapsed(!propertyTypeCollapsed)
+                          }
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-md flex items-center justify-center shadow-md">
+                              <Home className="h-3 w-3 text-white" />
+                            </div>
+                            <span className="text-xs font-semibold">
+                              Property Type
+                            </span>
+                          </span>
+                          {propertyTypeCollapsed ? (
+                            <ChevronDown className="h-3 w-3 text-gray-500" />
+                          ) : (
+                            <ChevronUp className="h-3 w-3 text-gray-500" />
+                          )}
+                        </div>
+                        {!propertyTypeCollapsed && (
+                          <div className="flex flex-col gap-1">
+                            {[
+                              {
+                                key: "all",
+                                label: "All Properties",
+                                icon: "🏘️",
+                              },
+                              { key: "buy", label: "Buy", icon: "🏠" },
+                              { key: "rent", label: "Rent", icon: "🔑" },
+                              { key: "plot", label: "Plot", icon: "🏞️" },
+                              {
+                                key: "commercial",
+                                label: "Commercial",
+                                icon: "🏢",
+                              },
+                            ].map((tab) => (
+                              <button
+                                key={tab.key}
+                                onClick={() => handleTabChange(tab.key)}
+                                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 border backdrop-blur-sm
                                 ${
                                   activeTab === tab.key
                                     ? "bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg border-blue-400/50 transform scale-105 hover:shadow-xl hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700"
                                     : "bg-gradient-to-r from-white to-gray-50 text-gray-700 hover:from-blue-50 hover:to-indigo-50 border-gray-200 hover:border-blue-300 hover:shadow-md hover:text-blue-700"
                                 }
                               `}
-                            >
-                              <span className="text-sm">{tab.icon}</span>
-                              <span>{tab.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Commercial Type Selection */}
-                    {activeTab === "commercial" && (
-                      <div className="mb-2">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Commercial Type
-                        </label>
-                        <div className="grid grid-cols-2 gap-1">
-                          <Button
-                            variant={
-                              commercialType === "buy" ? "default" : "outline"
-                            }
-                            className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg transition-all duration-300 ${
-                              commercialType === "buy"
-                                ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
-                                : "bg-gradient-to-r from-white to-gray-50 border-2 border-emerald-200 hover:from-emerald-50 hover:to-green-50 hover:border-emerald-400 hover:shadow-md text-emerald-700 hover:text-emerald-800"
-                            }`}
-                            onClick={() => handleCommercialTypeChange("buy")}
-                          >
-                            <span className="text-sm">💰</span>
-                            <span>Buy</span>
-                          </Button>
-                          <Button
-                            variant={
-                              commercialType === "rent" ? "default" : "outline"
-                            }
-                            className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg transition-all duration-300 ${
-                              commercialType === "rent"
-                                ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
-                                : "bg-gradient-to-r from-white to-gray-50 border-2 border-orange-200 hover:from-orange-50 hover:to-red-50 hover:border-orange-400 hover:shadow-md text-orange-700 hover:text-orange-800"
-                            }`}
-                            onClick={() => handleCommercialTypeChange("rent")}
-                          >
-                            <span className="text-sm">📋</span>
-                            <span>Rent</span>
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Price Range Section */}
-                    {shouldShowFilter("showPrice") && (
-                      <div className="mb-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-6 h-6 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-md flex items-center justify-center shadow-md rotate-3">
-                            <IndianRupeeIcon className="h-3 w-3 text-white" />
-                          </div>
-                          <div className="font-bold text-gray-800 text-xs">
-                            Price Range
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1">
-                          {(activeTab === "rent" ||
-                          (activeTab === "commercial" &&
-                            commercialType === "rent")
-                            ? rentPriceSteps
-                            : buyPriceSteps
-                          ).map((step) => (
-                            <Button
-                              key={step.id}
-                              variant={
-                                selectedPriceSteps.includes(step.id)
-                                  ? "default"
-                                  : "outline"
-                              }
-                              onClick={() => handlePriceStepChange(step.id)}
-                              className={`h-10 text-xs font-medium transition-all duration-300 rounded-lg ${
-                                selectedPriceSteps.includes(step.id)
-                                  ? "bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 hover:from-purple-600 hover:via-purple-700 hover:to-indigo-700 text-white shadow-lg transform scale-105 border-2 border-purple-400 hover:border-purple-300 hover:shadow-xl"
-                                  : "bg-gradient-to-r from-white to-gray-50 hover:from-purple-50 hover:to-indigo-50 border-2 border-purple-200 hover:border-purple-400 text-gray-700 hover:text-purple-700 hover:shadow-md backdrop-blur-sm"
-                              }`}
-                            >
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold">{step.label}</span>
-                                {selectedPriceSteps.includes(step.id) && (
-                                  <span className="text-xs opacity-90">
-                                    ✓ Selected
-                                  </span>
-                                )}
-                              </div>
-                            </Button>
-                          ))}
-                        </div>
-                        {selectedPriceSteps.length > 0 && (
-                          <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="text-xs text-blue-700 font-medium">
-                              Selected: {selectedPriceSteps.length} price range
-                              {selectedPriceSteps.length > 1 ? "s" : ""}
-                            </div>
+                              >
+                                <span className="text-sm">{tab.icon}</span>
+                                <span>{tab.label}</span>
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>
-                    )}
 
-                    {/* Rooms & Features Section */}
-                    <div className="bg-gradient-to-br from-blue-50/30 to-indigo-100/30 rounded-lg p-3 flex flex-col gap-2 border border-gray-200/40 backdrop-blur-sm shadow-sm">
-                      <div className="font-bold text-gray-800 text-xs mb-1 flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 rounded-md flex items-center justify-center shadow-md -rotate-3">
-                          <Bed className="h-3 w-3 text-white" />
+                      {/* Commercial Type Selection */}
+                      {activeTab === "commercial" && (
+                        <div className="mb-2">
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Commercial Type
+                          </label>
+                          <div className="grid grid-cols-2 gap-1">
+                            <Button
+                              variant={
+                                commercialType === "buy" ? "default" : "outline"
+                              }
+                              className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg transition-all duration-300 ${
+                                commercialType === "buy"
+                                  ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                                  : "bg-gradient-to-r from-white to-gray-50 border-2 border-emerald-200 hover:from-emerald-50 hover:to-green-50 hover:border-emerald-400 hover:shadow-md text-emerald-700 hover:text-emerald-800"
+                              }`}
+                              onClick={() => handleCommercialTypeChange("buy")}
+                            >
+                              <span className="text-sm">💰</span>
+                              <span>Buy</span>
+                            </Button>
+                            <Button
+                              variant={
+                                commercialType === "rent"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs rounded-lg transition-all duration-300 ${
+                                commercialType === "rent"
+                                  ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105"
+                                  : "bg-gradient-to-r from-white to-gray-50 border-2 border-orange-200 hover:from-orange-50 hover:to-red-50 hover:border-orange-400 hover:shadow-md text-orange-700 hover:text-orange-800"
+                              }`}
+                              onClick={() => handleCommercialTypeChange("rent")}
+                            >
+                              <span className="text-sm">📋</span>
+                              <span>Rent</span>
+                            </Button>
+                          </div>
                         </div>
-                        <span className="text-gray-800">
-                        {activeTab === "plot"
-                          ? "Features"
-                          : activeTab === "commercial"
-                            ? "Features"
-                            : "Rooms & Features"}
-                        </span>
-                      </div>
-
-                      {/* Residential Features */}
-                      {(activeTab === "buy" || activeTab === "rent") && (
-                        <>
-                          {/* Bedrooms Dropdown */}
-                          {shouldShowFilter("showBedrooms") && (
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                Bedrooms
-                              </label>
-                              <Select
-                                value={minBedrooms ? String(minBedrooms) : "0"}
-                                onValueChange={(v) =>
-                                  handleBedroomChange(Number(v))
-                                }
-                              >
-                                <SelectTrigger className="rounded-lg h-8 border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md backdrop-blur-sm text-xs transition-all duration-300">
-                                  <SelectValue placeholder="Any" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-gray-200">
-                                  <SelectItem value="0">Any</SelectItem>
-                                  <SelectItem value="1">1</SelectItem>
-                                  <SelectItem value="2">2</SelectItem>
-                                  <SelectItem value="3">3</SelectItem>
-                                  <SelectItem value="4">4</SelectItem>
-                                  <SelectItem value="5">5+</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                          {/* Bathrooms Dropdown */}
-                          {shouldShowFilter("showBathrooms") && (
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                Bathrooms
-                              </label>
-                              <Select
-                                value={
-                                  minBathrooms ? String(minBathrooms) : "0"
-                                }
-                                onValueChange={(v) =>
-                                  handleBathroomChange(Number(v))
-                                }
-                              >
-                                <SelectTrigger className="rounded-lg h-8 border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md backdrop-blur-sm text-xs transition-all duration-300">
-                                  <SelectValue placeholder="Any" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-gray-200">
-                                  <SelectItem value="0">Any</SelectItem>
-                                  <SelectItem value="1">1</SelectItem>
-                                  <SelectItem value="2">2</SelectItem>
-                                  <SelectItem value="3">3</SelectItem>
-                                  <SelectItem value="4">4</SelectItem>
-                                  <SelectItem value="5">5+</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                          {/* Balconies Dropdown */}
-                          {shouldShowFilter("showBalcony") && (
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                Balconies
-                              </label>
-                              <Select
-                                value={minBalcony ? String(minBalcony) : "0"}
-                                onValueChange={(v) =>
-                                  handleBalconyChange(Number(v))
-                                }
-                              >
-                                <SelectTrigger className="rounded-lg h-8 border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md backdrop-blur-sm text-xs transition-all duration-300">
-                                  <SelectValue placeholder="Any" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border-gray-200">
-                                  <SelectItem value="0">Any</SelectItem>
-                                  <SelectItem value="1">1</SelectItem>
-                                  <SelectItem value="2">2</SelectItem>
-                                  <SelectItem value="3">3</SelectItem>
-                                  <SelectItem value="4">4</SelectItem>
-                                  <SelectItem value="5">5+</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </>
                       )}
 
-                      {/* Area Range Section */}
-                      {shouldShowFilter("showArea") && (
+                      {/* Price Range Section */}
+                      {shouldShowFilter("showPrice") && (
                         <div className="mb-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-6 h-6 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-md flex items-center justify-center shadow-md rotate-3">
-                            <Ruler className="h-3 w-3 text-white" />
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-6 h-6 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-md flex items-center justify-center shadow-md rotate-3">
+                              <IndianRupeeIcon className="h-3 w-3 text-white" />
+                            </div>
+                            <div className="font-bold text-gray-800 text-xs">
+                              Price Range
+                            </div>
                           </div>
-                          <div className="font-bold text-gray-800 text-xs">
-                            Area (sq.ft)
-                          </div>
-                        </div>
                           <div className="grid grid-cols-2 gap-1">
-                            {areaSteps.map((step) => (
+                            {(activeTab === "rent" ||
+                            (activeTab === "commercial" &&
+                              commercialType === "rent")
+                              ? rentPriceSteps
+                              : buyPriceSteps
+                            ).map((step) => (
                               <Button
                                 key={step.id}
                                 variant={
-                                  selectedAreaSteps.includes(step.id)
+                                  selectedPriceSteps.includes(step.id)
                                     ? "default"
                                     : "outline"
                                 }
-                                onClick={() => handleAreaStepChange(step.id)}
+                                onClick={() => handlePriceStepChange(step.id)}
                                 className={`h-10 text-xs font-medium transition-all duration-300 rounded-lg ${
-                                  selectedAreaSteps.includes(step.id)
-                                    ? "bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 hover:from-teal-600 hover:via-cyan-600 hover:to-blue-600 text-white shadow-lg transform scale-105 border-2 border-teal-400 hover:border-teal-300 hover:shadow-xl"
-                                    : "bg-gradient-to-r from-white to-gray-50 hover:from-teal-50 hover:to-cyan-50 border-2 border-teal-200 hover:border-teal-400 text-gray-700 hover:text-teal-700 hover:shadow-md backdrop-blur-sm"
+                                  selectedPriceSteps.includes(step.id)
+                                    ? "bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 hover:from-purple-600 hover:via-purple-700 hover:to-indigo-700 text-white shadow-lg transform scale-105 border-2 border-purple-400 hover:border-purple-300 hover:shadow-xl"
+                                    : "bg-gradient-to-r from-white to-gray-50 hover:from-purple-50 hover:to-indigo-50 border-2 border-purple-200 hover:border-purple-400 text-gray-700 hover:text-purple-700 hover:shadow-md backdrop-blur-sm"
                                 }`}
                               >
                                 <div className="flex flex-col items-center">
                                   <span className="font-bold">
                                     {step.label}
                                   </span>
-                                  {selectedAreaSteps.includes(step.id) && (
+                                  {selectedPriceSteps.includes(step.id) && (
                                     <span className="text-xs opacity-90">
                                       ✓ Selected
                                     </span>
@@ -2274,511 +2263,679 @@ export const PropertyListing = () => {
                               </Button>
                             ))}
                           </div>
-                          {selectedAreaSteps.length > 0 && (
+                          {selectedPriceSteps.length > 0 && (
                             <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
                               <div className="text-xs text-blue-700 font-medium">
-                                Selected: {selectedAreaSteps.length} area range
-                                {selectedAreaSteps.length > 1 ? "s" : ""}
+                                Selected: {selectedPriceSteps.length} price
+                                range
+                                {selectedPriceSteps.length > 1 ? "s" : ""}
                               </div>
                             </div>
                           )}
                         </div>
                       )}
-                    </div>
 
-                    {/* Preferences Dropdown */}
-                    {shouldShowFilter("showTenantPreference") && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1 mt-2">
-                          Tenant Preferences
-                        </label>
-                        <div className="grid grid-cols-2 gap-1">
-                          {preferenceOptions.map((option) => (
-                            <Button
-                              key={option.id}
-                              type="button"
-                              variant={preferenceIds.includes(option.id) ? "default" : "outline"}
-                              onClick={() => handlePreferenceChange(option.id)}
-                              className={`h-8 text-xs font-medium transition-all duration-300 rounded-lg ${
-                                preferenceIds.includes(option.id)
-                                  ? "bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 hover:from-rose-600 hover:via-pink-600 hover:to-purple-600 text-white shadow-lg border-2 border-rose-400 hover:border-rose-300 hover:shadow-xl transform hover:scale-105"
-                                  : "bg-gradient-to-r from-white to-gray-50 hover:from-rose-50 hover:to-pink-50 border-2 border-rose-200 hover:border-rose-400 text-gray-700 hover:text-rose-700 hover:shadow-md backdrop-blur-sm"
-                              }`}
-                            >
-                              {option.label}
-                            </Button>
-                          ))}
+                      {/* Rooms & Features Section */}
+                      <div className="bg-gradient-to-br from-blue-50/30 to-indigo-100/30 rounded-lg p-3 flex flex-col gap-2 border border-gray-200/40 backdrop-blur-sm shadow-sm">
+                        <div className="font-bold text-gray-800 text-xs mb-1 flex items-center gap-2">
+                          <div className="w-6 h-6 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 rounded-md flex items-center justify-center shadow-md -rotate-3">
+                            <Bed className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="text-gray-800">
+                            {activeTab === "plot"
+                              ? "Features"
+                              : activeTab === "commercial"
+                              ? "Features"
+                              : "Rooms & Features"}
+                          </span>
+                        </div>
+
+                        {/* Residential Features */}
+                        {(activeTab === "buy" || activeTab === "rent") && (
+                          <>
+                            {/* Bedrooms Dropdown */}
+                            {shouldShowFilter("showBedrooms") && (
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                  Bedrooms
+                                </label>
+                                <Select
+                                  value={
+                                    minBedrooms ? String(minBedrooms) : "0"
+                                  }
+                                  onValueChange={(v) =>
+                                    handleBedroomChange(Number(v))
+                                  }
+                                >
+                                  <SelectTrigger className="rounded-lg h-8 border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md backdrop-blur-sm text-xs transition-all duration-300">
+                                    <SelectValue placeholder="Any" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white border-gray-200">
+                                    <SelectItem value="0">Any</SelectItem>
+                                    <SelectItem value="1">1</SelectItem>
+                                    <SelectItem value="2">2</SelectItem>
+                                    <SelectItem value="3">3</SelectItem>
+                                    <SelectItem value="4">4</SelectItem>
+                                    <SelectItem value="5">5+</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            {/* Bathrooms Dropdown */}
+                            {shouldShowFilter("showBathrooms") && (
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                  Bathrooms
+                                </label>
+                                <Select
+                                  value={
+                                    minBathrooms ? String(minBathrooms) : "0"
+                                  }
+                                  onValueChange={(v) =>
+                                    handleBathroomChange(Number(v))
+                                  }
+                                >
+                                  <SelectTrigger className="rounded-lg h-8 border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md backdrop-blur-sm text-xs transition-all duration-300">
+                                    <SelectValue placeholder="Any" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white border-gray-200">
+                                    <SelectItem value="0">Any</SelectItem>
+                                    <SelectItem value="1">1</SelectItem>
+                                    <SelectItem value="2">2</SelectItem>
+                                    <SelectItem value="3">3</SelectItem>
+                                    <SelectItem value="4">4</SelectItem>
+                                    <SelectItem value="5">5+</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            {/* Balconies Dropdown */}
+                            {shouldShowFilter("showBalcony") && (
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                  Balconies
+                                </label>
+                                <Select
+                                  value={minBalcony ? String(minBalcony) : "0"}
+                                  onValueChange={(v) =>
+                                    handleBalconyChange(Number(v))
+                                  }
+                                >
+                                  <SelectTrigger className="rounded-lg h-8 border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md backdrop-blur-sm text-xs transition-all duration-300">
+                                    <SelectValue placeholder="Any" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white border-gray-200">
+                                    <SelectItem value="0">Any</SelectItem>
+                                    <SelectItem value="1">1</SelectItem>
+                                    <SelectItem value="2">2</SelectItem>
+                                    <SelectItem value="3">3</SelectItem>
+                                    <SelectItem value="4">4</SelectItem>
+                                    <SelectItem value="5">5+</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* Area Range Section */}
+                        {shouldShowFilter("showArea") && (
+                          <div className="mb-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-6 h-6 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-md flex items-center justify-center shadow-md rotate-3">
+                                <Ruler className="h-3 w-3 text-white" />
+                              </div>
+                              <div className="font-bold text-gray-800 text-xs">
+                                Area (sq.ft)
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1">
+                              {areaSteps.map((step) => (
+                                <Button
+                                  key={step.id}
+                                  variant={
+                                    selectedAreaSteps.includes(step.id)
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  onClick={() => handleAreaStepChange(step.id)}
+                                  className={`h-10 text-xs font-medium transition-all duration-300 rounded-lg ${
+                                    selectedAreaSteps.includes(step.id)
+                                      ? "bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 hover:from-teal-600 hover:via-cyan-600 hover:to-blue-600 text-white shadow-lg transform scale-105 border-2 border-teal-400 hover:border-teal-300 hover:shadow-xl"
+                                      : "bg-gradient-to-r from-white to-gray-50 hover:from-teal-50 hover:to-cyan-50 border-2 border-teal-200 hover:border-teal-400 text-gray-700 hover:text-teal-700 hover:shadow-md backdrop-blur-sm"
+                                  }`}
+                                >
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-bold">
+                                      {step.label}
+                                    </span>
+                                    {selectedAreaSteps.includes(step.id) && (
+                                      <span className="text-xs opacity-90">
+                                        ✓ Selected
+                                      </span>
+                                    )}
+                                  </div>
+                                </Button>
+                              ))}
+                            </div>
+                            {selectedAreaSteps.length > 0 && (
+                              <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="text-xs text-blue-700 font-medium">
+                                  Selected: {selectedAreaSteps.length} area
+                                  range
+                                  {selectedAreaSteps.length > 1 ? "s" : ""}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Preferences Dropdown */}
+                      {shouldShowFilter("showTenantPreference") && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1 mt-2">
+                            Tenant Preferences
+                          </label>
+                          <div className="grid grid-cols-2 gap-1">
+                            {preferenceOptions.map((option) => (
+                              <Button
+                                key={option.id}
+                                type="button"
+                                variant={
+                                  preferenceIds.includes(option.id)
+                                    ? "default"
+                                    : "outline"
+                                }
+                                onClick={() =>
+                                  handlePreferenceChange(option.id)
+                                }
+                                className={`h-8 text-xs font-medium transition-all duration-300 rounded-lg ${
+                                  preferenceIds.includes(option.id)
+                                    ? "bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 hover:from-rose-600 hover:via-pink-600 hover:to-purple-600 text-white shadow-lg border-2 border-rose-400 hover:border-rose-300 hover:shadow-xl transform hover:scale-105"
+                                    : "bg-gradient-to-r from-white to-gray-50 hover:from-rose-50 hover:to-pink-50 border-2 border-rose-200 hover:border-rose-400 text-gray-700 hover:text-rose-700 hover:shadow-md backdrop-blur-sm"
+                                }`}
+                              >
+                                {option.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Furnished Dropdown */}
+                      {shouldShowFilter("showFurnished") && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Furnished
+                          </label>
+                          <Select
+                            value={furnished}
+                            onValueChange={handleFurnishedChange}
+                          >
+                            <SelectTrigger className="rounded-lg border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 h-8 text-xs hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md transition-all duration-300">
+                              <SelectValue placeholder="Any" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-gray-200">
+                              {furnishedOptions.map((option) => (
+                                <SelectItem key={option.id} value={option.id}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Removed Amenities Filter - only using furnished filter */}
+
+                      {/* Available From Date Picker */}
+                      {shouldShowFilter("showAvailableFrom") && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1 mt-4">
+                            Available From
+                          </label>
+                          <div className="relative">
+                            <DatePicker
+                              date={availableFrom}
+                              setDate={handleDateChange}
+                              className="w-full rounded-lg border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 h-8 text-xs hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md transition-all duration-300"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Collapsed Sidebar Icons - Only visible when sidebar is collapsed */}
+              {!sidebarVisible && (
+                <div className="flex flex-col items-center gap-6 p-2 mt-16">
+                  {/* Property Type Icons - Only first 5 visible and clickable */}
+                  {[
+                    { key: "all", label: "All Properties", icon: "🏘️" },
+                    { key: "buy", label: "Buy", icon: "🏠" },
+                    { key: "rent", label: "Rent", icon: "🔑" },
+                    { key: "plot", label: "Plot", icon: "🏞️" },
+                    { key: "commercial", label: "Commercial", icon: "🏢" },
+                  ]
+                    .slice(0, 5)
+                    .map((tab) => (
+                      <div
+                        key={tab.key}
+                        className="relative group cursor-pointer"
+                        title={tab.label}
+                        onClick={() => handleTabChange(tab.key)}
+                      >
+                        <div
+                          className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs transition-all duration-300 ${
+                            activeTab === tab.key
+                              ? "bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg scale-110 hover:shadow-xl"
+                              : "bg-gradient-to-r from-white to-gray-50 text-gray-600 hover:from-blue-50 hover:to-indigo-50 hover:text-blue-600 backdrop-blur-sm border-2 border-gray-200 hover:border-blue-300 hover:shadow-md"
+                          }`}
+                        >
+                          {tab.icon}
+                        </div>
+                        {/* Tooltip */}
+                        <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                          {tab.label}
                         </div>
                       </div>
+                    ))}
+                  {/* The rest of the icons are hidden in collapsed state */}
+                </div>
+              )}
+            </div>
+
+            {/* Property listings - takes full remaining width */}
+            <div className="flex-1 min-w-0 w-full pr-4">
+              {/* Applied filters display - Only show when filters are actually applied */}
+              {(searchQuery ||
+                minBedrooms > 0 ||
+                minBathrooms > 0 ||
+                minBalcony > 0 ||
+                minArea > 0 ||
+                availableFrom ||
+                preferenceIds.length > 0 ||
+                (furnished && furnished !== "any") ||
+                // Removed selectedAmenities
+                selectedPriceSteps.length > 0 ||
+                selectedAreaSteps.length > 0) && (
+                <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-medium mr-2">
+                      Active Filters:
+                    </h3>
+
+                    {searchQuery && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        Search: {searchQuery}
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setSearchTerm("");
+                            searchParams.delete("search");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
                     )}
 
-                    {/* Furnished Dropdown */}
-                    {shouldShowFilter("showFurnished") && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Furnished
-                        </label>
-                        <Select
-                          value={furnished}
-                          onValueChange={handleFurnishedChange}
-                        >
-                          <SelectTrigger className="rounded-lg border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 h-8 text-xs hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md transition-all duration-300">
-                            <SelectValue placeholder="Any" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-gray-200">
-                            {furnishedOptions.map((option) => (
-                              <SelectItem key={option.id} value={option.id}>
-                                {option.label}
-                              </SelectItem>
+                    {minBedrooms > 0 && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {minBedrooms}+ Beds
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setMinBedrooms(0);
+                            searchParams.delete("bedrooms");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {minBathrooms > 0 && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {minBathrooms}+ Baths
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setMinBathrooms(0);
+                            searchParams.delete("bathrooms");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {minBalcony > 0 && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {minBalcony}+ Balconies
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setMinBalcony(0);
+                            searchParams.delete("balcony");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {minArea > 0 && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {minArea}+ sq.ft
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setMinArea(0);
+                            setMaxArea(0);
+                            setSelectedAreaSteps([]);
+                            searchParams.delete("minArea");
+                            searchParams.delete("maxArea");
+                            setSearchParams(searchParams);
+
+                            // Trigger API call to fetch fresh data
+                            const currentTab =
+                              searchParams.get("type") || activeTab;
+                            if (fetchPropertiesRef.current) {
+                              fetchPropertiesRef.current(currentTab);
+                            }
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {availableFrom && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        Available: {availableFrom.toLocaleDateString()}
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setAvailableFrom(undefined);
+                            searchParams.delete("availableFrom");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {preferenceIds.length > 0 && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        Preferences: {preferenceIds.length} selected
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setPreferenceIds([]);
+                            searchParams.delete("preference");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {furnished && furnished !== "any" && (
+                      <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {furnishedOptions.find((f) => f.id === furnished)
+                          ?.label || "Furnished"}
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer"
+                          onClick={() => {
+                            setFurnished("any"); // Reset to default
+                            searchParams.delete("furnished"); // Remove from URL instead of setting
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {/* Removed amenity badges - only using furnished filter */}
+
+                    {selectedPriceSteps.length > 0 && (
+                      <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
+                        <IndianRupeeIcon className="h-3 w-3" />
+                        Price: {selectedPriceSteps.length} selected
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600"
+                          onClick={() => {
+                            setSelectedPriceSteps([]);
+                            searchParams.delete("priceSteps");
+                            searchParams.delete("minPrice");
+                            searchParams.delete("maxPrice");
+                            setSearchParams(searchParams);
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {selectedAreaSteps.length > 0 && (
+                      <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
+                        <Ruler className="h-3 w-3" />
+                        Area: {selectedAreaSteps.length} selected
+                        <X
+                          className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600"
+                          onClick={() => {
+                            setSelectedAreaSteps([]);
+                            setMinArea(0);
+                            setMaxArea(0);
+                            searchParams.delete("areaSteps");
+                            searchParams.delete("minArea");
+                            searchParams.delete("maxArea");
+                            setSearchParams(searchParams);
+
+                            // Trigger API call to fetch fresh data
+                            const currentTab =
+                              searchParams.get("type") || activeTab;
+                            if (fetchPropertiesRef.current) {
+                              fetchPropertiesRef.current(currentTab);
+                            }
+                          }}
+                        />
+                      </Badge>
+                    )}
+
+                    {/* Clear All Filters Button - appears when any filters are active */}
+                    <Button
+                      onClick={resetFilters}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 bg-gradient-to-r from-red-50 to-orange-50 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-300 hover:text-red-800 transition-all duration-300 shadow-sm hover:shadow-md ml-2"
+                    >
+                      <FilterX className="h-3 w-3" />
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sort options */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                {/* Sort dropdown */}
+                <div className="mt-2 sm:mt-0">
+                  <Select value={sortBy} onValueChange={handleSortChange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                      <SelectItem value="price-low">
+                        Price: Low to High
+                      </SelectItem>
+                      <SelectItem value="price-high">
+                        Price: High to Low
+                      </SelectItem>
+                      <SelectItem value="area-high">
+                        Area: Largest First
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Error state */}
+              {error && (
+                <Card className="bg-red-50 border-red-100 mb-8">
+                  <CardContent className="p-8 text-center">
+                    <X className="h-10 w-10 text-red-500 mx-auto mb-4" />
+                    <p className="text-red-600 mb-4">{error}</p>
+                    <Button
+                      onClick={handleRetry}
+                      variant="outline"
+                      className="bg-white border-red-200 hover:bg-red-50"
+                    >
+                      Try Again
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Results grid - modern card design, 3 per row on desktop */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-10 w-full">
+                {loading ? (
+                  // Loading skeletons
+                  Array(6)
+                    .fill(0)
+                    .map((_, index) => (
+                      <Card
+                        key={index}
+                        className="overflow-hidden shadow-lg rounded-2xl border-0 bg-white animate-pulse"
+                      >
+                        <div className="h-48 bg-gray-200 animate-pulse rounded-t-2xl" />
+                        <CardContent className="p-4">
+                          <div className="h-4 bg-gray-200 rounded-full animate-pulse mb-4" />
+                          <div className="h-6 bg-gray-200 rounded-full animate-pulse w-3/4 mb-4" />
+                          <div className="space-y-3">
+                            <div className="flex justify-between gap-2">
+                              <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/4" />
+                              <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/4" />
+                              <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/4" />
+                            </div>
+                            <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/2" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                ) : (
+                  <>
+                    {/* Commercial Buy Properties */}
+                    {activeTab === "commercial" && commercialType === "buy" && (
+                      <>
+                        <h3 className="col-span-full text-lg font-semibold mb-4">
+                          Commercial Properties for Buy
+                        </h3>
+                        {paginatedProperties
+                          .filter(
+                            (prop) =>
+                              prop.type === "commercial" &&
+                              !prop.status?.toLowerCase().includes("rent")
+                          )
+                          .map((property) => (
+                            <div key={property.id} className="w-full">
+                              <PropertyCard
+                                {...property}
+                                likeCount={property.likeCount}
+                                formattedPrice={formatPrice(
+                                  property.price,
+                                  property.type
+                                )}
+                                commercialType="buy" // Pass prop
+                              />
+                            </div>
+                          ))}
+                      </>
+                    )}
+
+                    {/* Commercial Rent Properties */}
+                    {activeTab === "commercial" &&
+                      commercialType === "rent" && (
+                        <>
+                          <h3 className="col-span-full text-lg font-semibold mb-4">
+                            Commercial Properties for Rent
+                          </h3>
+                          {paginatedProperties
+                            .filter(
+                              (prop) =>
+                                prop.type === "commercial" &&
+                                prop.status?.toLowerCase().includes("rent")
+                            )
+                            .map((property) => (
+                              <div key={property.id} className="w-full">
+                                <PropertyCard
+                                  {...property}
+                                  likeCount={property.likeCount}
+                                  formattedPrice={formatPrice(
+                                    property.price,
+                                    property.type
+                                  )}
+                                  commercialType="rent" // Pass prop
+                                />
+                              </div>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                        </>
+                      )}
 
-                    {/* Removed Amenities Filter - only using furnished filter */}
-
-                    {/* Available From Date Picker */}
-                    {shouldShowFilter("showAvailableFrom") && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1 mt-4">
-                          Available From
-                        </label>
-                        <div className="relative">
-                          <DatePicker
-                            date={availableFrom}
-                            setDate={handleDateChange}
-                            className="w-full rounded-lg border-2 border-gray-200 bg-gradient-to-r from-white to-gray-50 text-gray-700 font-medium focus:ring-2 focus:ring-blue-400 h-8 text-xs hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-md transition-all duration-300"
+                    {/* Other Property Types */}
+                    {activeTab !== "commercial" &&
+                      paginatedProperties.map((property) => (
+                        <div key={property.id} className="w-full">
+                          <PropertyCard
+                            {...property}
+                            likeCount={property.likeCount}
+                            formattedPrice={formatPrice(
+                              property.price,
+                              property.type
+                            )}
                           />
                         </div>
-                      </div>
-                    )}
+                      ))}
+                  </>
+                )}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-8 flex justify-center">
+                  <div className="inline-flex rounded-md space-x-2">
+                    <Button
+                      variant="outline"
+                      size="default"
+                      className="rounded-full"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                    >
+                      {"<"}
+                    </Button>
+                    {[...Array(totalPages)].map((_, idx) => (
+                      <Button
+                        key={idx + 1}
+                        variant={
+                          currentPage === idx + 1 ? "default" : "outline"
+                        }
+                        size="default"
+                        className="rounded-full"
+                        onClick={() => setCurrentPage(idx + 1)}
+                      >
+                        {idx + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="default"
+                      className="rounded-full"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                    >
+                      {">"}
+                    </Button>
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Collapsed Sidebar Icons - Only visible when sidebar is collapsed */}
-            {!sidebarVisible && (
-              <div className="flex flex-col items-center gap-6 p-2 mt-16">
-                {/* Property Type Icons - Only first 5 visible and clickable */}
-                {[
-                  { key: "all", label: "All Properties", icon: "🏘️" },
-                  { key: "buy", label: "Buy", icon: "🏠" },
-                  { key: "rent", label: "Rent", icon: "🔑" },
-                  { key: "plot", label: "Plot", icon: "🏞️" },
-                  { key: "commercial", label: "Commercial", icon: "🏢" },
-                ]
-                  .slice(0, 5)
-                  .map((tab) => (
-                    <div
-                      key={tab.key}
-                      className="relative group cursor-pointer"
-                      title={tab.label}
-                      onClick={() => handleTabChange(tab.key)}
-                    >
-                      <div
-                         className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs transition-all duration-300 ${
-                          activeTab === tab.key
-                             ? "bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 text-white shadow-lg scale-110 hover:shadow-xl"
-                             : "bg-gradient-to-r from-white to-gray-50 text-gray-600 hover:from-blue-50 hover:to-indigo-50 hover:text-blue-600 backdrop-blur-sm border-2 border-gray-200 hover:border-blue-300 hover:shadow-md"
-                        }`}
-                      >
-                        {tab.icon}
-                      </div>
-                      {/* Tooltip */}
-                       <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                        {tab.label}
-                      </div>
-                    </div>
-                  ))}
-                {/* The rest of the icons are hidden in collapsed state */}
-              </div>
-            )}
-          </div>
-
-          {/* Property listings - takes full remaining width */}
-          <div className="flex-1 min-w-0 w-full pr-4">
-            {/* Applied filters display - Only show when filters are actually applied */}
-            {(searchQuery ||
-              minBedrooms > 0 ||
-              minBathrooms > 0 ||
-              minBalcony > 0 ||
-              minArea > 0 ||
-              availableFrom ||
-              preferenceIds.length > 0 ||
-               (furnished && furnished !== "any") ||
-              // Removed selectedAmenities
-              selectedPriceSteps.length > 0 ||
-              selectedAreaSteps.length > 0) && (
-              <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-sm font-medium mr-2">Active Filters:</h3>
-
-                  {searchQuery && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      Search: {searchQuery}
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setSearchQuery("");
-                          setSearchTerm("");
-                          searchParams.delete("search");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {minBedrooms > 0 && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      {minBedrooms}+ Beds
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setMinBedrooms(0);
-                          searchParams.delete("bedrooms");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {minBathrooms > 0 && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      {minBathrooms}+ Baths
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setMinBathrooms(0);
-                          searchParams.delete("bathrooms");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {minBalcony > 0 && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      {minBalcony}+ Balconies
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setMinBalcony(0);
-                          searchParams.delete("balcony");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {minArea > 0 && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      {minArea}+ sq.ft
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setMinArea(0);
-                          setMaxArea(0);
-                          setSelectedAreaSteps([]);
-                          searchParams.delete("minArea");
-                          searchParams.delete("maxArea");
-                          setSearchParams(searchParams);
-                          
-                          // Trigger API call to fetch fresh data
-                          const currentTab = searchParams.get("type") || activeTab;
-                          if (fetchPropertiesRef.current) {
-                            fetchPropertiesRef.current(currentTab);
-                          }
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {availableFrom && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      Available: {availableFrom.toLocaleDateString()}
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setAvailableFrom(undefined);
-                          searchParams.delete("availableFrom");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {preferenceIds.length > 0 && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      Preferences: {preferenceIds.length} selected
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setPreferenceIds([]);
-                          searchParams.delete("preference");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                   {furnished && furnished !== "any" && (
-                    <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800 hover:bg-blue-200">
-                      {furnishedOptions.find((f) => f.id === furnished)?.label || "Furnished"}
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => {
-                          setFurnished("any"); // Reset to default
-                          searchParams.delete("furnished"); // Remove from URL instead of setting
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {/* Removed amenity badges - only using furnished filter */}
-
-                  {selectedPriceSteps.length > 0 && (
-                    <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
-                      <IndianRupeeIcon className="h-3 w-3" />
-                      Price: {selectedPriceSteps.length} selected
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600"
-                        onClick={() => {
-                          setSelectedPriceSteps([]);
-                          searchParams.delete("priceSteps");
-                          searchParams.delete("minPrice");
-                          searchParams.delete("maxPrice");
-                          setSearchParams(searchParams);
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {selectedAreaSteps.length > 0 && (
-                    <Badge className="flex items-center gap-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 hover:from-blue-200 hover:to-blue-300 border border-blue-300">
-                      <Ruler className="h-3 w-3" />
-                      Area: {selectedAreaSteps.length} selected
-                      <X
-                        className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600"
-                        onClick={() => {
-                          setSelectedAreaSteps([]);
-                          setMinArea(0);
-                          setMaxArea(0);
-                          searchParams.delete("areaSteps");
-                          searchParams.delete("minArea");
-                          searchParams.delete("maxArea");
-                          setSearchParams(searchParams);
-                          
-                          // Trigger API call to fetch fresh data
-                          const currentTab = searchParams.get("type") || activeTab;
-                          if (fetchPropertiesRef.current) {
-                            fetchPropertiesRef.current(currentTab);
-                          }
-                        }}
-                      />
-                    </Badge>
-                  )}
-
-                  {/* Clear All Filters Button - appears when any filters are active */}
-                  <Button
-                    onClick={resetFilters}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 bg-gradient-to-r from-red-50 to-orange-50 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-300 hover:text-red-800 transition-all duration-300 shadow-sm hover:shadow-md ml-2"
-                  >
-                    <FilterX className="h-3 w-3" />
-                    Clear All
-                  </Button>
-
-
-                </div>
-              </div>
-            )}
-
-            {/* Sort options */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-              {/* Sort dropdown */}
-              <div className="mt-2 sm:mt-0">
-                <Select value={sortBy} onValueChange={handleSortChange}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="newest">Newest First</SelectItem>
-                    <SelectItem value="price-low">
-                      Price: Low to High
-                    </SelectItem>
-                    <SelectItem value="price-high">
-                      Price: High to Low
-                    </SelectItem>
-                    <SelectItem value="area-high">
-                      Area: Largest First
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Error state */}
-            {error && (
-              <Card className="bg-red-50 border-red-100 mb-8">
-                <CardContent className="p-8 text-center">
-                  <X className="h-10 w-10 text-red-500 mx-auto mb-4" />
-                  <p className="text-red-600 mb-4">{error}</p>
-                  <Button
-                    onClick={handleRetry}
-                    variant="outline"
-                    className="bg-white border-red-200 hover:bg-red-50"
-                  >
-                    Try Again
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Results grid - modern card design, 3 per row on desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-10 w-full">
-              {loading ? (
-                // Loading skeletons
-                Array(6)
-                  .fill(0)
-                  .map((_, index) => (
-                    <Card
-                      key={index}
-                      className="overflow-hidden shadow-lg rounded-2xl border-0 bg-white animate-pulse"
-                    >
-                      <div className="h-48 bg-gray-200 animate-pulse rounded-t-2xl" />
-                      <CardContent className="p-4">
-                        <div className="h-4 bg-gray-200 rounded-full animate-pulse mb-4" />
-                        <div className="h-6 bg-gray-200 rounded-full animate-pulse w-3/4 mb-4" />
-                        <div className="space-y-3">
-                          <div className="flex justify-between gap-2">
-                            <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/4" />
-                            <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/4" />
-                            <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/4" />
-                          </div>
-                          <div className="h-4 bg-gray-200 rounded-full animate-pulse w-1/2" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-              ) : (
-                <>
-                  {/* Commercial Buy Properties */}
-                  {activeTab === "commercial" && commercialType === "buy" && (
-                    <>
-                      <h3 className="col-span-full text-lg font-semibold mb-4">
-                        Commercial Properties for Buy
-                      </h3>
-                      {paginatedProperties
-                        .filter(
-                          (prop) =>
-                            prop.type === "commercial" &&
-                            !prop.status?.toLowerCase().includes("rent"),
-                        )
-                        .map((property) => (
-                          <div key={property.id} className="w-full">
-                            <PropertyCard
-                              {...property}
-                              likeCount={property.likeCount}
-                              formattedPrice={formatPrice(
-                                property.price,
-                                property.type,
-                              )}
-                              commercialType="buy" // Pass prop
-                            />
-                          </div>
-                        ))}
-                    </>
-                  )}
-
-                  {/* Commercial Rent Properties */}
-                  {activeTab === "commercial" && commercialType === "rent" && (
-                    <>
-                      <h3 className="col-span-full text-lg font-semibold mb-4">
-                        Commercial Properties for Rent
-                      </h3>
-                      {paginatedProperties
-                        .filter(
-                          (prop) =>
-                            prop.type === "commercial" &&
-                            prop.status?.toLowerCase().includes("rent"),
-                        )
-                        .map((property) => (
-                          <div key={property.id} className="w-full">
-                            <PropertyCard
-                              {...property}
-                              likeCount={property.likeCount}
-                              formattedPrice={formatPrice(
-                                property.price,
-                                property.type,
-                              )}
-                              commercialType="rent" // Pass prop
-                            />
-                          </div>
-                        ))}
-                    </>
-                  )}
-
-                  {/* Other Property Types */}
-                  {activeTab !== "commercial" &&
-                    paginatedProperties.map((property) => (
-                      <div key={property.id} className="w-full">
-                        <PropertyCard
-                          {...property}
-                          likeCount={property.likeCount}
-                          formattedPrice={formatPrice(
-                            property.price,
-                            property.type,
-                          )}
-                        />
-                      </div>
-                    ))}
-                </>
-              )}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex justify-center">
-                <div className="inline-flex rounded-md space-x-2">
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="rounded-full"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                  >
-                    {"<"}
-                  </Button>
-                  {[...Array(totalPages)].map((_, idx) => (
-                    <Button
-                      key={idx + 1}
-                      variant={currentPage === idx + 1 ? "default" : "outline"}
-                      size="default"
-                      className="rounded-full"
-                      onClick={() => setCurrentPage(idx + 1)}
-                    >
-                      {idx + 1}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="default"
-                    className="rounded-full"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                  >
-                    {">"}
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
-      </div>
       </div>
     </>
   );
