@@ -59,17 +59,11 @@ const BuilderProjectPost = () => {
   const [projectPlanImageURLs, setProjectPlanImageURLs] = useState([]);
   const [projectPlanMainIndex, setProjectPlanMainIndex] = useState(null);
   
-  const [floorPlanImages, setFloorPlanImages] = useState([]);
-  const [floorPlanImageURLs, setFloorPlanImageURLs] = useState([]);
-  const [floorPlanMainIndex, setFloorPlanMainIndex] = useState(null);
   
   // Amenities (like PostProperty)
   const [amenities, setAmenities] = useState([]);
   const [selectedOption, setSelectedOption] = useState("");
   
-  // Dynamic lists
-  const [exclusiveFeatures, setExclusiveFeatures] = useState([""]);
-  const [paymentPlans, setPaymentPlans] = useState([""]);
 
   // Get amenities data
   const checkBoxAmenities = getAmenity().checkBoxAmenities;
@@ -117,17 +111,6 @@ const BuilderProjectPost = () => {
     }
   }, [stateId]);
 
-  // Handlers for dynamic lists
-  const handleListChange = (setter, index, value) => {
-    setter((prev) => {
-      const updated = [...prev];
-      updated[index] = value;
-      return updated;
-    });
-  };
-  const handleAddListItem = (setter) => setter((prev) => [...prev, ""]);
-  const handleRemoveListItem = (setter, index) =>
-    setter((prev) => prev.filter((_, i) => i !== index));
 
   // Image upload handlers (like PostProperty)
   const handleImageUpload = async (imageType, e) => {
@@ -166,25 +149,10 @@ const BuilderProjectPost = () => {
           if (projectPlanMainIndex === null && newImages.length > 0) {
             setProjectPlanMainIndex(projectPlanImages.length);
           }
-        } else if (imageType === 'floorPlan') {
-          if (floorPlanImages.length + newFiles.length > 10) {
-            toast({
-              title: "Maximum 10 images allowed",
-              description: "You can upload up to 10 floor plan images.",
-              variant: "destructive",
-            });
-            return;
-          }
-          const newImages = [...floorPlanImages, ...newFiles];
-          setFloorPlanImages(newImages);
-          const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-          setFloorPlanImageURLs([...floorPlanImageURLs, ...newImageURLs]);
-          if (floorPlanMainIndex === null && newImages.length > 0) {
-            setFloorPlanMainIndex(floorPlanImages.length);
-          }
         }
       }
     } catch (error) {
+      // Handle image compression error silently
     }
   };
 
@@ -202,19 +170,6 @@ const BuilderProjectPost = () => {
       } else if (projectPlanMainIndex > index) {
         setProjectPlanMainIndex(projectPlanMainIndex - 1);
       }
-    } else if (imageType === 'floorPlan') {
-      const newImages = [...floorPlanImages];
-      const newURLs = [...floorPlanImageURLs];
-      newImages.splice(index, 1);
-      newURLs.splice(index, 1);
-      setFloorPlanImages(newImages);
-      setFloorPlanImageURLs(newURLs);
-      
-      if (floorPlanMainIndex === index) {
-        setFloorPlanMainIndex(newImages.length > 0 ? 0 : null);
-      } else if (floorPlanMainIndex > index) {
-        setFloorPlanMainIndex(floorPlanMainIndex - 1);
-      }
     }
   };
 
@@ -225,16 +180,17 @@ const BuilderProjectPost = () => {
     );
   };
 
-  const handleRadioChange = (id) => {
-    setSelectedOption(id);
+  const handleAmenityRadioButton = (event) => {
+    setSelectedOption(event.target.value);
   };
+
 
   // Form submission handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Basic validation
-    if (!user || !user.userId) {
+    if (!user) {
       toast({
         title: "Authentication Error",
         description: "Please log in to post a project",
@@ -273,36 +229,59 @@ const BuilderProjectPost = () => {
     try {
       const formData = new FormData();
       
-      // Add all the required fields (with quotes like curl example)
-      formData.append("BuilderId", `"${user.userId}"`);
-      formData.append("Name", `"${name}"`);
-      formData.append("ProjectType", `"${projectType}"`);
-      formData.append("Description", `"${description}"`);
-      formData.append("Price", `"${price}"`);
-      formData.append("Area", `"${area}"`);
-      formData.append("Beds", `"${beds}"`);
-      formData.append("Status", `"${status}"`);
-      formData.append("Possession", `"${possession}"`);
-      formData.append("Address", `"${address}"`);
-      formData.append("Locality", `"${locality}"`);
-      formData.append("CityId", `"${cityId}"`);
-      formData.append("StateId", `"${stateId}"`);
-      formData.append("IsNA", `"${isNA.toString()}"`);
-      formData.append("IsReraApproved", `"${isReraApproved.toString()}"`);
-      formData.append("IsOCApproved", `"${isOCApproved.toString()}"`);
+      // Add all the required fields (without quotes as per API expectations)
+      formData.append("BuilderId", "cc8011ef-8493-4543-84df-01bae14e4d06");
+      formData.append("Name", name);
+      formData.append("ProjectType", projectType);
+      formData.append("Description", description);
+      formData.append("Price", price.toString());
+      formData.append("Area", area.toString());
+      formData.append("Beds", beds.toString());
+      formData.append("Status", status);
+      formData.append("Possession", possession);
+      formData.append("Address", address);
+      formData.append("Locality", locality);
+      formData.append("CityId", cityId.toString());
+      formData.append("StateId", stateId.toString());
+      formData.append("IsNA", isNA.toString());
+      formData.append("IsReraApproved", isReraApproved.toString());
+      formData.append("IsOCApproved", isOCApproved.toString());
       
-      // Add amenity IDs (with quotes like curl example)
-      amenities.forEach(amenityId => {
-        formData.append("AmenityIds", `"${amenityId}"`);
+      // Add amenity IDs (without quotes as per API expectations)
+      // Map selected amenities to their IDs (like PostProperty)
+      const amenityIds = selectedOption === "" ? amenities : [...amenities, selectedOption];
+      amenityIds.forEach(amenityId => {
+        formData.append("AmenityIds", amenityId);
       });
       
-      // Add main images (with quotes like curl example)
+      // Add main images (without quotes as per API expectations)
       projectPlanImages.forEach((image, index) => {
         formData.append(`MainImages[${index}].File`, image);
-        formData.append(`MainImages[${index}].IsMain`, `"${(index === projectPlanMainIndex).toString()}"`);
+        formData.append(`MainImages[${index}].IsMain`, (index === projectPlanMainIndex).toString());
       });
 
 
+      
+      console.log("Sending project data:", {
+        BuilderId: "cc8011ef-8493-4543-84df-01bae14e4d06",
+        Name: name,
+        ProjectType: projectType,
+        Description: description,
+        Price: price,
+        Area: area,
+        Beds: beds,
+        Status: status,
+        Possession: possession,
+        Address: address,
+        Locality: locality,
+        CityId: cityId,
+        StateId: stateId,
+        IsNA: isNA,
+        IsReraApproved: isReraApproved,
+        IsOCApproved: isOCApproved,
+        AmenityIds: amenityIds,
+        ImageCount: projectPlanImages.length
+      });
       
       const response = await axiosInstance.post("/api/Builder/AddProject", formData);
       
@@ -329,13 +308,13 @@ const BuilderProjectPost = () => {
         setProjectPlanImages([]);
         setProjectPlanImageURLs([]);
         setProjectPlanMainIndex(null);
-        setFloorPlanImages([]);
-        setFloorPlanImageURLs([]);
-        setFloorPlanMainIndex(null);
         setAmenities([]);
         setSelectedOption("");
       }
     } catch (error) {
+      console.error("API Error Details:", error);
+      console.error("Error Response:", error.response?.data);
+      console.error("Error Status:", error.response?.status);
       
       // Enhanced error handling
       let errorMessage = "Failed to add project. Please try again.";
@@ -353,8 +332,13 @@ const BuilderProjectPost = () => {
         if (errorMessages.length > 0) {
           errorMessage = `Validation errors: ${errorMessages.join('; ')}`;
         }
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
       }
       
+      console.error("Final Error Message:", errorMessage);
       
       toast({
         title: "Error",
@@ -704,14 +688,14 @@ const BuilderProjectPost = () => {
                           onClick={() => removeImage('projectPlan', index)}
                         >
                           <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    </Button>
+                  </div>
                       {projectPlanMainIndex === index && (
                         <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
                           Main
                         </div>
                       )}
-                    </div>
+              </div>
                     <Button
                       type="button"
                       variant="outline"
@@ -744,73 +728,6 @@ const BuilderProjectPost = () => {
             </CardContent>
           </Card>
 
-          {/* Floor Plan Images */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-              <div className="flex items-center">
-                <Camera className="h-5 w-5 text-blue-600 mr-2" />
-              <CardTitle>Floor Plan Images</CardTitle>
-              </div>
-              <CardDescription>Upload floor plan images (max 10)</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {floorPlanImageURLs.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <div className="relative w-full h-36 border rounded-lg overflow-hidden">
-                      <img
-                        src={url}
-                        alt={`Floor Plan ${index + 1}`}
-                      className="object-cover w-full h-full"
-                    />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8"
-                          onClick={() => removeImage('floorPlan', index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {floorPlanMainIndex === index && (
-                        <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                          Main
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setFloorPlanMainIndex(index)}
-                    >
-                      {floorPlanMainIndex === index ? "Main Image" : "Set as Main"}
-                    </Button>
-                  </div>
-                ))}
-                {floorPlanImageURLs.length < 10 && (
-                  <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload('floorPlan', e)}
-                      className="hidden"
-                    />
-                    <Upload className="h-8 w-8 text-blue-500 mb-2" />
-                    <span className="text-sm text-blue-600 font-medium">
-                      Upload Image
-                    </span>
-                    <span className="text-xs text-gray-500 mt-1">
-                      {floorPlanImageURLs.length}/10 images
-                    </span>
-                  </label>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Amenities */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -862,109 +779,29 @@ const BuilderProjectPost = () => {
                           ? "bg-blue-100 border-2 border-blue-300"
                           : "bg-gray-50 border-2 border-gray-200 hover:border-blue-200"
                       }`}
-                      onClick={() => handleRadioChange(id)}
                     >
-                      <input
-                        type="radio"
-                        id={id}
-                        name="radioAmenity"
-                        checked={selectedOption === id}
-                        onChange={() => {}}
-                        className="border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
-                      />
-                      <Label
-                        htmlFor={amenity}
-                        className="cursor-pointer text-sm"
-                      >
+                      <label key={id}>
+                        <input
+                          type="radio"
+                          name="furnishing"
+                          value={id}
+                          checked={selectedOption === id}
+                          onChange={handleAmenityRadioButton}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                        />
                         {amenity}
-                      </Label>
-                    </div>
-                  ))}
+                        <br />
+                      </label>
+                </div>
+              ))}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Exclusive Features List */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-              <CardTitle>Exclusive Features</CardTitle>
-              <CardDescription>List exclusive features</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              {exclusiveFeatures.map((item, idx) => (
-                <div key={idx} className="flex gap-2 items-center mb-2">
-                  <Input
-                    value={item}
-                    onChange={(e) =>
-                      handleListChange(
-                        setExclusiveFeatures,
-                        idx,
-                        e.target.value,
-                      )
-                    }
-                    placeholder="Exclusive Feature"
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="destructive"
-                    onClick={() =>
-                      handleRemoveListItem(setExclusiveFeatures, idx)
-                    }
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleAddListItem(setExclusiveFeatures)}
-              >
-                + Add Feature
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Payment Plan List */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-              <CardTitle>Payment Plan</CardTitle>
-              <CardDescription>List payment plan details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              {paymentPlans.map((item, idx) => (
-                <div key={idx} className="flex gap-2 items-center mb-2">
-                  <Input
-                    value={item}
-                    onChange={(e) =>
-                      handleListChange(setPaymentPlans, idx, e.target.value)
-                    }
-                    placeholder="Payment Plan"
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="destructive"
-                    onClick={() => handleRemoveListItem(setPaymentPlans, idx)}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleAddListItem(setPaymentPlans)}
-              >
-                + Add Payment Plan
-              </Button>
-            </CardContent>
-          </Card>
 
           <div className="flex justify-center pt-6 sm:pt-8">
-            <Button 
+                  <Button
               type="submit" 
               className="w-full max-w-sm sm:max-w-md h-12 sm:h-14 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-bold text-base sm:text-lg rounded-2xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 border-0"
             >
