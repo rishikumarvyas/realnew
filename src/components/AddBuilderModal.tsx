@@ -252,15 +252,15 @@ const AddBuilderModal: React.FC<AddBuilderModalProps> = ({ isOpen, onClose }) =>
 
 
     try {
-      // Create FormData with all required fields (with quotes as per curl example)
+      // Create FormData with all required fields (without quotes as per API expectations)
       const formDataToSend = new FormData();
-      formDataToSend.append("Name", `"${formData.name.trim()}"`);
-      formDataToSend.append("Description", `"${formData.description.trim()}"`);
-      formDataToSend.append("Address", `"${formData.address.trim()}"`);
-      formDataToSend.append("Email", `"${formData.email.trim()}"`);
-      formDataToSend.append("Phone", `"${formData.phone.trim()}"`);
-      formDataToSend.append("CityId", `"${formData.cityId.toString()}"`);
-      formDataToSend.append("StateId", `"${formData.stateId.toString()}"`);
+      formDataToSend.append("Name", formData.name.trim());
+      formDataToSend.append("Description", formData.description.trim());
+      formDataToSend.append("Address", formData.address.trim());
+      formDataToSend.append("Email", formData.email.trim());
+      formDataToSend.append("Phone", formData.phone.trim());
+      formDataToSend.append("CityId", formData.cityId.toString());
+      formDataToSend.append("StateId", formData.stateId.toString());
       
       if (formData.logo) {
         formDataToSend.append("Logo", formData.logo);
@@ -290,6 +290,17 @@ const AddBuilderModal: React.FC<AddBuilderModalProps> = ({ isOpen, onClose }) =>
 
 
 
+      console.log("Sending builder data:", {
+        Name: formData.name.trim(),
+        Description: formData.description.trim(),
+        Address: formData.address.trim(),
+        Email: formData.email.trim(),
+        Phone: formData.phone.trim(),
+        CityId: formData.cityId,
+        StateId: formData.stateId,
+        HasLogo: !!formData.logo
+      });
+      
       const response = await axiosInstance.post("/api/Builder/AddBuilder", formDataToSend);
 
 

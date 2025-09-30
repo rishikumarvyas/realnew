@@ -69,6 +69,7 @@ const mockBuilderProjects = [
     exclusiveFeatures: ["Sky Garden", "Kids Play Area"],
     paymentPlans: ["10% on Booking", "80% on Possession", "10% on Handover"],
     builder: "Godrej Properties",
+    builderId: "91e7bc0d-a138-4fa6-b0c8-eacc7dfbf44d",
     bhk: "3 & 4 BHK",
     area: "Available on Request",
     possessionDate: "Jan 2030",
@@ -98,6 +99,7 @@ const mockBuilderProjects = [
     exclusiveFeatures: ["Business Lounge"],
     paymentPlans: ["20% on Booking", "60% on Completion", "20% on Handover"],
     builder: "Lodha Group",
+    builderId: "a2b3c4d5-e6f7-8901-2345-6789abcdef01",
     bhk: "3 & 4 BHK",
     area: "Available on Request",
     possessionDate: "May 2030",
@@ -127,6 +129,7 @@ const mockBuilderProjects = [
     exclusiveFeatures: ["Aqua Park", "Sky Lounge"],
     paymentPlans: ["10% on Booking", "80% on Possession", "10% on Handover"],
     builder: "Godrej Properties",
+    builderId: "91e7bc0d-a138-4fa6-b0c8-eacc7dfbf44d",
     bhk: "1, 2 & 3 BHK",
     area: "Available on Request",
     possessionDate: "Jun 2030",
@@ -156,6 +159,7 @@ const mockBuilderProjects = [
     exclusiveFeatures: ["Ocean View", "Helipad"],
     paymentPlans: ["15% on Booking", "75% on Possession", "10% on Handover"],
     builder: "Prestige Group",
+    builderId: "b3c4d5e6-f7g8-9012-3456-789abcdef012",
     bhk: "4 & 5 BHK",
     area: "Available on Request",
     possessionDate: "Dec 2029",
@@ -189,6 +193,7 @@ const mockBuilderProjects = [
       "30% on Possession",
     ],
     builder: "Brigade Group",
+    builderId: "c4d5e6f7-g8h9-0123-4567-89abcdef0123",
     bhk: "Office Spaces",
     area: "1000-5000 sq.ft",
     possessionDate: "Mar 2030",
@@ -520,6 +525,31 @@ const NewLanching = () => {
               you. Filter by your preferences and explore the best new launches in
               your city!
             </p>
+            
+            {/* Test Buttons */}
+            <div className="flex flex-wrap justify-center gap-4 mb-6">
+              <Button
+                onClick={() => navigate('/builder/cc8011ef-8493-4543-84df-01bae14e4d06')}
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                <Building2 className="h-5 w-5 mr-2" />
+                Get Builder
+              </Button>
+              <Button
+                onClick={() => navigate('/project/9fbfa4a4-b826-4300-9fe0-bf6283fbbf55')}
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                <Home className="h-5 w-5 mr-2" />
+                Get Project 1
+              </Button>
+              <Button
+                onClick={() => navigate('/project/bae1f47b-b041-4088-ba8a-afc593f4b99a')}
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+              >
+                <Home className="h-5 w-5 mr-2" />
+                Get Project 2
+              </Button>
+            </div>
             
             {/* Additional Offer Highlights */}
             <div className="flex flex-wrap justify-center gap-4 mb-6">
@@ -857,10 +887,20 @@ const NewLanching = () => {
                         {project.city ? `, ${project.city}` : ""}
                       </div>
                       <div className="font-bold text-base sm:text-lg text-gray-800 mb-1 leading-tight line-clamp-2">
-                        {project.projectName}
+                        <button
+                          onClick={() => navigate(`/project/${project.id}`)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200 text-left"
+                        >
+                          {project.projectName}
+                        </button>
                       </div>
                       <div className="text-sm font-semibold text-gray-700 mb-2">
-                        {project.builder}
+                        <button
+                          onClick={() => navigate(`/builder/${project.builderId}`)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200"
+                        >
+                          {project.builder}
+                        </button>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center mb-2">

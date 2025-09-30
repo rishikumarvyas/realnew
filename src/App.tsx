@@ -26,6 +26,8 @@ import BuilderProjectPost from "./pages/BuilderProjectPost";
 import NewLanching from "./pages/newlanching";
 import BuilderPropertyDetail from "./pages/BuilderPropertyDetail";
 import Profile from "./pages/Profile";
+import GetBuilder from "./pages/GetBuilder";
+import GetProject from "./pages/GetProject";
 
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({
@@ -69,6 +71,8 @@ const App = () => (
               <Route path="properties" element={<PropertyListing />} />
               <Route path="properties/:id" element={<PropertyDetail />} />
               <Route path="builderpost" element={<BuilderProjectPost />} />
+              <Route path="builder/:builderId" element={<GetBuilder />} />
+              <Route path="project/:projectId" element={<GetProject />} />
               <Route
                 path="builder-property/:id"
                 element={<BuilderPropertyDetail />}
