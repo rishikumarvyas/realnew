@@ -47,6 +47,16 @@ const BuilderProjectPost = () => {
   const [isNA, setIsNA] = useState(false);
   const [isReraApproved, setIsReraApproved] = useState(false);
   const [isOCApproved, setIsOCApproved] = useState(false);
+  // New fields per API
+  const [reraNumber, setReraNumber] = useState("");
+  const [reraDate, setReraDate] = useState("");
+  const [projectAreaAcres, setProjectAreaAcres] = useState("");
+  const [launchDate, setLaunchDate] = useState("");
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState("");
+  const [ocDate, setOcDate] = useState("");
+  const [exclusiveFeatures, setExclusiveFeatures] = useState<string[]>([]);
+  type PlanDetail = { type: string; area: string; price: string };
+  const [planDetails, setPlanDetails] = useState<PlanDetail[]>([{ type: "", area: "", price: "" }]);
   
   // State and city dropdowns
   const [states, setStates] = useState([]);
@@ -54,10 +64,16 @@ const BuilderProjectPost = () => {
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingCities, setLoadingCities] = useState(false);
   
-  // Image states (like PostProperty)
-  const [projectPlanImages, setProjectPlanImages] = useState([]);
-  const [projectPlanImageURLs, setProjectPlanImageURLs] = useState([]);
-  const [projectPlanMainIndex, setProjectPlanMainIndex] = useState(null);
+  // Image states (split into Project/Amenity/Floor)
+  const [projectImages, setProjectImages] = useState([]);
+  const [projectImageURLs, setProjectImageURLs] = useState([]);
+  const [projectMainIndex, setProjectMainIndex] = useState(null);
+  const [amenityImages, setAmenityImages] = useState([]);
+  const [amenityImageURLs, setAmenityImageURLs] = useState([]);
+  const [amenityMainIndex, setAmenityMainIndex] = useState(null);
+  const [floorImages, setFloorImages] = useState([]);
+  const [floorImageURLs, setFloorImageURLs] = useState([]);
+  const [floorMainIndex, setFloorMainIndex] = useState(null);
   
   
   // Amenities (like PostProperty)
@@ -112,7 +128,7 @@ const BuilderProjectPost = () => {
   }, [stateId]);
 
 
-  // Image upload handlers (like PostProperty)
+  // Image upload handlers (3 sections)
   const handleImageUpload = async (imageType, e) => {
     const imageFile = e.target.files[0];
     const options = {
@@ -133,21 +149,47 @@ const BuilderProjectPost = () => {
       if (fileList && fileList.length > 0) {
         const newFiles = Array.from(fileList);
         
-        if (imageType === 'projectPlan') {
-          if (projectPlanImages.length + newFiles.length > 10) {
+        if (imageType === 'project') {
+          if (projectImages.length + newFiles.length > 10) {
             toast({
               title: "Maximum 10 images allowed",
-              description: "You can upload up to 10 project plan images.",
+              description: "You can upload up to 10 project images.",
               variant: "destructive",
             });
             return;
           }
-          const newImages = [...projectPlanImages, ...newFiles];
-          setProjectPlanImages(newImages);
+          const newImages = [...projectImages, ...newFiles];
+          setProjectImages(newImages);
           const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-          setProjectPlanImageURLs([...projectPlanImageURLs, ...newImageURLs]);
-          if (projectPlanMainIndex === null && newImages.length > 0) {
-            setProjectPlanMainIndex(projectPlanImages.length);
+          setProjectImageURLs([...projectImageURLs, ...newImageURLs]);
+          if (projectMainIndex === null && newImages.length > 0) {
+            setProjectMainIndex(projectImages.length);
+          }
+        }
+        if (imageType === 'amenity') {
+          if (amenityImages.length + newFiles.length > 10) {
+            toast({ title: "Maximum 10 images allowed", description: "You can upload up to 10 amenity images.", variant: "destructive" });
+            return;
+          }
+          const newImages = [...amenityImages, ...newFiles];
+          setAmenityImages(newImages);
+          const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
+          setAmenityImageURLs([...amenityImageURLs, ...newImageURLs]);
+          if (amenityMainIndex === null && newImages.length > 0) {
+            setAmenityMainIndex(amenityImages.length);
+          }
+        }
+        if (imageType === 'floor') {
+          if (floorImages.length + newFiles.length > 10) {
+            toast({ title: "Maximum 10 images allowed", description: "You can upload up to 10 floor plan images.", variant: "destructive" });
+            return;
+          }
+          const newImages = [...floorImages, ...newFiles];
+          setFloorImages(newImages);
+          const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
+          setFloorImageURLs([...floorImageURLs, ...newImageURLs]);
+          if (floorMainIndex === null && newImages.length > 0) {
+            setFloorMainIndex(floorImages.length);
           }
         }
       }
@@ -157,18 +199,43 @@ const BuilderProjectPost = () => {
   };
 
   const removeImage = (imageType, index) => {
-    if (imageType === 'projectPlan') {
-      const newImages = [...projectPlanImages];
-      const newURLs = [...projectPlanImageURLs];
+    if (imageType === 'project') {
+      const newImages = [...projectImages];
+      const newURLs = [...projectImageURLs];
       newImages.splice(index, 1);
       newURLs.splice(index, 1);
-      setProjectPlanImages(newImages);
-      setProjectPlanImageURLs(newURLs);
-      
-      if (projectPlanMainIndex === index) {
-        setProjectPlanMainIndex(newImages.length > 0 ? 0 : null);
-      } else if (projectPlanMainIndex > index) {
-        setProjectPlanMainIndex(projectPlanMainIndex - 1);
+      setProjectImages(newImages);
+      setProjectImageURLs(newURLs);
+      if (projectMainIndex === index) {
+        setProjectMainIndex(newImages.length > 0 ? 0 : null);
+      } else if (projectMainIndex > index) {
+        setProjectMainIndex(projectMainIndex - 1);
+      }
+    }
+    if (imageType === 'amenity') {
+      const newImages = [...amenityImages];
+      const newURLs = [...amenityImageURLs];
+      newImages.splice(index, 1);
+      newURLs.splice(index, 1);
+      setAmenityImages(newImages);
+      setAmenityImageURLs(newURLs);
+      if (amenityMainIndex === index) {
+        setAmenityMainIndex(newImages.length > 0 ? 0 : null);
+      } else if (amenityMainIndex > index) {
+        setAmenityMainIndex(amenityMainIndex - 1);
+      }
+    }
+    if (imageType === 'floor') {
+      const newImages = [...floorImages];
+      const newURLs = [...floorImageURLs];
+      newImages.splice(index, 1);
+      newURLs.splice(index, 1);
+      setFloorImages(newImages);
+      setFloorImageURLs(newURLs);
+      if (floorMainIndex === index) {
+        setFloorMainIndex(newImages.length > 0 ? 0 : null);
+      } else if (floorMainIndex > index) {
+        setFloorMainIndex(floorMainIndex - 1);
       }
     }
   };
@@ -253,35 +320,41 @@ const BuilderProjectPost = () => {
       amenityIds.forEach(amenityId => {
         formData.append("AmenityIds", amenityId);
       });
-      
-      // Add main images (without quotes as per API expectations)
-      projectPlanImages.forEach((image, index) => {
-        formData.append(`MainImages[${index}].File`, image);
-        formData.append(`MainImages[${index}].IsMain`, (index === projectPlanMainIndex).toString());
+
+      // Project images
+      projectImages.forEach((image, index) => {
+        formData.append(`ProjectImages[${index}].File`, image);
+        formData.append(`ProjectImages[${index}].IsMain`, (index === projectMainIndex).toString());
+      });
+      // Amenity images
+      amenityImages.forEach((image, index) => {
+        formData.append(`AmenityImages[${index}].File`, image);
+        formData.append(`AmenityImages[${index}].IsMain`, (index === amenityMainIndex).toString());
+      });
+      // Floor images
+      floorImages.forEach((image, index) => {
+        formData.append(`FloorImages[${index}].File`, image);
+        formData.append(`FloorImages[${index}].IsMain`, (index === floorMainIndex).toString());
       });
 
-
-      
-      console.log("Sending project data:", {
-        BuilderId: "cc8011ef-8493-4543-84df-01bae14e4d06",
-        Name: name,
-        ProjectType: projectType,
-        Description: description,
-        Price: price,
-        Area: area,
-        Beds: beds,
-        Status: status,
-        Possession: possession,
-        Address: address,
-        Locality: locality,
-        CityId: cityId,
-        StateId: stateId,
-        IsNA: isNA,
-        IsReraApproved: isReraApproved,
-        IsOCApproved: isOCApproved,
-        AmenityIds: amenityIds,
-        ImageCount: projectPlanImages.length
+      // Plan details (table rows)
+      planDetails.forEach((pd, index) => {
+        if (pd.area || pd.type || pd.price) {
+          formData.append(`PlanDetails[${index}].Area`, pd.area);
+          formData.append(`PlanDetails[${index}].Type`, pd.type);
+          formData.append(`PlanDetails[${index}].Price`, pd.price);
+        }
       });
+
+      // RERA and dates and area in acres
+      if (reraNumber) formData.append("ReraNumber", reraNumber);
+      if (reraDate) formData.append("ReraDate", reraDate);
+      if (projectAreaAcres) formData.append("ProjectAreaInAcres", projectAreaAcres);
+      if (launchDate) formData.append("LaunchDate", launchDate);
+      if (expectedCompletionDate) formData.append("ExpectedCompletionDate", expectedCompletionDate);
+      if (ocDate) formData.append("OCDate", ocDate);
+      // Exclusive features (multiple)
+      exclusiveFeatures.forEach((f) => formData.append("ExclusiveFeatures", f));
       
       const response = await axiosInstance.post("/api/Builder/AddProject", formData);
       
@@ -305,11 +378,25 @@ const BuilderProjectPost = () => {
         setIsNA(false);
         setIsReraApproved(false);
         setIsOCApproved(false);
-        setProjectPlanImages([]);
-        setProjectPlanImageURLs([]);
-        setProjectPlanMainIndex(null);
+        setProjectImages([]);
+        setProjectImageURLs([]);
+        setProjectMainIndex(null);
+        setAmenityImages([]);
+        setAmenityImageURLs([]);
+        setAmenityMainIndex(null);
+        setFloorImages([]);
+        setFloorImageURLs([]);
+        setFloorMainIndex(null);
         setAmenities([]);
         setSelectedOption("");
+        setReraNumber("");
+        setReraDate("");
+        setProjectAreaAcres("");
+        setLaunchDate("");
+        setExpectedCompletionDate("");
+        setOcDate("");
+        setExclusiveFeatures([]);
+        setPlanDetails([{ type: "", area: "", price: "" }]);
       }
     } catch (error) {
       console.error("API Error Details:", error);
@@ -660,18 +747,18 @@ const BuilderProjectPost = () => {
             </CardContent>
           </Card>
 
-          {/* Project Plan Images */}
+          {/* Project Images */}
           <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
             <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
               <div className="flex items-center">
                 <Camera className="h-5 w-5 text-blue-600 mr-2" />
-              <CardTitle>Project Plan Images</CardTitle>
+              <CardTitle>Project Images</CardTitle>
               </div>
-              <CardDescription>Upload project plan images (max 10)</CardDescription>
+              <CardDescription>Upload project images (max 10)</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {projectPlanImageURLs.map((url, index) => (
+                {projectImageURLs.map((url, index) => (
                   <div key={index} className="relative group">
                     <div className="relative w-full h-36 border rounded-lg overflow-hidden">
                       <img
@@ -685,12 +772,12 @@ const BuilderProjectPost = () => {
                       size="icon"
                       variant="destructive"
                           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8"
-                          onClick={() => removeImage('projectPlan', index)}
+                          onClick={() => removeImage('project', index)}
                         >
                           <X className="h-4 w-4" />
                     </Button>
                   </div>
-                      {projectPlanMainIndex === index && (
+                      {projectMainIndex === index && (
                         <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
                           Main
                         </div>
@@ -701,18 +788,18 @@ const BuilderProjectPost = () => {
                       variant="outline"
                       size="sm"
                       className="w-full mt-2"
-                      onClick={() => setProjectPlanMainIndex(index)}
+                      onClick={() => setProjectMainIndex(index)}
                     >
-                      {projectPlanMainIndex === index ? "Main Image" : "Set as Main"}
+                      {projectMainIndex === index ? "Main Image" : "Set as Main"}
                     </Button>
                   </div>
                 ))}
-                {projectPlanImageURLs.length < 10 && (
+                {projectImageURLs.length < 10 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => handleImageUpload('projectPlan', e)}
+                      onChange={(e) => handleImageUpload('project', e)}
                       className="hidden"
                     />
                     <Upload className="h-8 w-8 text-blue-500 mb-2" />
@@ -720,8 +807,86 @@ const BuilderProjectPost = () => {
                       Upload Image
                     </span>
                     <span className="text-xs text-gray-500 mt-1">
-                      {projectPlanImageURLs.length}/10 images
+                      {projectImageURLs.length}/10 images
                     </span>
+                  </label>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Amenity Images */}
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+              <div className="flex items-center">
+                <Camera className="h-5 w-5 text-blue-600 mr-2" />
+                <CardTitle>Amenity Images</CardTitle>
+              </div>
+              <CardDescription>Upload amenity images (max 10)</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                {amenityImageURLs.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <div className="relative w-full h-36 border rounded-lg overflow-hidden">
+                      <img src={url} alt={`Amenity ${index + 1}`} className="object-cover w-full h-full" />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                        <Button type="button" size="icon" variant="destructive" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8" onClick={() => removeImage('amenity', index)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {amenityMainIndex === index && <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">Main</div>}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="w-full mt-2" onClick={() => setAmenityMainIndex(index)}>
+                      {amenityMainIndex === index ? "Main Image" : "Set as Main"}
+                    </Button>
+                  </div>
+                ))}
+                {amenityImageURLs.length < 10 && (
+                  <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload('amenity', e)} className="hidden" />
+                    <Upload className="h-8 w-8 text-blue-500 mb-2" />
+                    <span className="text-sm text-blue-600 font-medium">Upload Image</span>
+                    <span className="text-xs text-gray-500 mt-1">{amenityImageURLs.length}/10 images</span>
+                  </label>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Floor Plan Images */}
+          <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+              <div className="flex items-center">
+                <Camera className="h-5 w-5 text-blue-600 mr-2" />
+              <CardTitle>Floor Plan Images</CardTitle>
+              </div>
+              <CardDescription>Upload floor plan images (max 10)</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                {floorImageURLs.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <div className="relative w-full h-36 border rounded-lg overflow-hidden">
+                      <img src={url} alt={`Floor ${index + 1}`} className="object-cover w-full h-full" />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                        <Button type="button" size="icon" variant="destructive" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-8 w-8" onClick={() => removeImage('floor', index)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {floorMainIndex === index && <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">Main</div>}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="w-full mt-2" onClick={() => setFloorMainIndex(index)}>
+                      {floorMainIndex === index ? "Main Image" : "Set as Main"}
+                    </Button>
+                  </div>
+                ))}
+                {floorImageURLs.length < 10 && (
+                  <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload('floor', e)} className="hidden" />
+                    <Upload className="h-8 w-8 text-blue-500 mb-2" />
+                    <span className="text-sm text-blue-600 font-medium">Upload Image</span>
+                    <span className="text-xs text-gray-500 mt-1">{floorImageURLs.length}/10 images</span>
                   </label>
                 )}
               </div>
@@ -796,6 +961,104 @@ const BuilderProjectPost = () => {
               ))}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* RERA and Dates & Acres */}
+          <Card className="group border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-fuchsia-600 via-pink-600 to-rose-600 text-white rounded-t-lg p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">RERA & Timeline</CardTitle>
+              <CardDescription className="text-pink-100 mt-1 text-xs sm:text-sm">Regulatory and key project dates</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                <div className="space-y-3">
+                  <Label>RERA Number</Label>
+                  <Input value={reraNumber} onChange={(e) => setReraNumber(e.target.value)} placeholder="RERA-ABC-2025" className="h-12 border-2" />
+                </div>
+                <div className="space-y-3">
+                  <Label>RERA Date</Label>
+                  <Input value={reraDate} onChange={(e) => setReraDate(e.target.value)} placeholder="15-Oct-2025" className="h-12 border-2" />
+                </div>
+                <div className="space-y-3">
+                  <Label>Project Area (in Acres)</Label>
+                  <Input value={projectAreaAcres} onChange={(e) => setProjectAreaAcres(e.target.value)} placeholder="2.5" className="h-12 border-2" />
+                </div>
+                <div className="space-y-3">
+                  <Label>Launch Date</Label>
+                  <Input value={launchDate} onChange={(e) => setLaunchDate(e.target.value)} placeholder="01-Jan-2024" className="h-12 border-2" />
+                </div>
+                <div className="space-y-3">
+                  <Label>Expected Completion Date</Label>
+                  <Input value={expectedCompletionDate} onChange={(e) => setExpectedCompletionDate(e.target.value)} placeholder="31-Dec-2027" className="h-12 border-2" />
+                </div>
+                <div className="space-y-3">
+                  <Label>OC Date</Label>
+                  <Input value={ocDate} onChange={(e) => setOcDate(e.target.value)} placeholder="31-Dec-2027" className="h-12 border-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Exclusive Features */}
+          <Card className="group border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-sky-600 via-cyan-600 to-teal-600 text-white rounded-t-lg p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">Exclusive Features</CardTitle>
+              <CardDescription className="text-sky-100 mt-1 text-xs sm:text-sm">Add special features (you can add multiple)</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4">
+              {exclusiveFeatures.map((f, idx) => (
+                <div key={idx} className="flex gap-3 items-center">
+                  <Input value={f} onChange={(e) => {
+                    const copy = [...exclusiveFeatures];
+                    copy[idx] = e.target.value;
+                    setExclusiveFeatures(copy);
+                  }} placeholder="e.g., Sky Lounge" className="h-12 border-2" />
+                  <Button type="button" variant="outline" onClick={() => {
+                    const copy = [...exclusiveFeatures];
+                    copy.splice(idx,1);
+                    setExclusiveFeatures(copy);
+                  }}>Remove</Button>
+                </div>
+              ))}
+              <Button type="button" onClick={() => setExclusiveFeatures([...exclusiveFeatures, ""]) }>+ Add Feature</Button>
+            </CardContent>
+          </Card>
+
+          {/* Plan Details Table */}
+          <Card className="group border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm">
+            <CardHeader className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white rounded-t-lg p-4 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl lg:text-2xl font-bold">Plan Details</CardTitle>
+              <CardDescription className="text-indigo-100 mt-1 text-xs sm:text-sm">Rows will be sent as PlanDetails[n].Type/Area/Price</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 lg:p-8 space-y-3">
+              {planDetails.map((pd, idx) => (
+                <div key={idx} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input value={pd.type} onChange={(e)=>{
+                    const copy=[...planDetails];
+                    copy[idx] = { ...copy[idx], type: e.target.value };
+                    setPlanDetails(copy);
+                  }} placeholder="Type (e.g., 2BHK)" className="h-12 border-2" />
+                  <Input value={pd.area} onChange={(e)=>{
+                    const copy=[...planDetails];
+                    copy[idx] = { ...copy[idx], area: e.target.value };
+                    setPlanDetails(copy);
+                  }} placeholder="Area (sqft)" className="h-12 border-2" />
+                  <div className="flex gap-2">
+                    <Input value={pd.price} onChange={(e)=>{
+                      const copy=[...planDetails];
+                      copy[idx] = { ...copy[idx], price: e.target.value };
+                      setPlanDetails(copy);
+                    }} placeholder="Price" className="h-12 border-2" />
+                    <Button type="button" variant="outline" onClick={()=>{
+                      const copy=[...planDetails];
+                      copy.splice(idx,1);
+                      setPlanDetails(copy.length?copy:[{type:"",area:"",price:""}]);
+                    }}>Remove</Button>
+                  </div>
+                </div>
+              ))}
+              <Button type="button" onClick={()=> setPlanDetails([...planDetails, { type: "", area: "", price: "" }]) }>+ Add Row</Button>
             </CardContent>
           </Card>
 
