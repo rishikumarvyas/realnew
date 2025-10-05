@@ -19,9 +19,8 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
-    
     return Promise.reject(error);
-  },
+  }
 );
 
 // Add a response interceptor to handle token expiry
@@ -31,20 +30,70 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     // Handle response errors
+    const originalRequest = error.config;
 
-    // Check if error is due to token expiry or unauthorized access
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token is expired or invalid
-      localStorage.removeItem("token");
-
-      // Don't redirect automatically - let the protected route handle this
-      // This avoids refresh loops when authentication fails
-
-      // Instead, let the AuthContext handle redirection through its protection mechanism
+    // If no response (network error) just reject
+    if (!error.response) {
+      return Promise.reject(error);
     }
 
+    const status = error.response.status;
+    // If unauthorized or forbidden, try to refresh the access token once
+    if ((status === 401 || status === 403) && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      // Simple refresh queue to avoid multiple refresh calls in parallel
+      if (!axiosInstance._isRefreshing) {
+        axiosInstance._isRefreshing = true;
+        axiosInstance._refreshSubscribers = [];
+        const currentToken = localStorage.getItem("token");
+        const refreshUrl = `${axiosInstance.defaults.baseURL}/api/Auth/RefreshToken`;
+
+        return axios
+          .post(refreshUrl, { accessToken: currentToken })
+          .then((res) => {
+            // Server returns a refreshToken which will act as the next accessToken
+            const newRefreshToken = res?.data?.refreshToken;
+
+            if (newRefreshToken) {
+              // Replace our stored token with the new refreshToken
+              axiosInstance.deflocalStorage.setItem("token", newRefreshToken);
+              aults.headers.Authorization = `Bearer ${newRefreshToken}`;
+
+              // notify queued requests with the new token
+              axiosInstance._refreshSubscribers.forEach((cb) =>
+                cb(newRefreshToken)
+              );
+              axiosInstance._refreshSubscribers = [];
+
+              // retry original
+              return axiosInstance(originalRequest);
+            }
+            return Promise.reject(error);
+          })
+          .catch((err) => {
+            // If refresh failed, remove tokens and reject
+            localStorage.removeItem("token");
+            return Promise.reject(err);
+          })
+          .finally(() => {
+            axiosInstance._isRefreshing = false;
+          });
+      }
+
+      // If a refresh is already in progress, queue the request
+      return new Promise((resolve, reject) => {
+        axiosInstance._refreshSubscribers.push((token) => {
+          if (!originalRequest.headers) {
+            originalRequest.headers = {};
+          }
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          resolve(axiosInstance(originalRequest));
+        });
+      });
+    }
     return Promise.reject(error);
-  },
+  }
 );
 
 export default axiosInstance;

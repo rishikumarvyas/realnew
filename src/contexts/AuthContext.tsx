@@ -1,3 +1,4 @@
+// @refresh reset
 import React, {
   createContext,
   useContext,
@@ -32,6 +33,8 @@ interface AuthContextType {
   // Auth modal state
   showAuthModal: boolean;
   modalType: "login" | "signup" | null;
+  showInactivityWarning: boolean;
+  acknowledgeInactivity: () => void;
   openLoginModal: () => void;
   openSignupModal: () => void;
   closeAuthModal: () => void;
@@ -50,6 +53,7 @@ interface AuthContextType {
     userTypeId: string
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
+  logoutNow: () => Promise<void>;
   fetchNotifications: () => Promise<void>;
   // NEW: Add notification creation functions
   createNotification: (
@@ -86,12 +90,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     if (user?.userId) {
       console.log("User available in AuthContext, fetching notifications...");
       fetchNotifications();
+      // start refresh & inactivity timers when user becomes available
+      scheduleTokenRefresh();
+      startInactivityTimers();
+    } else {
+      // stop timers when user is null
+      stopRefreshCycle();
+      stopInactivityTimers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.userId]);
 
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [modalType, setModalType] = useState<"login" | "signup" | null>(null);
+  // Auto refresh & inactivity handling
+  const refreshTimerRef = useRef<number | null>(null);
+  const refreshInProgress = useRef(false);
+
+  // Inactivity tracking
+  const inactivityTimeoutRef = useRef<number | null>(null);
+  const warningTimeoutRef = useRef<number | null>(null);
+  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  // Ref to hold latest showInactivityWarning to avoid stale closures in handlers
+  const showInactivityWarningRef = useRef<boolean>(showInactivityWarning);
+  const inactivityResetHandlerRef = useRef<(() => void) | null>(null);
 
   // Auth modal actions
   const openLoginModal = () => {
@@ -180,6 +203,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  // callRefreshToken: always POST { accessToken } where accessToken is the current token stored
+  // server responds with { refreshToken, expiresAt }
+  const callRefreshToken = async () => {
+    try {
+      const accessToken = localStorage.getItem("token");
+      if (!accessToken) return null;
+      const res = await axios.post(
+        `${axiosInstance.defaults.baseURL}/api/Auth/RefreshToken`,
+        { accessToken }
+      );
+      const data = res.data;
+      if (
+        data?.statusCode === 200 &&
+        data?.message != null &&
+        data?.message != undefined &&
+        data?.message != ""
+      ) {
+        return data;
+      } else {
+        return null;
+      }
+    } catch (err) {
+      return null;
+    }
+  };
+
   // Change signup return type to Promise<{ success: boolean; message?: string }>
   const signup = async (
     phoneNumber: string,
@@ -243,7 +292,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             signupResponse?.data?.message || "Signup failed. Please try again.",
         };
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error signing up:", error);
       let message = "An unexpected error occurred.";
       if (error?.response?.data?.message) {
@@ -307,7 +356,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     isCreatingNotification.current = true;
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         userId: user.userId,
         message: message,
         notificationType: type,
@@ -387,7 +436,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     isMarkingAsRead.current = true;
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         type: type,
         userId: user.userId,
         notificationId: notificationId,
@@ -497,7 +546,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         console.error("Error parsing login response:", e);
         return { success: false, message: "Error parsing login response." };
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error during login:", error);
       // Try to extract error message from API response
       let message = "An unexpected error occurred.";
@@ -601,11 +650,140 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setNotifications([]);
     setUnreadCount(0);
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("amenities");
     localStorage.removeItem("allStates");
     localStorage.removeItem("userType");
     localStorage.removeItem("superCategory");
+    // Stop timers
+    stopRefreshCycle();
+    stopInactivityTimers();
   };
+
+  // Revoke session on backend (if API exists) and then logout locally
+  const revokeAndLogout = async () => {
+    // No backend logout endpoint available; perform local cleanup and redirect
+    logout();
+    try {
+      window.location.href = "/";
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Exposed method to perform revoke and logout from components
+  const logoutNow = async () => {
+    await revokeAndLogout();
+  };
+
+  // Schedule token refresh every X ms (ms)
+  // Refresh every 13 minutes by default
+  const scheduleTokenRefresh = (ms = 13 * 60 * 1000) => {
+    // clear existing
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    // set new timer
+    refreshTimerRef.current = window.setTimeout(async () => {
+      if (refreshInProgress.current) return;
+      refreshInProgress.current = true;
+      try {
+        const data = await callRefreshToken();
+        if (data && data.refreshToken) {
+          // If server returned a refreshToken, persist it as the active token (rotating-token pattern)
+          try {
+            localStorage.setItem("token", data.refreshToken);
+          } catch (e) {
+            console.warn("Failed to persist refreshToken to localStorage", e);
+          }
+          // keep a copy under refreshToken key as well
+          try {
+            localStorage.setItem("refreshToken", data.refreshToken);
+          } catch (e) {
+            // ignored
+          }
+          axiosInstance.defaults.headers.Authorization = `Bearer ${data.refreshToken}`;
+
+          // Schedule next refresh at the fixed interval (ignore expiresAt)
+          scheduleTokenRefresh(ms);
+        } else {
+          // If refresh failed or returned nothing useful, force logout
+          revokeAndLogout();
+        }
+      } catch (e) {
+        revokeAndLogout();
+      } finally {
+        refreshInProgress.current = false;
+      }
+    }, ms);
+  };
+
+  const stopRefreshCycle = () => {
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    refreshInProgress.current = false;
+  };
+
+  // Inactivity: show warning after 20 - 5 = 15 minutes, then logout after 5 more minutes
+  const startInactivityTimers = (
+    inactiveMs = 15 * 60 * 1000,
+    warningMs = 5 * 60 * 1000
+  ) => {
+    stopInactivityTimers();
+    // Reset listeners. If the inactivity warning modal is visible, ignore
+    // activity so the modal isn't dismissed by simple mouse movement.
+    const resetHandler = () => {
+      // Use ref to avoid stale closure: ignore activity while modal is visible
+      if (showInactivityWarningRef.current) return;
+      stopInactivityTimers();
+      startInactivityTimers(inactiveMs, warningMs);
+    };
+
+    inactivityResetHandlerRef.current = resetHandler;
+
+    // Attach event listeners
+    ["mousemove", "mousedown", "keydown", "touchstart", "scroll"].forEach(
+      (ev) => window.addEventListener(ev, resetHandler)
+    );
+
+    // warning timer: show warning at (inactiveMs - warningMs)
+    warningTimeoutRef.current = window.setTimeout(() => {
+      setShowInactivityWarning(true);
+    }, Math.max(0, inactiveMs - warningMs));
+
+    // final timeout: perform logout after inactiveMs
+    inactivityTimeoutRef.current = window.setTimeout(() => {
+      setShowInactivityWarning(false);
+      revokeAndLogout();
+    }, inactiveMs);
+  };
+
+  const stopInactivityTimers = () => {
+    if (warningTimeoutRef.current) {
+      window.clearTimeout(warningTimeoutRef.current);
+      warningTimeoutRef.current = null;
+    }
+    if (inactivityTimeoutRef.current) {
+      window.clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+    setShowInactivityWarning(false);
+    const handler = inactivityResetHandlerRef.current;
+    if (handler) {
+      ["mousemove", "mousedown", "keydown", "touchstart", "scroll"].forEach(
+        (ev) => window.removeEventListener(ev, handler)
+      );
+      inactivityResetHandlerRef.current = null;
+    }
+  };
+
+  // Keep ref in sync with state so handlers defined earlier can read latest value
+  useEffect(() => {
+    showInactivityWarningRef.current = showInactivityWarning;
+  }, [showInactivityWarning]);
 
   const value = {
     user,
@@ -619,6 +797,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     openLoginModal,
     openSignupModal,
     closeAuthModal,
+    showInactivityWarning,
+    acknowledgeInactivity: () => {
+      // user acknowledged warning, reset timers
+      setShowInactivityWarning(false);
+      startInactivityTimers();
+    },
+    logoutNow,
     // Auth functions
     requestOtp,
     login,

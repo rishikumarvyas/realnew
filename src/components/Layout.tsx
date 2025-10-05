@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
+import InactivityModal from "./InactivityModal";
 
 export function Layout() {
   return (
@@ -9,6 +10,7 @@ export function Layout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <InactivityModal />
       <Footer />
     </div>
   );
