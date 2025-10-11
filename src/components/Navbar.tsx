@@ -23,6 +23,7 @@ import {
   LandPlot,
   Store,
   Hammer,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -138,7 +139,7 @@ export function Navbar() {
                   {label}
                 </Link>
               ))}
-              {user?.role === "Admin" && (
+              {(user?.role === "Admin" || user?.role === "Builder") && (
                 <Link
                   to="/newlanching"
                   className={cn(
@@ -155,14 +156,54 @@ export function Navbar() {
             {isAuthenticated ? (
               <>
                 {user?.role === "Admin" && (
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/admin")}
-                    className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full mr-2"
-                  >
-                    <Shield className="h-4 w-4 mr-1" />
-                    Admin
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/admin")}
+                      className="flex items-center gap-1 bg-blue-600 text-white hover:bg-white-700 rounded-full mr-2"
+                    >
+                      <Shield className="h-4 w-4 mr-1" />
+                      Admin
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="flex items-center gap-1 bg-orange-600 text-white hover:bg-orange-700 rounded-full mr-2"
+                        >
+                          <Hammer className="h-4 w-4 mr-1" />
+                          Builder
+                          <ChevronDown className="h-4 w-4 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-48 p-2 border border-orange-100"
+                      >
+                        <DropdownMenuItem
+                          onClick={handleAddBuilderClick}
+                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
+                          <span className="text-orange-600">Add Builder</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => navigate("/add-project")}
+                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
+                          <span className="text-orange-600">Add Project</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => navigate("/builder-project-post")}
+                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
+                          <span className="text-orange-600">Post Project</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
                 )}
                 <div className="flex items-center space-x-4">
                   <Button
@@ -173,11 +214,11 @@ export function Navbar() {
                     <PlusCircle className="h-4 w-4 mr-1" />
                     Post Property
                   </Button>
-                  {/* Post Project button only for builder role */}
+                  {/* Post Project button for builder role only (admin has it in Builder dropdown) */}
                   {user?.role === "Builder" && (
                     <Button
                       variant="outline"
-                      onClick={() => navigate("/builderpost")}
+                      onClick={() => navigate("/builder-project-post")}
                       className="flex items-center gap-1 bg-green-600 text-white hover:bg-green-700 rounded-full"
                     >
                       <PlusCircle className="h-4 w-4 mr-1" />
@@ -221,19 +262,6 @@ export function Navbar() {
                         </Link>
                       </DropdownMenuItem>
 
-                      {/* Add Builder option for admin users */}
-                      {(user?.role === "Admin" || user?.role === "admin" || user?.userType === "Admin") && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={handleAddBuilderClick}
-                            className="cursor-pointer hover:bg-green-50 flex items-center py-1"
-                          >
-                            <Hammer className="mr-2 h-4 w-4 text-green-500" />
-                            <span className="text-green-600">Add Builder</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
 
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -351,10 +379,10 @@ export function Navbar() {
                     <PlusCircle className="w-5 h-5 mr-2" />
                     <span>Post Property</span>
                   </Link>
-                  {/* Post Project button for builder role */}
-                  {user?.role === "Builder" && (
+                  {/* Post Project button for builder and admin roles */}
+                  {(user?.role === "Builder" || user?.role === "Admin") && (
                     <Link
-                      to="/builderpost"
+                      to="/builder-project-post"
                       onClick={() => setIsOpen(false)}
                       className="flex items-center justify-center p-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full transition-all shadow-md min-h-[40px]"
                     >
@@ -380,16 +408,53 @@ export function Navbar() {
                   <User className="w-5 h-5 mr-3 text-gray-500" /> Profile
                 </Link>
                 {user?.role === "Admin" && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-                  >
-                    <Shield className="w-5 h-5 mr-3 text-gray-500" /> Admin
-                    Panel
-                  </Link>
+                  <>
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                    >
+                      <Shield className="w-5 h-5 mr-3 text-gray-500" /> Admin
+                      Panel
+                    </Link>
+                    {/* Builder dropdown for mobile */}
+                    <div className="border-l-4 border-orange-500 pl-3 ml-3">
+                      <div className="text-sm font-semibold text-orange-600 mb-2 flex items-center">
+                        <Hammer className="w-4 h-4 mr-2" />
+                        Builder Actions
+                      </div>
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => {
+                            handleAddBuilderClick();
+                            setIsOpen(false);
+                          }}
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md w-full text-left"
+                        >
+                          <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
+                          Add Builder
+                        </button>
+                        <Link
+                          to="/add-project"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
+                        >
+                          <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
+                          Add Project
+                        </Link>
+                        <Link
+                          to="/builder-project-post"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
+                        >
+                          <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
+                          Post Project
+                        </Link>
+                      </div>
+                    </div>
+                  </>
                 )}
-                {user?.role === "Admin" && (
+                {(user?.role === "Admin" || user?.role === "Builder") && (
                   <Link
                     to="/newlanching"
                     onClick={() => setIsOpen(false)}
@@ -398,14 +463,6 @@ export function Navbar() {
                     <PlusCircle className="w-5 h-5 mr-3 text-gray-500" /> New
                     Launching
                   </Link>
-                )}
-                {(user?.role === "Admin" || user?.role === "admin" || user?.userType === "Admin") && (
-                  <button
-                    onClick={handleAddBuilderClick}
-                    className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md w-full text-left"
-                  >
-                    <Hammer className="w-5 h-5 mr-3 text-green-500" /> Add Builder
-                  </button>
                 )}
 
                 <div className="flex justify-center py-2 relative">

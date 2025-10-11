@@ -297,7 +297,7 @@ const BuilderProjectPost = () => {
       const formData = new FormData();
       
       // Add all the required fields (without quotes as per API expectations)
-      formData.append("BuilderId", "cc8011ef-8493-4543-84df-01bae14e4d06");
+      formData.append("BuilderId", user.userId);
       formData.append("Name", name);
       formData.append("ProjectType", projectType);
       formData.append("Description", description);
@@ -399,9 +399,6 @@ const BuilderProjectPost = () => {
         setPlanDetails([{ type: "", area: "", price: "" }]);
       }
     } catch (error) {
-      console.error("API Error Details:", error);
-      console.error("Error Response:", error.response?.data);
-      console.error("Error Status:", error.response?.status);
       
       // Enhanced error handling
       let errorMessage = "Failed to add project. Please try again.";
@@ -424,8 +421,6 @@ const BuilderProjectPost = () => {
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       }
-      
-      console.error("Final Error Message:", errorMessage);
       
       toast({
         title: "Error",

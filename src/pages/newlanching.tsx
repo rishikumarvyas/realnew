@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +25,8 @@ import hmBanner from "@/Images/hm.jpg";
 import { useNavigate } from "react-router-dom";
 import SEOHead from "@/components/SEOHead";
 import { getNewLaunchingSEO } from "@/utils/seoUtils";
+import { useAuth } from "@/contexts/AuthContext";
+import axiosInstance from "@/axiosCalls/axiosInstance";
 import { 
   Gift, 
   Star, 
@@ -129,7 +131,7 @@ const mockBuilderProjects = [
     exclusiveFeatures: ["Aqua Park", "Sky Lounge"],
     paymentPlans: ["10% on Booking", "80% on Possession", "10% on Handover"],
     builder: "Godrej Properties",
-    builderId: "91e7bc0d-a138-4fa6-b0c8-eacc7dfbf44d",
+    builderId: "91e7bc0d-a138-4fa6-b0c8-eacc7dfbf44e",
     bhk: "1, 2 & 3 BHK",
     area: "Available on Request",
     possessionDate: "Jun 2030",
@@ -288,6 +290,7 @@ const allCityOptions = Array.from(
 
 const NewLanching = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const seoConfig = getNewLaunchingSEO();
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState("");
@@ -299,6 +302,13 @@ const NewLanching = () => {
   const [maxPrice, setMaxPrice] = useState("");
   const [builder, setBuilder] = useState("");
   const [onlyNewLaunch, setOnlyNewLaunch] = useState(false);
+  
+  // State for builders from API
+  const [builders, setBuilders] = useState([]);
+  const [loadingBuilders, setLoadingBuilders] = useState(false);
+  
+  // State for builder selection modal
+  const [showBuilderModal, setShowBuilderModal] = useState(false);
   
   // New state for offers popup
   const [isOffersPopupOpen, setIsOffersPopupOpen] = useState(false);
@@ -315,8 +325,52 @@ const NewLanching = () => {
     agreeToTerms: false
   });
 
+  // Function to fetch builders from API
+  const fetchBuilders = async () => {
+    setLoadingBuilders(true);
+    try {
+      // Use POST method with searchTerm as per API documentation
+      const response = await axiosInstance.post("/api/Builder/GetBuilders", {
+        searchTerm: ""
+      });
+      
+      if (response.data.statusCode === 200) {
+        const apiBuilders = response.data.data || [];
+        
+        // Map API response to consistent format using correct field names
+        const mappedBuilders = apiBuilders.map((builder) => {
+          return {
+            id: builder.builderId,
+            name: builder.name,
+            location: `${builder.address}, ${builder.city}, ${builder.state}`,
+            email: builder.email,
+            phone: builder.phone,
+            logoUrl: builder.logoUrl,
+            status: builder.isActive ? "Active" : "Inactive"
+          };
+        });
+        
+        setBuilders(mappedBuilders);
+      } else {
+        console.error("Failed to fetch builders:", response.data);
+        // Fallback to mock data if API fails
+        setBuilders(mockBuilderProjects.map(p => ({ id: p.builderId, name: p.builder })));
+      }
+    } catch (error) {
+      console.error("❌ Error fetching builders:", error);
+      console.error("❌ Error response:", error.response?.data);
+      console.error("❌ Error status:", error.response?.status);
+      console.error("❌ Falling back to mock data");
+      // Fallback to mock data if API fails
+      setBuilders(mockBuilderProjects.map(p => ({ id: p.builderId, name: p.builder })));
+    } finally {
+      setLoadingBuilders(false);
+    }
+  };
+
   useEffect(() => {
     setProjects(mockBuilderProjects);
+    fetchBuilders();
   }, []);
 
   const filteredProjects = projects.filter((p) => {
@@ -529,12 +583,22 @@ const NewLanching = () => {
             {/* Test Buttons */}
             <div className="flex flex-wrap justify-center gap-4 mb-6">
               <Button
-                onClick={() => navigate('/builder/cc8011ef-8493-4543-84df-01bae14e4d06')}
+                onClick={() => setShowBuilderModal(true)}
                 className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
               >
                 <Building2 className="h-5 w-5 mr-2" />
-                Get Builder
+                View All Builders
               </Button>
+              {/* Add Project button for admin users */}
+              {user?.role === "Admin" && (
+                <Button
+                  onClick={() => navigate('/add-project')}
+                  className="bg-purple-500/20 backdrop-blur-sm hover:bg-purple-500/30 text-white border border-purple-500/30 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
+                >
+                  <Building2 className="h-5 w-5 mr-2" />
+                  Add Project
+                </Button>
+              )}
               <Button
                 onClick={() => navigate('/project/9fbfa4a4-b826-4300-9fe0-bf6283fbbf55')}
                 className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border border-white/30 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
@@ -549,6 +613,16 @@ const NewLanching = () => {
                 <Home className="h-5 w-5 mr-2" />
                 Get Project 2
               </Button>
+              {/* Post Project Button for Admin Users */}
+              {user?.role === "Admin" && (
+                <Button
+                  onClick={() => navigate('/builder-project-post')}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
+                >
+                  <Building2 className="h-5 w-5 mr-2" />
+                  Post Project
+                </Button>
+              )}
             </div>
             
             {/* Additional Offer Highlights */}
@@ -650,18 +724,24 @@ const NewLanching = () => {
                 </Select>
                 <Select value={builder} onValueChange={setBuilder}>
                   <SelectTrigger className="min-w-[160px] h-12 border-none focus:ring-0 focus:border-none text-base px-4 mr-2">
-                    <SelectValue placeholder="BUILDER" />
+                    <SelectValue placeholder={loadingBuilders ? "Loading..." : "BUILDER"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {builderOptions.map((opt) => (
-                      <SelectItem
-                        key={opt}
-                        value={opt}
-                        className="text-base px-4 py-2"
-                      >
-                        {opt}
+                    {loadingBuilders ? (
+                      <SelectItem value="loading" disabled>
+                        Loading builders...
                       </SelectItem>
-                    ))}
+                    ) : (
+                      builders.map((builderItem) => (
+                        <SelectItem
+                          key={builderItem.id}
+                          value={builderItem.name}
+                          className="text-base px-4 py-2"
+                        >
+                          {builderItem.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 <Select value={status} onValueChange={setStatus}>
@@ -728,9 +808,21 @@ const NewLanching = () => {
         {/* Project Grid Heading */}
         <div className="w-full mx-auto flex items-center my-8">
           <div className="flex-1 border-t border-gray-300"></div>
-          <h2 className="mx-6 text-2xl md:text-3xl font-extrabold text-gray-800 text-center whitespace-nowrap">
-            EXPLORE HOMES
-          </h2>
+          <div className="mx-6 flex items-center gap-4">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-800 text-center whitespace-nowrap">
+              EXPLORE HOMES
+            </h2>
+            {/* Post Project Button for Admin Users */}
+            {user?.role === "Admin" && (
+              <Button
+                onClick={() => navigate('/builder-project-post')}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 px-4 py-2 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg text-sm"
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Post Project
+              </Button>
+            )}
+          </div>
           <div className="flex-1 border-t border-gray-300"></div>
         </div>
         {/* Project Grid */}
@@ -809,6 +901,26 @@ const NewLanching = () => {
                       </div>
                       <div className="border-t border-white/30 w-full my-2"></div>
                       <div className="flex flex-col gap-2 w-full">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/project/${project.id}`);
+                          }}
+                          className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-semibold text-sm"
+                        >
+                          <Home className="h-4 w-4" />
+                          View Project
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/builder/${project.builderId}`);
+                          }}
+                          className="flex items-center gap-2 text-blue-400 hover:text-blue-300 font-semibold text-sm"
+                        >
+                          <Building2 className="h-4 w-4" />
+                          View Builder
+                        </button>
                         <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
                           <svg
                             width="16"
@@ -896,11 +1008,35 @@ const NewLanching = () => {
                       </div>
                       <div className="text-sm font-semibold text-gray-700 mb-2">
                         <button
-                          onClick={() => navigate(`/builder/${project.builderId}`)}
-                          className="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/builder/${project.builderId}`);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200 flex items-center bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md border border-blue-200 hover:border-blue-300 w-full justify-center"
                         >
+                          <Building2 className="h-4 w-4 mr-1" />
                           {project.builder}
+                          <span className="ml-1 text-xs text-blue-500">→</span>
                         </button>
+                      </div>
+                      {/* Additional Builder Info */}
+                      <div className="text-xs text-gray-500 mb-2 space-y-1">
+                        <div className="flex items-center">
+                          <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                          <span>RERA: {project.reraNumber}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                          <span>Phase: {project.projectPhase}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                          <span>Area: {project.projectArea} acres</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                          <span>Launch: {new Date(project.launchDate).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center mb-2">
@@ -1166,11 +1302,20 @@ const NewLanching = () => {
                       <SelectValue placeholder="Select Builder" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from(new Set(mockBuilderOffers.map(offer => offer.builderName))).map((builder) => (
-                        <SelectItem key={builder} value={builder}>
-                          {builder}
+                      {loadingBuilders ? (
+                        <SelectItem value="loading" disabled>
+                          Loading builders...
                         </SelectItem>
-                      ))}
+                      ) : (
+                        builders.map((builderItem) => (
+                          <SelectItem
+                            key={builderItem.id}
+                            value={builderItem.name}
+                          >
+                            {builderItem.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1294,6 +1439,136 @@ const NewLanching = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Builder Selection Modal */}
+        <Dialog open={showBuilderModal} onOpenChange={setShowBuilderModal}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-gray-800 flex items-center">
+                <Building2 className="h-6 w-6 text-blue-600 mr-3" />
+                All Builders
+              </DialogTitle>
+              <DialogDescription>
+                Select a builder to view their detailed profile and projects.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {loadingBuilders ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-gray-500">Loading builders...</div>
+                </div>
+              ) : builders.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-gray-500">No builders found</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {builders.map((builderItem) => (
+                    <div
+                      key={builderItem.id || builderItem.builderId}
+                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => {
+                        const builderId = builderItem.id || builderItem.builderId;
+                        navigate(`/builder/${builderId}`);
+                        setShowBuilderModal(false);
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {builderItem.logoUrl ? (
+                            <img 
+                              src={builderItem.logoUrl} 
+                              alt={builderItem.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Building2 className="h-6 w-6 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-800 text-sm">
+                              {builderItem.name}
+                            </h3>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              builderItem.status === "Active" 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-red-100 text-red-800"
+                            }`}>
+                              {builderItem.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            ID: {builderItem.id}
+                          </p>
+                          {builderItem.location && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              📍 {builderItem.location}
+                            </p>
+                          )}
+                          {builderItem.email && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              📧 {builderItem.email}
+                            </p>
+                          )}
+                          {builderItem.phone && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              📞 {builderItem.phone}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const builderId = builderItem.id || builderItem.builderId;
+                            navigate(`/builder/${builderId}`);
+                            setShowBuilderModal(false);
+                          }}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowBuilderModal(false)}
+                className="px-6 py-2"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Floating Action Button for Admin Users */}
+        {user?.role === "Admin" && (
+          <div className="fixed bottom-6 right-6 z-50 group">
+            <Button
+              onClick={() => navigate('/builder-project-post')}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 w-14 h-14 rounded-full font-semibold transition-all duration-300 hover:scale-110 shadow-2xl"
+              size="icon"
+              title="Post New Project"
+            >
+              <Building2 className="h-6 w-6" />
+            </Button>
+            {/* Tooltip */}
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              Post New Project
+              <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
