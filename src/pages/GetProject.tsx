@@ -3,24 +3,21 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
   MapPin, 
-  Calendar, 
   Building, 
-  Star, 
-  IndianRupee, 
-  Home, 
-  CheckCircle, 
-  XCircle,
-  Clock,
+  Search, 
+  Filter,
+  Eye,
+  Edit,
+  Calendar,
+  DollarSign,
+  Home,
   Users,
-  Ruler,
-  Camera,
-  Award,
-  Shield,
-  FileText
+  Ruler
 } from "lucide-react";
 import axiosInstance from "@/axiosCalls/axiosInstance";
 import { Loader2 } from "lucide-react";
@@ -39,15 +36,24 @@ interface Project {
   mainImage: {
     url: string;
     isMain: boolean;
-  };
-  projectType: string;
-  price: string;
-  beds: string;
-  area: string;
-  status: string;
-  city: string;
-  state: string;
+  } | null;
+  projectType: string | null;
+  price: string | null;
+  beds: string | null;
+  area: string | null;
+  status: string | null;
+  city: string | null;
+  state: string | null;
   isActive: boolean;
+}
+
+interface ProjectResponse {
+  data: Project[];
+  statusCode: number;
+  message: string;
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
 }
 
 const GetProject = () => {
@@ -55,81 +61,61 @@ const GetProject = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
   
-  const [project, setProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [selectedBuilder, setSelectedBuilder] = useState<string>("");
 
   useEffect(() => {
-    if (projectId) {
-      fetchProject();
-    }
-  }, [projectId]);
+    fetchProjects();
+  }, []);
 
-  const fetchProject = async () => {
+  useEffect(() => {
+    // Filter projects based on search term and builder
+    let filtered = projects;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(project => 
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.state.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (selectedBuilder) {
+      filtered = filtered.filter(project => project.builderId === selectedBuilder);
+    }
+    
+    setFilteredProjects(filtered);
+  }, [projects, searchTerm, selectedBuilder]);
+
+  const fetchProjects = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log("Fetching projects for builder ID: cc8011ef-8493-4543-84df-01bae14e4d06");
-      console.log("Looking for project ID:", projectId);
-      
-      // Get all projects for the specific builder
       const response = await axiosInstance.post("/api/Builder/GetProjects", {
-        BuilderId: "cc8011ef-8493-4543-84df-01bae14e4d06"
+        builderId: "",
+        projectId: "",
+        searchTerm: "",
+        pageNumber: 0,
+        pageSize: 100
       });
 
-      console.log("API Response:", response.data);
-
-      if (response.data.statusCode === 200 && response.data.data && response.data.data.length > 0) {
-        // Find the specific project by projectId
-        const foundProject = response.data.data.find((p: any) => p.projectId === projectId);
-        
-        if (foundProject) {
-          console.log("Found project:", foundProject);
-          
-          // Map the API response to our interface
-          const mappedProject: Project = {
-            builderId: foundProject.builderId || foundProject.BuilderId || "cc8011ef-8493-4543-84df-01bae14e4d06",
-            projectId: foundProject.projectId || foundProject.ProjectId || projectId || "",
-            name: foundProject.name || foundProject.Name || foundProject.projectName || "",
-            description: foundProject.description || foundProject.Description || "",
-            address: foundProject.address || foundProject.Address || "",
-            locality: foundProject.locality || foundProject.Locality || "",
-            possession: foundProject.possession || foundProject.Possession || "",
-            isNA: foundProject.isNA || foundProject.IsNA || false,
-            isReraApproved: foundProject.isReraApproved || foundProject.IsReraApproved || false,
-            isOCApproved: foundProject.isOCApproved || foundProject.IsOCApproved || false,
-            mainImage: {
-              url: foundProject.mainImage?.url || foundProject.MainImage?.url || foundProject.imageUrl || "",
-              isMain: foundProject.mainImage?.isMain || foundProject.MainImage?.isMain || true
-            },
-            projectType: foundProject.projectType || foundProject.ProjectType || "",
-            price: foundProject.price || foundProject.Price || "0",
-            beds: foundProject.beds || foundProject.Beds || "0",
-            area: foundProject.area || foundProject.Area || "0",
-            status: foundProject.status || foundProject.Status || "",
-            city: foundProject.city || foundProject.City || "",
-            state: foundProject.state || foundProject.State || "",
-            isActive: foundProject.isActive || foundProject.IsActive || true
-          };
-          
-          console.log("Mapped project data:", mappedProject);
-          setProject(mappedProject);
-        } else {
-          console.log("Project not found in builder's projects");
-          setError("Project not found");
-        }
+      if (response.data.statusCode === 200) {
+        setProjects(response.data.data || []);
       } else {
-        console.log("No projects found for builder");
-        setError("No projects found for this builder");
+        setError("Failed to load projects");
       }
     } catch (error: any) {
-      console.error("Error fetching project:", error);
-      console.error("Error response:", error.response?.data);
-      setError("Failed to load project information");
+      console.error("Error fetching projects:", error);
+      setError("Failed to load projects");
       toast({
         title: "Error",
-        description: "Failed to load project information. Please try again.",
+        description: "Failed to load projects. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -137,14 +123,34 @@ const GetProject = () => {
     }
   };
 
-  const formatPrice = (price: string) => {
-    const numPrice = parseInt(price);
-    if (numPrice >= 10000000) {
-      return `₹${(numPrice / 10000000).toFixed(2)} Cr`;
-    } else if (numPrice >= 100000) {
-      return `₹${(numPrice / 100000).toFixed(2)} Lakh`;
-    } else {
-      return `₹${numPrice.toLocaleString()}`;
+  const getStatusColor = (status: string | null) => {
+    if (!status) return 'bg-gray-100 text-gray-800 border-gray-200';
+    
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'upcoming':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'completed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'on hold':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getProjectTypeColor = (type: string | null) => {
+    if (!type) return 'bg-gray-100 text-gray-800 border-gray-200';
+    
+    switch (type.toLowerCase()) {
+      case 'residential':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'commercial':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'both':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -153,13 +159,13 @@ const GetProject = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Loading project information...</p>
+          <p className="text-gray-600">Loading projects...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !project) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
@@ -167,8 +173,8 @@ const GetProject = () => {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Building className="h-8 w-8 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Project Not Found</h1>
-            <p className="text-gray-600 mb-6">{error || "The project you're looking for doesn't exist."}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Projects</h1>
+            <p className="text-gray-600 mb-6">{error}</p>
             <Button 
               onClick={() => navigate(-1)}
               className="w-full bg-blue-600 hover:bg-blue-700"
@@ -198,268 +204,179 @@ const GetProject = () => {
             </Button>
             <div className="flex items-center space-x-2">
               <Building className="h-5 w-5 text-blue-600" />
-              <span className="text-sm font-medium text-gray-600">Project Details</span>
+              <span className="text-sm font-medium text-gray-600">All Projects</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Project Header */}
-        <Card className="mb-8 shadow-xl border-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
-          <CardContent className="p-8">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8">
-              {/* Project Image */}
-              <div className="flex-shrink-0">
-                <div className="w-32 h-32 bg-white/20 rounded-2xl flex items-center justify-center overflow-hidden">
-                  {project.mainImage?.url ? (
-                    <img
-                      src={project.mainImage.url}
-                      alt={project.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Building className="h-16 w-16 text-white/80" />
-                  )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">All Projects</h1>
+              <p className="text-gray-600">Browse and manage all builder projects</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Badge variant="outline" className="text-blue-600 border-blue-200">
+                {filteredProjects.length} Projects
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filter Section */}
+        <Card className="mb-8 shadow-lg border-0">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search projects by name, description, city, or state..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-300 rounded-xl"
+                  />
                 </div>
               </div>
-
-              {/* Project Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-white">{project.name}</h1>
-                  <Badge 
-                    variant={project.isActive ? "default" : "secondary"}
-                    className={project.isActive ? "bg-green-500 hover:bg-green-600" : "bg-gray-500"}
-                  >
-                    {project.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center space-x-2 text-white/90 mb-2">
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-lg">{project.address}, {project.locality}, {project.city}, {project.state}</span>
-                </div>
-
-                <div className="flex flex-wrap items-center space-x-6 text-white/80">
-                  <div className="flex items-center space-x-2">
-                    <IndianRupee className="h-4 w-4" />
-                    <span className="text-xl font-bold">{formatPrice(project.price)}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Home className="h-4 w-4" />
-                    <span>{project.beds} BHK</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Ruler className="h-4 w-4" />
-                    <span>{project.area} sq ft</span>
-                  </div>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600">Filters:</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Project Details Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Project Information */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Details */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-                <CardTitle className="flex items-center text-gray-800">
-                  <FileText className="h-5 w-5 text-blue-600 mr-2" />
-                  Project Information
-                </CardTitle>
-                <CardDescription>
-                  Detailed information about this project
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-700 mb-2">Description</h4>
-                    <p className="text-gray-600">{project.description}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Building className="h-5 w-5 text-blue-600" />
+        {/* Projects Grid */}
+        {filteredProjects.length === 0 ? (
+          <Card className="shadow-lg border-0">
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Projects Found</h3>
+              <p className="text-gray-600 mb-6">
+                {searchTerm ? "No projects match your search criteria." : "No projects available at the moment."}
+              </p>
+              {searchTerm && (
+                <Button
+                  onClick={() => setSearchTerm("")}
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  Clear Search
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <Card key={project.projectId} className="shadow-lg border-0 hover:shadow-xl transition-all duration-300 group">
+                <CardHeader className="p-0">
+                  <div className="relative h-48 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-t-xl overflow-hidden">
+                    {project.mainImage?.url ? (
+                      <img
+                        src={project.mainImage.url}
+                        alt={project.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Building className="h-16 w-16 text-blue-400" />
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Project Type</p>
-                        <p className="font-semibold text-gray-900">{project.projectType}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Clock className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Status</p>
-                        <p className="font-semibold text-gray-900">{project.status}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Possession</p>
-                        <p className="font-semibold text-gray-900">{project.possession}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <Home className="h-5 w-5 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">Configuration</p>
-                        <p className="font-semibold text-gray-900">{project.beds} BHK</p>
-                      </div>
+                    )}
+                    <div className="absolute top-4 right-4 flex flex-col space-y-2">
+                      <Badge className={`text-xs font-medium border ${getStatusColor(project.status)}`}>
+                        {project.status || 'Unknown'}
+                      </Badge>
+                      <Badge className={`text-xs font-medium border ${getProjectTypeColor(project.projectType)}`}>
+                        {project.projectType || 'Unknown'}
+                      </Badge>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Location Details */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-white border-b">
-                <CardTitle className="flex items-center text-gray-800">
-                  <MapPin className="h-5 w-5 text-green-600 mr-2" />
-                  Location Details
-                </CardTitle>
-                <CardDescription>
-                  Project location and address information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="h-5 w-5 text-green-600 mt-1" />
+                </CardHeader>
+                
+                <CardContent className="p-6">
+                  <div className="space-y-4">
                     <div>
-                      <p className="font-semibold text-gray-900">{project.address}</p>
-                      <p className="text-gray-600">{project.locality}, {project.city}, {project.state}</p>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
+                        {project.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm line-clamp-2">
+                        {project.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span>
+                          {[project.locality, project.city, project.state].filter(Boolean).join(', ') || 'Location not specified'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                          <span className="font-semibold text-gray-900">{project.price || 'Price not available'}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Ruler className="h-4 w-4 text-blue-600" />
+                          <span className="text-gray-600">{project.area || 'Area not specified'}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Home className="h-4 w-4 text-purple-600" />
+                          <span className="text-gray-600">{project.beds || 'Beds not specified'}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-orange-600" />
+                          <span className="text-gray-600">{project.possession || 'Possession not specified'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div className="flex items-center space-x-2">
+                          {project.isReraApproved && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                              RERA
+                            </Badge>
+                          )}
+                          {project.isOCApproved && (
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              OC
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/project-detail/${project.projectId}`)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/update-project/${project.projectId}`)}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Update Project
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Project Status */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-white border-b">
-                <CardTitle className="flex items-center text-gray-800">
-                  <Award className="h-5 w-5 text-purple-600 mr-2" />
-                  Project Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-600">RERA Approved</span>
-                    {project.isReraApproved ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-600">OC Approved</span>
-                    {project.isOCApproved ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-600">Not Applicable</span>
-                    {project.isNA ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pricing Information */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-yellow-50 to-white border-b">
-                <CardTitle className="flex items-center text-gray-800">
-                  <IndianRupee className="h-5 w-5 text-yellow-600 mr-2" />
-                  Pricing
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-900 mb-2">
-                    {formatPrice(project.price)}
-                  </div>
-                  <p className="text-sm text-gray-600">Starting Price</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Project Specifications */}
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-indigo-50 to-white border-b">
-                <CardTitle className="flex items-center text-gray-800">
-                  <Ruler className="h-5 w-5 text-indigo-600 mr-2" />
-                  Specifications
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Area</span>
-                    <span className="font-semibold">{project.area} sq ft</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Configuration</span>
-                    <span className="font-semibold">{project.beds} BHK</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Type</span>
-                    <span className="font-semibold">{project.projectType}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          <Button
-            onClick={() => navigate(`/builder/${project.builderId}`)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            <Building className="h-5 w-5 mr-2" />
-            View Builder
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/builderpost`)}
-            className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            <Home className="h-5 w-5 mr-2" />
-            Post New Project
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );

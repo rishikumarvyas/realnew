@@ -201,6 +201,13 @@ export function Navbar() {
                           <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
                           <span className="text-orange-600">Post Project</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => navigate("/get-project")}
+                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                        >
+                          <Building className="mr-2 h-4 w-4 text-orange-500" />
+                          <span className="text-orange-600">Get Project</span>
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
@@ -449,6 +456,14 @@ export function Navbar() {
                         >
                           <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
                           Post Project
+                        </Link>
+                        <Link
+                          to="/get-project"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
+                        >
+                          <Building className="w-4 h-4 mr-2 text-orange-500" />
+                          Get Project
                         </Link>
                       </div>
                     </div>

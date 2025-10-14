@@ -28,6 +28,8 @@ import BuilderPropertyDetail from "./pages/BuilderPropertyDetail";
 import Profile from "./pages/Profile";
 import GetBuilder from "./pages/GetBuilder";
 import GetProject from "./pages/GetProject";
+import ProjectDetail from "./pages/ProjectDetail";
+import UpdateProject from "./pages/UpdateProject";
 import AddProject from "./pages/AddProject";
 
 // Initialize QueryClient with better caching options
@@ -75,6 +77,9 @@ const App = () => (
               <Route path="builder-project-post" element={<BuilderProjectPost />} />
               <Route path="builder/:builderId" element={<GetBuilder />} />
               <Route path="project/:projectId" element={<GetProject />} />
+              <Route path="get-project" element={<GetProject />} />
+              <Route path="project-detail/:projectId" element={<ProjectDetail />} />
+              <Route path="update-project/:projectId" element={<UpdateProject />} />
               <Route
                 path="builder-property/:id"
                 element={<BuilderPropertyDetail />}
