@@ -139,6 +139,14 @@ export function Navbar() {
                   {label}
                 </Link>
               ))}
+              <Link
+                to="/get-project-api"
+                className={cn(
+                  "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
+                )}
+              >
+                Projects
+              </Link>
               {(user?.role === "Admin" || user?.role === "Builder") && (
                 <Link
                   to="/newlanching"
@@ -206,7 +214,14 @@ export function Navbar() {
                           className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
                         >
                           <Building className="mr-2 h-4 w-4 text-orange-500" />
-                          <span className="text-orange-600">Get Project</span>
+                          <span className="text-orange-600">Get Project (Mock)</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => navigate("/get-project-api")}
+                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                        >
+                          <Building className="mr-2 h-4 w-4 text-orange-500" />
+                          <span className="text-orange-600">Get Project (API)</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -450,12 +465,27 @@ export function Navbar() {
                           className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
                         >
                           <Building className="w-4 h-4 mr-2 text-orange-500" />
-                          Get Project
+                          Get Project (Mock)
+                        </Link>
+                        <Link
+                          to="/get-project-api"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
+                        >
+                          <Building className="w-4 h-4 mr-2 text-orange-500" />
+                          Get Project (API)
                         </Link>
                       </div>
                     </div>
                   </>
                 )}
+                <Link
+                  to="/get-project-api"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                >
+                  <Building className="w-5 h-5 mr-3 text-gray-500" /> Projects
+                </Link>
                 {(user?.role === "Admin" || user?.role === "Builder") && (
                   <Link
                     to="/newlanching"

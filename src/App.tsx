@@ -30,6 +30,8 @@ import GetProject from "./pages/GetProject";
 import ProjectDetail from "./pages/ProjectDetail";
 import UpdateProject from "./pages/UpdateProject";
 import AddProject from "./pages/AddProject";
+import GetProjectAPI from "./pages/GetProjectAPI";
+import ProjectDetailAPI from "./pages/ProjectDetailAPI";
 
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({
@@ -77,7 +79,9 @@ const App = () => (
               <Route path="builder/:builderId" element={<GetBuilder />} />
               <Route path="project/:projectId" element={<GetProject />} />
               <Route path="get-project" element={<GetProject />} />
+              <Route path="get-project-api" element={<GetProjectAPI />} />
               <Route path="project-detail/:projectId" element={<ProjectDetail />} />
+              <Route path="project-detail-api/:projectId" element={<ProjectDetailAPI />} />
               <Route path="update-project/:projectId" element={<UpdateProject />} />
               <Route
                 path="builder-property/:id"
