@@ -319,10 +319,7 @@ const GetProjectAPI = () => {
       return;
     }
 
-    if (!interestFormData.propertyType || !interestFormData.budget || interestFormData.budget <= 0) {
-      toast.error("Please select Property Type and enter a valid Budget");
-      return;
-    }
+    // Budget and Property Type are now optional - no validation required
 
     if (isSubmittingEmail) {
       toast.info("Please wait, email is being sent...");
@@ -345,41 +342,59 @@ const GetProjectAPI = () => {
 
     // Convert budget to double value for API (moved outside try block for scope)
     const getBudgetValue = () => {
-      return typeof interestFormData.budget === 'number' ? interestFormData.budget : 0.0; // Already a double
+      // If budget is 0 or not provided, return 0.0 (optional field)
+      const value = (typeof interestFormData.budget === 'number' && interestFormData.budget > 0) ? interestFormData.budget : 0.0;
+      return parseFloat(value.toFixed(1)); // Ensure double with decimal
     };
 
     try {
       // Use separate firstName and lastName fields
       const firstName = interestFormData.firstName.trim();
-      const lastName = interestFormData.lastName.trim() || 'User'; // Default value for empty lastName
+      const lastName = interestFormData.lastName.trim() || 'N/A'; // API requires LastName, use N/A if empty
 
-      // Prepare email data for SendEmail API
+      // Prepare email data for SendEmail API using GetEmailDetails response
       const budgetValue = getBudgetValue();
       const emailData = {
-        projectName: selectedProject?.name || '',
-        propertyType: interestFormData.propertyType,
+        toEmail: projectEmailDetails?.toEmail || "support@homeyatra.com",
+        firstName: projectEmailDetails?.firstName || firstName,
+        lastName: lastName,
+        phone: projectEmailDetails?.phone || interestFormData.phone,
+        email: projectEmailDetails?.email || interestFormData.email,
         budget: parseFloat(budgetValue.toFixed(1)), // Ensure double with decimal
-        toEmail: projectEmailDetails?.toEmail || "support@homeyatra.com", // Dynamic project email or fallback
-        FirstName: firstName, // API expects FirstName with capital F
-        LastName: lastName,   // API expects LastName with capital L
-        email: interestFormData.email,
-        phone: interestFormData.phone,
-        subject: `Interest in Project: ${selectedProject?.name || 'Unknown Project'}`
+        propertyType: interestFormData.propertyType || projectEmailDetails?.propertyType || '',
+        subject: projectEmailDetails?.subject || `Property Interest Alert: ${firstName} Wants to Know More About ${selectedProject?.name || 'Unknown Project'}`,
+        projectName: projectEmailDetails?.projectName || selectedProject?.name || ''
       };
 
       // Call SendEmail API
+      console.log("GetEmailDetails Response:", projectEmailDetails);
       console.log("User selected budget:", interestFormData.budget);
       console.log("Converted budget value:", budgetValue);
       console.log("Final budget value (double):", parseFloat(budgetValue.toFixed(1)));
       console.log("Budget data type:", typeof parseFloat(budgetValue.toFixed(1)));
+      console.log("Budget in emailData:", emailData.budget);
       console.log("First Name from form:", interestFormData.firstName);
       console.log("Last Name from form:", interestFormData.lastName);
-      console.log("Processed First Name:", firstName);
-      console.log("Processed Last Name:", lastName);
-      console.log("Project email details:", projectEmailDetails);
+      console.log("Using firstName (lowercase):", projectEmailDetails?.firstName || firstName);
+      console.log("Using lastName (lowercase):", lastName, "(N/A if empty)");
+      console.log("Using Email from API:", projectEmailDetails?.email || interestFormData.email);
+      console.log("Using Phone from API:", projectEmailDetails?.phone || interestFormData.phone);
       console.log("Using project email:", projectEmailDetails?.toEmail || "support@homeyatra.com");
       console.log("Sending email data:", emailData);
       console.log("Email data JSON:", JSON.stringify(emailData, null, 2));
+      
+      // Validate required fields before sending
+      if (!emailData.firstName || !emailData.email || !emailData.phone || !emailData.toEmail) {
+        console.log("Missing required fields:", {
+          firstName: emailData.firstName,
+          email: emailData.email,
+          phone: emailData.phone,
+          toEmail: emailData.toEmail
+        });
+        toast.error("Missing required fields. Please check your information.");
+        return;
+      }
+      
       const response = await axiosInstance.post('/api/Builder/SendEmail', emailData);
       
       if (response.data && (response.data.statusCode === 200 || response.data.message === "Email sent successfully.")) {
@@ -403,9 +418,13 @@ const GetProjectAPI = () => {
       console.error("Error submitting interest:", error);
       console.log("SendEmail API Error Status:", error.response?.status);
       console.log("SendEmail API Error Data:", error.response?.data);
+      console.log("SendEmail API Error Details:", JSON.stringify(error.response?.data, null, 2));
       
       // Show specific error messages based on the error type
-      if (error.response?.status === 404) {
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.message || "Invalid data provided";
+        toast.error(`Validation Error: ${errorMessage}`);
+      } else if (error.response?.status === 404) {
         toast.error("Email service not available. Please contact support or try again later.");
       } else if (error.response?.status === 500) {
         const errorMessage = error.response?.data?.message || "Server error occurred.";
@@ -1166,15 +1185,14 @@ const GetProjectAPI = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-semibold text-gray-700">
-                  Property Type *
+                  Property Type (Optional)
                 </Label>
                 <Select
                   value={interestFormData.propertyType}
                   onValueChange={(value) => setInterestFormData(prev => ({ ...prev, propertyType: value }))}
-                  required
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select Property Type" />
+                    <SelectValue placeholder="Select Property Type (Optional)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1 BHK">1 BHK</SelectItem>
@@ -1189,7 +1207,7 @@ const GetProjectAPI = () => {
               </div>
               <div>
                 <Label htmlFor="budget" className="text-sm font-semibold text-gray-700">
-                  Budget (in Lakhs) *
+                  Budget (in Lakhs) (Optional)
                 </Label>
                 <Input
                   id="budget"
@@ -1197,9 +1215,8 @@ const GetProjectAPI = () => {
                   step="0.1"
                   value={interestFormData.budget}
                   onChange={(e) => setInterestFormData(prev => ({ ...prev, budget: parseFloat(e.target.value) || 0.0 }))}
-                  placeholder="Enter budget amount (e.g., 150.5 for ₹1.5 Cr)"
+                  placeholder="Enter budget amount (optional)"
                   className="mt-1"
-                  required
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Enter amount in lakhs (e.g., 150.5 for ₹1.5 Cr, 500 for ₹5 Cr)

@@ -394,6 +394,48 @@ const UpdateProject = () => {
             ocDate: convertDateFormat(projectData.ocDate),
             exclusiveFeatures: projectData.exclusiveFeatures || [],
           });
+
+          // Prefill image preview URLs and main indices for all image groups
+          try {
+            const projImages = Array.isArray(projectData.projectImages) ? projectData.projectImages : [];
+            const amenImages = Array.isArray(projectData.amenityImages) ? projectData.amenityImages : [];
+            const flrImages = Array.isArray(projectData.floorImages) ? projectData.floorImages : [];
+
+            const projURLs = projImages.map((img: any) => img?.url).filter(Boolean);
+            const amenURLs = amenImages.map((img: any) => img?.url).filter(Boolean);
+            const floorURLs = flrImages.map((img: any) => img?.url).filter(Boolean);
+
+            setProjectImageURLs(projURLs);
+            setAmenityImageURLs(amenURLs);
+            setFloorImageURLs(floorURLs);
+
+            const projMainIdx = projImages.findIndex((img: any) => img?.isMain);
+            const amenMainIdx = amenImages.findIndex((img: any) => img?.isMain);
+            const floorMainIdx = flrImages.findIndex((img: any) => img?.isMain);
+
+            setProjectMainIndex(
+              projMainIdx >= 0 ? projMainIdx : (projURLs.length > 0 ? 0 : null)
+            );
+            setAmenityMainIndex(
+              amenMainIdx >= 0 ? amenMainIdx : (amenURLs.length > 0 ? 0 : null)
+            );
+            setFloorMainIndex(
+              floorMainIdx >= 0 ? floorMainIdx : (floorURLs.length > 0 ? 0 : null)
+            );
+          } catch {}
+
+          // Prefill amenity selections
+          try {
+            const existingAmenityIds = Array.isArray(projectData.amenityIds) ? projectData.amenityIds : [];
+            setAmenities(existingAmenityIds);
+
+            // If any amenity matches a radio option id, preselect the first match
+            const radioIds = (radioAmenities || []).map((r: any) => r.id);
+            const firstRadioMatch = existingAmenityIds.find((id: string) => radioIds.includes(id));
+            if (firstRadioMatch) {
+              setSelectedOption(firstRadioMatch);
+            }
+          } catch {}
         } else {
           toast({
             title: "Error",
@@ -492,11 +534,11 @@ const UpdateProject = () => {
       formDataToSend.append("ExpectedCompletionDate", formData.expectedCompletionDate);
       formDataToSend.append("OCDate", formData.ocDate);
 
-      // Add amenity IDs (map selected amenities to their IDs)
+      // Add amenity IDs as comma-separated (matches working Postman format)
       const amenityIds = selectedOption === "" ? amenities : [...amenities, selectedOption];
-      amenityIds.forEach(amenityId => {
-        formDataToSend.append("AmenityIds", amenityId);
-      });
+      if (amenityIds && amenityIds.length > 0) {
+        formDataToSend.append("AmenityIds", amenityIds.join(","));
+      }
 
       // Add exclusive features
       formData.exclusiveFeatures.forEach(feature => {
