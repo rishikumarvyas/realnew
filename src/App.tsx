@@ -22,8 +22,6 @@ import ContactUs from "./pages/ContactUs";
 import AdminPage from "./pages/AdminPage";
 import ScrollToTop from "./components/ScrollToTop";
 import AuthModal from "./components/AuthModal"; // Import the AuthModal component
-import BuilderProjectPost from "./pages/BuilderProjectPost";
-import NewLanching from "./pages/newlanching";
 import BuilderPropertyDetail from "./pages/BuilderPropertyDetail";
 import Profile from "./pages/Profile";
 import GetBuilder from "./pages/GetBuilder";
@@ -75,8 +73,6 @@ const App = () => (
 
               <Route path="properties" element={<PropertyListing />} />
               <Route path="properties/:id" element={<PropertyDetail />} />
-              <Route path="builderpost" element={<BuilderProjectPost />} />
-              <Route path="builder-project-post" element={<BuilderProjectPost />} />
               <Route path="builder/:builderId" element={<GetBuilder />} />
               <Route path="project/:projectId" element={<GetProject />} />
               <Route path="get-project" element={<GetProject />} />
@@ -94,7 +90,7 @@ const App = () => (
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="post-property" element={<PostProperty />} />
-                <Route path="newlanching" element={<NewLanching />} />
+              
                 <Route path="add-project" element={<AddProject />} />
                 <Route
                   path="/edit-property/:propertyId"
