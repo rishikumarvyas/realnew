@@ -145,18 +145,9 @@ export function Navbar() {
                   "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
                 )}
               >
-                Projects
+                New Launching
               </Link>
-              {(user?.role === "Admin" || user?.role === "Builder") && (
-                <Link
-                  to="/newlanching"
-                  className={cn(
-                    "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
-                  )}
-                >
-                  New Launching
-                </Link>
-              )}
+              
             </div>
           </div>
 
@@ -203,13 +194,6 @@ export function Navbar() {
                           <span className="text-orange-600">Add Project</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => navigate("/builder-project-post")}
-                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
-                        >
-                          <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
-                          <span className="text-orange-600">Post Project</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
                           onClick={() => navigate("/get-project")}
                           className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
                         >
@@ -238,14 +222,7 @@ export function Navbar() {
                   </Button>
                   {/* Post Project button for builder role only (admin has it in Builder dropdown) */}
                   {user?.role === "Builder" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate("/builder-project-post")}
-                      className="flex items-center gap-1 bg-green-600 text-white hover:bg-green-700 rounded-full"
-                    >
-                      <PlusCircle className="h-4 w-4 mr-1" />
-                      Post Project
-                    </Button>
+                    <></>
                   )}
                   <NotificationIcon />
                   <DropdownMenu>
@@ -397,14 +374,7 @@ export function Navbar() {
                   </Link>
                   {/* Post Project button for builder and admin roles */}
                   {(user?.role === "Builder" || user?.role === "Admin") && (
-                    <Link
-                      to="/builder-project-post"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center justify-center p-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full transition-all shadow-md min-h-[40px]"
-                    >
-                      <PlusCircle className="w-5 h-5 mr-2" />
-                      <span>Post Project</span>
-                    </Link>
+                    <></>
                   )}
                 </div>
 
@@ -452,14 +422,6 @@ export function Navbar() {
                           Add Project
                         </Link>
                         <Link
-                          to="/builder-project-post"
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
-                        >
-                          <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
-                          Post Project
-                        </Link>
-                        <Link
                           to="/get-project"
                           onClick={() => setIsOpen(false)}
                           className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
@@ -484,18 +446,9 @@ export function Navbar() {
                   onClick={() => setIsOpen(false)}
                   className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
                 >
-                  <Building className="w-5 h-5 mr-3 text-gray-500" /> Projects
+                  <Building className="w-5 h-5 mr-3 text-gray-500" /> New Launching
                 </Link>
-                {(user?.role === "Admin" || user?.role === "Builder") && (
-                  <Link
-                    to="/newlanching"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-                  >
-                    <PlusCircle className="w-5 h-5 mr-3 text-gray-500" /> New
-                    Launching
-                  </Link>
-                )}
+                
 
                 <div className="flex justify-center py-2 relative">
                   <div className="relative">

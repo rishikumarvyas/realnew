@@ -71,6 +71,7 @@ const GetProjectAPI = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projectImagesMap, setProjectImagesMap] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -98,6 +99,20 @@ const GetProjectAPI = () => {
     agreeToTerms: false
   });
 
+  // Resolve image URL: if API returns relative path, prefix with API baseURL
+  const resolveImageUrl = (url?: string) => {
+    if (!url) return "";
+    if (/^https?:\/\//i.test(url)) return url;
+    try {
+      // @ts-ignore axios instance is JS file
+      const base = (axiosInstance as any)?.defaults?.baseURL || "";
+      if (!base) return url;
+      return `${base}${url.startsWith("/") ? url : `/${url}`}`;
+    } catch {
+      return url;
+    }
+  };
+
   // Fetch projects from API
   const fetchProjects = async () => {
     try {
@@ -111,7 +126,32 @@ const GetProjectAPI = () => {
       });
       
       if ((response.data.statusCode === 200 || response.data.message === "Email sent successfully.")) {
-        setProjects(response.data.data || []);
+        const list = response.data.data || [];
+        setProjects(list);
+        // Fetch main image for projects that don't include images in list API
+        try {
+          const targets = list
+            .filter((p: any) => !p?.projectImages || p.projectImages.length === 0)
+            .slice(0, 20); // cap to avoid too many requests
+          if (targets.length > 0) {
+            const results = await Promise.allSettled(
+              targets.map((p: any) => axiosInstance.get(`/api/Builder/GetProjectDetails?projectId=${p.projectId}`))
+            );
+            const map: Record<string, string> = {};
+            results.forEach((res: any, idx: number) => {
+              if (res.status === 'fulfilled') {
+                const data = res.value?.data?.data;
+                const img = data?.projectImages?.find((i: any) => i?.isMain)?.url || data?.projectImages?.[0]?.url;
+                if (img) {
+                  map[targets[idx].projectId] = resolveImageUrl(img);
+                }
+              }
+            });
+            if (Object.keys(map).length) {
+              setProjectImagesMap(prev => ({ ...prev, ...map }));
+            }
+          }
+        } catch {}
       } else {
         toast.error("Failed to fetch projects");
         setProjects([]);
@@ -568,7 +608,7 @@ const GetProjectAPI = () => {
     filteredProjects.length > 0 &&
     filteredProjects[0].projectImages &&
     filteredProjects[0].projectImages.length > 0
-      ? filteredProjects[0].projectImages[0].url
+      ? resolveImageUrl(filteredProjects[0].projectImages[0].url)
       : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=1200&q=80";
 
   if (loading) {
@@ -792,8 +832,9 @@ const GetProjectAPI = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {filteredProjects.map((project) => {
-              const mainImage = project.projectImages?.find(img => img.isMain)?.url || 
-                               project.projectImages?.[0]?.url || 
+              const mainImage = projectImagesMap[project.projectId] ||
+                               resolveImageUrl(project.projectImages?.find(img => img.isMain)?.url) || 
+                               resolveImageUrl(project.projectImages?.[0]?.url) || 
                                "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=600&q=80";
               
               return (
@@ -1056,8 +1097,8 @@ const GetProjectAPI = () => {
             <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="flex items-start">
                 <img
-                  src={selectedProject.projectImages?.find(img => img.isMain)?.url || 
-                       selectedProject.projectImages?.[0]?.url || 
+                  src={resolveImageUrl(selectedProject.projectImages?.find(img => img.isMain)?.url) || 
+                       resolveImageUrl(selectedProject.projectImages?.[0]?.url) || 
                        "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=600&q=80"}
                   alt={selectedProject.name}
                   className="w-20 h-20 rounded-lg object-cover mr-4"
