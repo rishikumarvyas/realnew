@@ -127,10 +127,22 @@ const GetProjectAPI = () => {
       
       if ((response.data.statusCode === 200 || response.data.message === "Email sent successfully.")) {
         const list = response.data.data || [];
-        setProjects(list);
+        
+        // Transform amenities if needed
+        const transformedList = list.map((project: any) => {
+          if (project.amenityDetails && Array.isArray(project.amenityDetails)) {
+            project.amenities = project.amenityDetails.map((item: any) => item.amenity || item.amenityId || item);
+          } else if (!project.amenities) {
+            project.amenities = [];
+          }
+          return project;
+        });
+        
+        console.log("Transformed projects with amenities:", transformedList);
+        setProjects(transformedList);
         // Fetch main image for projects that don't include images in list API
         try {
-          const targets = list
+          const targets = transformedList
             .filter((p: any) => !p?.projectImages || p.projectImages.length === 0)
             .slice(0, 20); // cap to avoid too many requests
           if (targets.length > 0) {
@@ -603,13 +615,8 @@ const GetProjectAPI = () => {
     }
   };
 
-  // Dynamic banner image: use first filtered project's image, else fallback
-  const bannerImage =
-    filteredProjects.length > 0 &&
-    filteredProjects[0].projectImages &&
-    filteredProjects[0].projectImages.length > 0
-      ? resolveImageUrl(filteredProjects[0].projectImages[0].url)
-      : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=1200&q=80";
+  // Banner image: use a beautiful property/home image
+  const bannerImage = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80";
 
   if (loading) {
     return (
@@ -631,7 +638,7 @@ const GetProjectAPI = () => {
           alt="All Projects Banner"
           className="absolute inset-0 w-full h-full object-cover object-center scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 via-blue-800/60 to-blue-600/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 via-blue-800/30 to-blue-600/20" />
         
         {/* Animated Flash Line with Offers */}
         <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 py-3 overflow-hidden z-20">
@@ -903,82 +910,6 @@ const GetProjectAPI = () => {
                           <span className="ml-auto">{formatPrice(project.price)}</span>
                         </div>
                       </div>
-                      <div className="border-t border-white/30 w-full my-2"></div>
-                      <div className="flex flex-col gap-2 w-full">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/project-detail-api/${project.projectId}`);
-                          }}
-                          className="flex items-center gap-2 text-purple-400 hover:text-purple-300 font-semibold text-sm"
-                        >
-                          <Home className="h-4 w-4" />
-                          View Project
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/builder/${project.builderId}`);
-                          }}
-                          className="flex items-center gap-2 text-blue-400 hover:text-blue-300 font-semibold text-sm"
-                        >
-                          <Building2 className="h-4 w-4" />
-                          View Builder
-                        </button>
-                        <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                          </svg>
-                          Enquire Now
-                        </button>
-                        <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M12 6v6l4 2" />
-                          </svg>
-                          Schedule a Visit
-                        </button>
-                        <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M22 16.92V19a2 2 0 0 1-2.18 2A19.72 19.72 0 0 1 3 5.18 2 2 0 0 1 5 3h2.09a2 2 0 0 1 2 1.72c.13 1.13.37 2.23.72 3.28a2 2 0 0 1-.45 2.11l-.27.27a16 16 0 0 0 6.29 6.29l.27-.27a2 2 0 0 1 2.11-.45c1.05.35 2.15.59 3.28.72A2 2 0 0 1 22 16.92z" />
-                          </svg>
-                          Call Us
-                        </button>
-                        <button className="flex items-center gap-2 text-green-400 hover:text-green-300 font-semibold text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M20.52 3.48A11.94 11.94 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.21.6 4.28 1.65 6.05l-1.6 5.85a1 1 0 0 0 1.25 1.25l5.85-1.6A11.94 11.94 0 0 0 12 24c6.63 0 12-5.37 12-12 0-2.21-.6-4.28-1.65-6.05z" />
-                          </svg>
-                          WhatsApp
-                        </button>
-                      </div>
                     </div>
                     {/* Expand overlay icon */}
                     <button className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow-lg group-hover:opacity-0 transition-opacity duration-300 z-10 border border-gray-200">
@@ -1012,38 +943,6 @@ const GetProjectAPI = () => {
                         >
                           {project.name}
                         </button>
-                      </div>
-                      <div className="text-sm font-semibold text-gray-700 mb-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/builder/${project.builderId}`);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200 flex items-center bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md border border-blue-200 hover:border-blue-300 w-full justify-center"
-                        >
-                          <Building2 className="h-4 w-4 mr-1" />
-                          {project.builderName}
-                          <span className="ml-1 text-xs text-blue-500">→</span>
-                        </button>
-                      </div>
-                      {/* Additional Builder Info */}
-                      <div className="text-xs text-gray-500 mb-2 space-y-1">
-                        <div className="flex items-center">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                          <span>RERA: {project.reraNumber || "N/A"}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                          <span>Type: {project.projectType || "N/A"}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
-                          <span>Area: {project.projectAreaAcres || "N/A"} acres</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                          <span>Launch: {formatDate(project.launchDate)}</span>
-                        </div>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center mb-2">

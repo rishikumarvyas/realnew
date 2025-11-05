@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +15,7 @@ import {
   Users,
   Ruler,
   Loader2,
-  Phone,
-  Mail,
-  Share2,
   Heart,
-  Download,
   Star,
   CheckCircle,
   Clock,
@@ -39,6 +35,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import PropertyMap from "@/components/PropertyMap";
 
 interface ProjectDetail {
   projectId: string;
@@ -95,8 +92,13 @@ const ProjectDetailAPI = () => {
   const navigate = useNavigate();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [activeSection, setActiveSection] = useState("overview");
+  const overviewRef = useRef<HTMLDivElement>(null);
+  const amenitiesRef = useRef<HTMLDivElement>(null);
+  const plansRef = useRef<HTMLDivElement>(null);
+  const locationRef = useRef<HTMLDivElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   // Fetch project details from API
   const fetchProjectDetails = async () => {
@@ -111,7 +113,25 @@ const ProjectDetailAPI = () => {
       const response = await axiosInstance.get(`/api/Builder/GetProjectDetails?projectId=${projectId}`);
       
       if (response.data.statusCode === 200 && response.data.data) {
-        setProject(response.data.data);
+        const projectData = response.data.data;
+        
+        // Transform amenities if needed
+        if (projectData.amenityDetails && Array.isArray(projectData.amenityDetails)) {
+          const allAmenities = JSON.parse(localStorage.getItem("amenities") || "[]");
+          projectData.amenities = projectData.amenityDetails.map((item: any) => {
+            const amenity = allAmenities.find((a: any) => a.id === item.amenityId);
+            return {
+              id: item.amenityId,
+              name: amenity?.amenity || item.amenity || "Unknown",
+              category: "General" // Default category, can be enhanced later
+            };
+          });
+        } else if (!projectData.amenities) {
+          projectData.amenities = [];
+        }
+        
+        console.log("Transformed project amenities:", projectData.amenities);
+        setProject(projectData);
       } else {
         toast.error("Project not found");
         navigate("/get-project-api");
@@ -128,6 +148,92 @@ const ProjectDetailAPI = () => {
   useEffect(() => {
     fetchProjectDetails();
   }, [projectId]);
+
+  // Scroll animation observer
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-fade-in');
+          entry.target.classList.remove('opacity-0', 'translate-y-8');
+        }
+      });
+    }, observerOptions);
+
+    const refs = [overviewRef, amenitiesRef, plansRef, locationRef, galleryRef];
+    refs.forEach((ref) => {
+      if (ref.current) {
+        observer.observe(ref.current);
+      }
+    });
+
+    return () => {
+      refs.forEach((ref) => {
+        if (ref.current) {
+          observer.unobserve(ref.current);
+        }
+      });
+    };
+  }, [project]);
+
+  // Track active section on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = [
+        { id: 'overview', ref: overviewRef },
+        { id: 'amenities', ref: amenitiesRef },
+        { id: 'plans', ref: plansRef },
+        { id: 'location', ref: locationRef },
+        { id: 'gallery', ref: galleryRef },
+      ];
+
+      const scrollPosition = window.scrollY + 200;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section.ref.current) {
+          const offsetTop = section.ref.current.offsetTop;
+          if (scrollPosition >= offsetTop) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [project]);
+
+  // Scroll to section function
+  const scrollToSection = (sectionId: string) => {
+    const sectionMap: { [key: string]: React.RefObject<HTMLDivElement> } = {
+      overview: overviewRef,
+      amenities: amenitiesRef,
+      plans: plansRef,
+      location: locationRef,
+      gallery: galleryRef,
+    };
+
+    const sectionRef = sectionMap[sectionId];
+    if (sectionRef?.current) {
+      const offset = 120; // Account for main navbar (60px gap) + navigation bar height (~60px)
+      const elementPosition = sectionRef.current.offsetTop;
+      const offsetPosition = elementPosition - offset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
+    }
+  };
+
 
   // Helper functions
   const formatPrice = (price: string) => {
@@ -225,6 +331,69 @@ const ProjectDetailAPI = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Navigation Bar Overlay - Sticky with gap from main navbar */}
+      <div className="sticky top-[60px] left-0 right-0 z-30 bg-transparent backdrop-blur-sm">
+        {/* White line at top */}
+        <div className="h-0.5 bg-black/20"></div>
+        
+        <div className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate("/get-project-api")}
+            className="flex items-center gap-2 text-black hover:text-gray-700 transition-colors uppercase text-sm font-medium"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            BACK
+          </button>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8">
+            {[
+              { id: 'overview', label: 'OVERVIEW' },
+              { id: 'amenities', label: 'AMENITIES' },
+              { id: 'plans', label: 'FLOOR PLANS' },
+              { id: 'location', label: 'LOCATION' },
+              { id: 'gallery', label: 'GALLERY' },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => scrollToSection(item.id)}
+                className={`uppercase text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeSection === item.id
+                    ? 'text-black border-b-2 border-black pb-1'
+                    : 'text-black/80 hover:text-black'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Mobile Navigation - Scrollable */}
+          <div className="md:hidden flex items-center gap-3 overflow-x-auto scrollbar-hide">
+            {[
+              { id: 'overview', label: 'OVERVIEW' },
+              { id: 'amenities', label: 'AMENITIES' },
+              { id: 'plans', label: 'FLOOR PLANS' },
+              { id: 'location', label: 'LOCATION' },
+              { id: 'gallery', label: 'GALLERY' },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => scrollToSection(item.id)}
+                className={`uppercase text-xs font-medium transition-colors whitespace-nowrap ${
+                  activeSection === item.id
+                    ? 'text-black border-b-2 border-black pb-1'
+                    : 'text-black/80 hover:text-black'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="relative h-[60vh] w-full">
         <img
@@ -233,22 +402,9 @@ const ProjectDetailAPI = () => {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        
-        {/* Back Button */}
-        <div className="absolute top-4 left-4 z-10">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(-1)}
-            className="bg-white/90 hover:bg-white text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </div>
 
         {/* Favorite Button */}
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-20 right-4 z-10">
           <Button
             variant="outline"
             size="sm"
@@ -263,12 +419,16 @@ const ProjectDetailAPI = () => {
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <Badge className={`${getStatusColor(project.status)} text-white`}>
-                {project.status}
-              </Badge>
-              <Badge className="bg-white/20 text-white border-white/30">
-                {project.projectType}
-              </Badge>
+              {project.status && (
+                <Badge className={`${getStatusColor(project.status)} text-white`}>
+                  {project.status}
+                </Badge>
+              )}
+              {project.projectType && (
+                <Badge className="bg-white/20 text-white border-white/30">
+                  {project.projectType}
+                </Badge>
+              )}
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">{project.name}</h1>
             <div className="flex flex-wrap items-center gap-4 text-lg">
@@ -285,38 +445,25 @@ const ProjectDetailAPI = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="sticky top-0 bg-white shadow-sm border-b z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex overflow-x-auto">
-            {[
-              { id: "overview", label: "Overview" },
-              { id: "amenities", label: "Amenities" },
-              { id: "plans", label: "Floor Plans" },
-              { id: "location", label: "Location" },
-              { id: "gallery", label: "Gallery" }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
+      {/* Content - Sequential Sections */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
-          <div className="space-y-8">
+        {/* Overview Section */}
+        <div 
+          ref={overviewRef}
+          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+        >
+          <div className="space-y-12 py-12">
+            {/* Overview Title */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-light tracking-wider uppercase text-gray-800">
+                OVERVIEW
+              </h2>
+              <p className="text-xl md:text-2xl font-serif text-gray-700 italic max-w-3xl mx-auto">
+                Discover Your Dream Home in Every Detail
+              </p>
+            </div>
+
+            <div className="space-y-8">
             {/* Key Details */}
             <Card>
               <CardHeader>
@@ -435,28 +582,27 @@ const ProjectDetailAPI = () => {
                 </CardContent>
               </Card>
             )}
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-                <Phone className="h-5 w-5 mr-2" />
-                Contact Builder
-              </Button>
-              <Button size="lg" variant="outline">
-                <Download className="h-5 w-5 mr-2" />
-                Download Brochure
-              </Button>
-              <Button size="lg" variant="outline">
-                <Share2 className="h-5 w-5 mr-2" />
-                Share
-              </Button>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Amenities Tab */}
-        {activeTab === "amenities" && (
-          <div className="space-y-8">
+        {/* Amenities Section */}
+        <div 
+          ref={amenitiesRef}
+          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+        >
+          <div className="space-y-12 py-12">
+            {/* Amenities Title */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-light tracking-wider uppercase text-gray-800">
+                AMENITIES
+              </h2>
+              <p className="text-xl md:text-2xl font-serif text-gray-700 italic max-w-3xl mx-auto">
+                Experience Luxury Living with Premium Amenities
+              </p>
+            </div>
+
+            <div className="space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Project Amenities</CardTitle>
@@ -503,12 +649,27 @@ const ProjectDetailAPI = () => {
                 </CardContent>
               </Card>
             )}
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Plans Tab */}
-        {activeTab === "plans" && (
-          <div className="space-y-8">
+        {/* Floor Plans Section */}
+        <div 
+          ref={plansRef}
+          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+        >
+          <div className="space-y-12 py-12">
+            {/* Floor Plans Title */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-light tracking-wider uppercase text-gray-800">
+                FLOOR PLANS
+              </h2>
+              <p className="text-xl md:text-2xl font-serif text-gray-700 italic max-w-3xl mx-auto">
+                Explore Your Perfect Living Space Layout
+              </p>
+            </div>
+
+            <div className="space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Floor Plans</CardTitle>
@@ -568,12 +729,27 @@ const ProjectDetailAPI = () => {
                 </CardContent>
               </Card>
             )}
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Location Tab */}
-        {activeTab === "location" && (
-          <div className="space-y-8">
+        {/* Location Section */}
+        <div 
+          ref={locationRef}
+          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+        >
+          <div className="space-y-12 py-12">
+            {/* Location Title */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-light tracking-wider uppercase text-gray-800">
+                LOCATION
+              </h2>
+              <p className="text-xl md:text-2xl font-serif text-gray-700 italic max-w-3xl mx-auto">
+                Find Your Perfect Place in the Heart of the City
+              </p>
+            </div>
+
+            <div className="space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Location Details</CardTitle>
@@ -592,50 +768,142 @@ const ProjectDetailAPI = () => {
               </CardContent>
             </Card>
 
-            {/* Map Placeholder */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Location Map</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-96 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">Interactive map will be displayed here</p>
+            {/* Location Map */}
+            <Card className="overflow-hidden">
+              {/* Map Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-blue-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="bg-blue-600 p-2 rounded-lg mr-3">
+                      <MapPin className="text-white" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Project Location
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Interactive map with precise location
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 rounded-full">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-blue-700">
+                        Live Location
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
 
-        {/* Gallery Tab */}
-        {activeTab === "gallery" && (
-          <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Gallery</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {project.projectImages && project.projectImages.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {project.projectImages.map((image, index) => (
-                      <div key={index} className="aspect-square overflow-hidden rounded-lg group cursor-pointer">
-                        <img
-                          src={image.url}
-                          alt={`Project ${index + 1}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 text-center py-8">No project images available.</p>
-                )}
-              </CardContent>
+              {/* Map Container */}
+              <div className="p-6">
+                <PropertyMap
+                  address={project.address || ""}
+                  city={project.city || ""}
+                  state={project.state || ""}
+                  className="h-[400px]"
+                />
+              </div>
             </Card>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Gallery Section */}
+        <div 
+          ref={galleryRef}
+          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+        >
+          <div className="space-y-12 py-12">
+            {/* Gallery Title */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl md:text-5xl font-light tracking-wider uppercase text-gray-800">
+                GALLERY
+              </h2>
+              <p className="text-xl md:text-2xl font-serif text-gray-700 italic max-w-3xl mx-auto">
+                Experience Luxury Living Through Every Frame
+              </p>
+            </div>
+
+            {/* Gallery Images Carousel - Combined: Project, Amenity, and Floor Plan Images */}
+            {(() => {
+              // Combine all images into a single array
+              const allImages: Array<{ url: string; type: string; index: number }> = [];
+              
+              // Add project images
+              if (project.projectImages && project.projectImages.length > 0) {
+                project.projectImages.forEach((img, idx) => {
+                  allImages.push({ url: img.url, type: 'Project', index: idx });
+                });
+              }
+              
+              // Add amenity images
+              if (project.amenityImages && project.amenityImages.length > 0) {
+                project.amenityImages.forEach((img, idx) => {
+                  allImages.push({ url: img.url, type: 'Amenity', index: idx });
+                });
+              }
+              
+              // Add floor plan images
+              if (project.floorImages && project.floorImages.length > 0) {
+                project.floorImages.forEach((img, idx) => {
+                  allImages.push({ url: img.url, type: 'Floor Plan', index: idx });
+                });
+              }
+
+              return allImages.length > 0 ? (
+                <div className="w-full">
+                  <Carousel className="w-full">
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {allImages.map((image, index) => (
+                        <CarouselItem key={`${image.type}-${image.index}-${index}`} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                          <div className="aspect-[4/3] overflow-hidden rounded-lg group cursor-pointer bg-gray-100 relative">
+                            <img
+                              src={image.url}
+                              alt={`${project.name} - ${image.type} ${image.index + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            />
+                            {/* Image Type Badge */}
+                            <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                              {image.type}
+                            </div>
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-2 md:left-4 bg-white/90 hover:bg-white border-gray-300" />
+                    <CarouselNext className="right-2 md:right-4 bg-white/90 hover:bg-white border-gray-300" />
+                  </Carousel>
+
+                  {/* Additional Gallery Grid View */}
+                  {allImages.length > 3 && (
+                    <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {allImages.slice(0, 4).map((image, index) => (
+                        <div key={`grid-${image.type}-${image.index}-${index}`} className="aspect-square overflow-hidden rounded-lg group cursor-pointer bg-gray-100 relative">
+                          <img
+                            src={image.url}
+                            alt={`${project.name} - ${image.type} Thumbnail ${image.index + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                          {/* Image Type Badge */}
+                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                            {image.type}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <p className="text-gray-600 text-lg">No images available.</p>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       </div>
     </div>
   );

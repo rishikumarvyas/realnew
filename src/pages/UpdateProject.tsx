@@ -33,6 +33,7 @@ import {
   Check,
 } from "lucide-react";
 import axiosInstance from "@/axiosCalls/axiosInstance";
+import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAmenity } from "@/utils/UtilityFunctions";
@@ -101,12 +102,15 @@ const UpdateProject = () => {
   const [projectImages, setProjectImages] = useState([]);
   const [projectImageURLs, setProjectImageURLs] = useState([]);
   const [projectMainIndex, setProjectMainIndex] = useState(null);
+  const [existingProjectImageURLs, setExistingProjectImageURLs] = useState([]); // Track existing images from API
   const [amenityImages, setAmenityImages] = useState([]);
   const [amenityImageURLs, setAmenityImageURLs] = useState([]);
   const [amenityMainIndex, setAmenityMainIndex] = useState(null);
+  const [existingAmenityImageURLs, setExistingAmenityImageURLs] = useState([]); // Track existing images from API
   const [floorImages, setFloorImages] = useState([]);
   const [floorImageURLs, setFloorImageURLs] = useState([]);
   const [floorMainIndex, setFloorMainIndex] = useState(null);
+  const [existingFloorImageURLs, setExistingFloorImageURLs] = useState([]); // Track existing images from API
 
   // Amenities
   const [amenities, setAmenities] = useState([]);
@@ -339,6 +343,13 @@ const UpdateProject = () => {
 
         if (response.data.statusCode === 200 && response.data.data) {
           const projectData = response.data.data;
+          console.log("GetProjectDetails Response:", projectData);
+          console.log("AmenityIds from API:", projectData.amenityIds);
+          console.log("Amenities from API:", projectData.amenities);
+          console.log("State field from API:", projectData.state);
+          console.log("City field from API:", projectData.city);
+          console.log("Name field from API:", projectData.name);
+          console.log("ProjectType field from API:", projectData.projectType);
           setProject(projectData);
           // Helper function to convert date format
           const convertDateFormat = (dateString) => {
@@ -364,6 +375,45 @@ const UpdateProject = () => {
             }
           };
 
+          // Extract amenity IDs from amenityDetails if present
+          let extractedAmenityIds = [];
+          if (projectData.amenityIds && Array.isArray(projectData.amenityIds)) {
+            extractedAmenityIds = projectData.amenityIds;
+          } else if (projectData.amenityDetails && Array.isArray(projectData.amenityDetails)) {
+            extractedAmenityIds = projectData.amenityDetails.map((item: any) => item.amenityId);
+          }
+          
+          // Map state and city names to IDs
+          let mappedStateId = "";
+          let mappedCityId = "";
+          
+          // Get all states if not already loaded
+          let allStates = states;
+          if (!allStates || allStates.length === 0) {
+            try {
+              const cachedStates = localStorage.getItem("allStates");
+              if (cachedStates) {
+                allStates = JSON.parse(cachedStates);
+              } else {
+                const stateResponse = await axiosInstance.get("/api/Generic/GetActiveRecords?tableName=State");
+                if (stateResponse.data.statusCode === 200) {
+                  allStates = stateResponse.data.data;
+                  localStorage.setItem("allStates", JSON.stringify(allStates));
+                }
+              }
+            } catch (error) {
+              console.error("Error loading states:", error);
+            }
+          }
+          
+          if (projectData.state && allStates && allStates.length > 0) {
+            const matchedState = allStates.find((s: any) => s.state === projectData.state);
+            if (matchedState) {
+              mappedStateId = matchedState.id;
+              console.log("Mapped state:", projectData.state, "->", mappedStateId);
+            }
+          }
+          
           setFormData({
             projectId: projectData.projectId || projectId,
             name: projectData.name || "",
@@ -374,11 +424,11 @@ const UpdateProject = () => {
             beds: projectData.beds || "",
             status: projectData.status || "",
             possession: projectData.possession || "",
-            amenityIds: projectData.amenityIds || [],
+            amenityIds: extractedAmenityIds,
             address: projectData.address || "",
             locality: projectData.locality || "",
-            cityId: projectData.cityId || "",
-            stateId: projectData.stateId || "",
+            cityId: projectData.cityId || mappedCityId || "",
+            stateId: projectData.stateId || mappedStateId || "",
             isNA: projectData.isNA || false,
             isReraApproved: projectData.isReraApproved || false,
             isOCApproved: projectData.isOCApproved || false,
@@ -394,6 +444,33 @@ const UpdateProject = () => {
             ocDate: convertDateFormat(projectData.ocDate),
             exclusiveFeatures: projectData.exclusiveFeatures || [],
           });
+          
+          // If we found a stateId, load cities and then map cityId
+          if (mappedStateId) {
+            try {
+              const citiesResponse = await axiosInstance.get(`/api/Generic/GetActiveRecords?tableName=City&parentTableName=State&parentField=StateId&parentId=${mappedStateId}`);
+              if (citiesResponse.data.statusCode === 200) {
+                const loadedCities = citiesResponse.data.data;
+                setCities(loadedCities);
+                
+                if (projectData.city) {
+                  const matchedCity = loadedCities.find((c: any) => c.city === projectData.city);
+                  if (matchedCity) {
+                    mappedCityId = matchedCity.id;
+                    console.log("Mapped city:", projectData.city, "->", mappedCityId);
+                    
+                    // Update cityId in formData
+                    setFormData(prev => ({
+                      ...prev,
+                      cityId: mappedCityId
+                    }));
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error loading cities:", error);
+            }
+          }
 
           // Prefill image preview URLs and main indices for all image groups
           try {
@@ -408,6 +485,11 @@ const UpdateProject = () => {
             setProjectImageURLs(projURLs);
             setAmenityImageURLs(amenURLs);
             setFloorImageURLs(floorURLs);
+            
+            // Store existing image URLs separately
+            setExistingProjectImageURLs(projURLs);
+            setExistingAmenityImageURLs(amenURLs);
+            setExistingFloorImageURLs(floorURLs);
 
             const projMainIdx = projImages.findIndex((img: any) => img?.isMain);
             const amenMainIdx = amenImages.findIndex((img: any) => img?.isMain);
@@ -426,7 +508,16 @@ const UpdateProject = () => {
 
           // Prefill amenity selections
           try {
-            const existingAmenityIds = Array.isArray(projectData.amenityIds) ? projectData.amenityIds : [];
+            // Handle both amenityIds (if returned) and amenityDetails (actual API response format)
+            let existingAmenityIds = [];
+            if (projectData.amenityIds && Array.isArray(projectData.amenityIds)) {
+              existingAmenityIds = projectData.amenityIds;
+            } else if (projectData.amenityDetails && Array.isArray(projectData.amenityDetails)) {
+              // Extract amenity IDs from amenityDetails objects
+              existingAmenityIds = projectData.amenityDetails.map((item: any) => item.amenityId);
+            }
+            
+            console.log("Extracted amenity IDs:", existingAmenityIds);
             setAmenities(existingAmenityIds);
 
             // If any amenity matches a radio option id, preselect the first match
@@ -501,6 +592,70 @@ const UpdateProject = () => {
     }));
   };
 
+  // Helper function to resolve image URL (handle relative URLs)
+  const resolveImageUrl = (url: string): string => {
+    if (!url) return "";
+    if (/^https?:\/\//i.test(url)) return url;
+    try {
+      const base = (axiosInstance as any)?.defaults?.baseURL || "";
+      if (!base) return url;
+      return `${base}${url.startsWith("/") ? url : `/${url}`}`;
+    } catch {
+      return url;
+    }
+  };
+
+  // Helper function to convert image URL to File
+  const urlToFile = async (url: string, filename: string): Promise<File | null> => {
+    try {
+      const resolvedUrl = resolveImageUrl(url);
+      
+      // Check if URL is absolute (external blob storage)
+      const isAbsoluteUrl = /^https?:\/\//i.test(resolvedUrl);
+      
+      if (isAbsoluteUrl) {
+        // For absolute URLs (like Azure Blob Storage), use axios directly (no baseURL)
+        try {
+          const response = await axios.get(resolvedUrl, {
+            responseType: 'blob',
+            headers: {
+              'Accept': 'image/*',
+            },
+          });
+          const blob = response.data;
+          return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+        } catch (axiosError: any) {
+          // If axios fails (likely CORS), try native fetch as fallback
+          try {
+            const fetchResponse = await fetch(resolvedUrl, {
+              mode: 'cors',
+              credentials: 'omit',
+            });
+            if (!fetchResponse.ok) {
+              throw new Error(`Failed to fetch: ${fetchResponse.statusText}`);
+            }
+            const blob = await fetchResponse.blob();
+            return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+          } catch (fetchError) {
+            // Both methods failed (likely CORS), return null to send URL instead
+            console.warn(`CORS blocked for ${resolvedUrl}, will send URL to API instead`);
+            return null;
+          }
+        }
+      } else {
+        // For relative URLs, use axiosInstance (goes through backend)
+        const response = await axiosInstance.get(resolvedUrl, {
+          responseType: 'blob',
+        });
+        const blob = response.data;
+        return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+      }
+    } catch (error) {
+      console.error("Error converting URL to File:", error);
+      return null; // Return null on error so we can send URL instead
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -536,9 +691,13 @@ const UpdateProject = () => {
 
       // Add amenity IDs as comma-separated (matches working Postman format)
       const amenityIds = selectedOption === "" ? amenities : [...amenities, selectedOption];
+      console.log("Amenities checkbox state:", amenities);
+      console.log("Selected radio option:", selectedOption);
+      console.log("Final amenity IDs to send:", amenityIds);
       if (amenityIds && amenityIds.length > 0) {
         formDataToSend.append("AmenityIds", amenityIds.join(","));
       }
+      console.log("FormData AmenityIds:", formDataToSend.get("AmenityIds"));
 
       // Add exclusive features
       formData.exclusiveFeatures.forEach(feature => {
@@ -552,22 +711,106 @@ const UpdateProject = () => {
         formDataToSend.append(`PlanDetails[${index}].Price`, plan.price);
       });
 
-      // Add project images
-      projectImages.forEach((image, index) => {
+      // Helper function to combine existing and new images
+      const combineImages = async (imageURLs: string[], existingURLs: string[], newFiles: File[], imageType: string): Promise<{ files: File[], existingUrls: string[] }> => {
+        const allImages: File[] = [];
+        const existingImageUrls: string[] = []; // URLs for existing images that couldn't be fetched
+        let newFileIndex = 0; // Track index in newFiles array
+        
+        for (let i = 0; i < imageURLs.length; i++) {
+          const url = imageURLs[i];
+          
+          // Check if this URL is an existing image (from API)
+          if (existingURLs.includes(url)) {
+            // This is an existing image, try to fetch it as File
+            try {
+              const file = await urlToFile(url, `${imageType}-image-${i}.jpg`);
+              if (file) {
+                allImages.push(file);
+              } else {
+                // CORS blocked, store URL to send separately
+                existingImageUrls.push(url);
+              }
+            } catch (error) {
+              console.error(`Failed to fetch existing ${imageType} image ${i}:`, error);
+              // Store URL to send separately
+              existingImageUrls.push(url);
+            }
+          } else {
+            // This is a new image (blob URL), use the corresponding File
+            if (newFiles[newFileIndex]) {
+              allImages.push(newFiles[newFileIndex]);
+              newFileIndex++;
+            }
+          }
+        }
+        
+        return { files: allImages, existingUrls: existingImageUrls };
+      };
+
+      // Helper to calculate main index in combined array
+      const calculateMainIndex = (originalIndex: number | null, imageURLs: string[], existingURLs: string[], combinedData: { files: File[], existingUrls: string[] }): number => {
+        if (originalIndex === null || originalIndex >= imageURLs.length) return 0;
+        
+        let combinedIndex = 0;
+        for (let i = 0; i < originalIndex; i++) {
+          const url = imageURLs[i];
+          if (existingURLs.includes(url)) {
+            // Existing image - only count if it was successfully fetched (not in existingUrls)
+            if (!combinedData.existingUrls.includes(url)) {
+              combinedIndex++;
+            }
+          } else {
+            // New image - always counted
+            combinedIndex++;
+          }
+        }
+        return combinedIndex;
+      };
+
+      // Combine existing and new project images
+      const projectImageData = await combineImages(projectImageURLs, existingProjectImageURLs, projectImages, 'project');
+      const combinedProjectIndex = calculateMainIndex(projectMainIndex, projectImageURLs, existingProjectImageURLs, projectImageData);
+      
+      // Add all project images (existing + new)
+      projectImageData.files.forEach((image, index) => {
         formDataToSend.append(`ProjectImages[${index}].File`, image);
-        formDataToSend.append(`ProjectImages[${index}].IsMain`, (index === projectMainIndex).toString());
+        formDataToSend.append(`ProjectImages[${index}].IsMain`, (index === combinedProjectIndex).toString());
+      });
+      
+      // Add existing project image URLs (if any couldn't be fetched due to CORS)
+      projectImageData.existingUrls.forEach((url, index) => {
+        formDataToSend.append(`ExistingProjectImageUrls[${index}]`, url);
       });
 
-      // Add amenity images
-      amenityImages.forEach((image, index) => {
+      // Combine existing and new amenity images
+      const amenityImageData = await combineImages(amenityImageURLs, existingAmenityImageURLs, amenityImages, 'amenity');
+      const combinedAmenityIndex = calculateMainIndex(amenityMainIndex, amenityImageURLs, existingAmenityImageURLs, amenityImageData);
+      
+      // Add all amenity images (existing + new)
+      amenityImageData.files.forEach((image, index) => {
         formDataToSend.append(`AmenityImages[${index}].File`, image);
-        formDataToSend.append(`AmenityImages[${index}].IsMain`, (index === amenityMainIndex).toString());
+        formDataToSend.append(`AmenityImages[${index}].IsMain`, (index === combinedAmenityIndex).toString());
+      });
+      
+      // Add existing amenity image URLs (if any couldn't be fetched due to CORS)
+      amenityImageData.existingUrls.forEach((url, index) => {
+        formDataToSend.append(`ExistingAmenityImageUrls[${index}]`, url);
       });
 
-      // Add floor images
-      floorImages.forEach((image, index) => {
+      // Combine existing and new floor images
+      const floorImageData = await combineImages(floorImageURLs, existingFloorImageURLs, floorImages, 'floor');
+      const combinedFloorIndex = calculateMainIndex(floorMainIndex, floorImageURLs, existingFloorImageURLs, floorImageData);
+      
+      // Add all floor images (existing + new)
+      floorImageData.files.forEach((image, index) => {
         formDataToSend.append(`FloorImages[${index}].File`, image);
-        formDataToSend.append(`FloorImages[${index}].IsMain`, (index === floorMainIndex).toString());
+        formDataToSend.append(`FloorImages[${index}].IsMain`, (index === combinedFloorIndex).toString());
+      });
+      
+      // Add existing floor image URLs (if any couldn't be fetched due to CORS)
+      floorImageData.existingUrls.forEach((url, index) => {
+        formDataToSend.append(`ExistingFloorImageUrls[${index}]`, url);
       });
 
       const response = await axiosInstance.post("/api/Builder/UpdateProject", formDataToSend, {
@@ -581,7 +824,7 @@ const UpdateProject = () => {
           title: "Success",
           description: "Project updated successfully!",
         });
-        navigate(`/project-detail/${projectId}`);
+        navigate(`/project-detail-api/${projectId}`);
       } else {
         toast({
           title: "Error",
@@ -691,10 +934,9 @@ const UpdateProject = () => {
                   id="name"
                   type="text"
                   value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  disabled
                   placeholder="Enter project name"
-                  className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
-                  required
+                  className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-gray-100 cursor-not-allowed"
                 />
               </div>
 
@@ -703,8 +945,8 @@ const UpdateProject = () => {
                   <Label htmlFor="projectType" className="text-sm font-semibold text-gray-700">
                     Project Type <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={formData.projectType} onValueChange={(value) => handleInputChange("projectType", value)}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
+                  <Select value={formData.projectType} disabled>
+                    <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-gray-100 cursor-not-allowed">
                       <SelectValue placeholder="Select project type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -748,53 +990,6 @@ const UpdateProject = () => {
                   className="min-h-[120px] border-2 border-gray-200 focus:border-blue-500 rounded-xl resize-none"
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="price" className="text-sm font-semibold text-gray-700 flex items-center">
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    Price
-                  </Label>
-                  <Input
-                    id="price"
-                    type="text"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange("price", e.target.value)}
-                    placeholder="e.g., 75L, 1.2Cr"
-                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="area" className="text-sm font-semibold text-gray-700 flex items-center">
-                    <Ruler className="h-4 w-4 mr-1" />
-                    Area (sqft)
-                  </Label>
-                  <Input
-                    id="area"
-                    type="text"
-                    value={formData.area}
-                    onChange={(e) => handleInputChange("area", e.target.value)}
-                    placeholder="e.g., 1200"
-                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="beds" className="text-sm font-semibold text-gray-700 flex items-center">
-                    <Users className="h-4 w-4 mr-1" />
-                    Beds
-                  </Label>
-                  <Input
-                    id="beds"
-                    type="text"
-                    value={formData.beds}
-                    onChange={(e) => handleInputChange("beds", e.target.value)}
-                    placeholder="e.g., 2BHK, 3BHK"
-                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">
@@ -860,8 +1055,8 @@ const UpdateProject = () => {
                   <Label htmlFor="stateId" className="text-sm font-semibold text-gray-700">
                     State <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={formData.stateId} onValueChange={(value) => handleInputChange("stateId", value)}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
+                  <Select value={formData.stateId} disabled>
+                    <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-gray-100 cursor-not-allowed">
                       <SelectValue placeholder="Select State" />
                     </SelectTrigger>
                     <SelectContent>
@@ -882,8 +1077,8 @@ const UpdateProject = () => {
                   <Label htmlFor="cityId" className="text-sm font-semibold text-gray-700">
                     City <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={formData.cityId} onValueChange={(value) => handleInputChange("cityId", value)}>
-                    <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
+                  <Select value={formData.cityId} disabled>
+                    <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl bg-gray-100 cursor-not-allowed">
                       <SelectValue placeholder="Select City" />
                     </SelectTrigger>
                     <SelectContent>

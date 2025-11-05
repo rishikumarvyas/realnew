@@ -168,7 +168,7 @@ export function Navbar() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
-                          className="flex items-center gap-1 bg-orange-600 text-white hover:bg-orange-700 rounded-full mr-2"
+                          className="flex items-center gap-1 bg-blue-600 text-white hover:bg-blue-700 rounded-full mr-2"
                         >
                           <Hammer className="h-4 w-4 mr-1" />
                           Builder
@@ -177,35 +177,28 @@ export function Navbar() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"
-                        className="w-48 p-2 border border-orange-100"
+                        className="w-48 p-2 border border-blue-100"
                       >
                         <DropdownMenuItem
                           onClick={handleAddBuilderClick}
-                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                          className="cursor-pointer hover:bg-blue-50 flex items-center py-2"
                         >
-                          <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
-                          <span className="text-orange-600">Add Builder</span>
+                          <PlusCircle className="mr-2 h-4 w-4 text-blue-500" />
+                          <span className="text-blue-600">Add Builder</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => navigate("/add-project")}
-                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                          className="cursor-pointer hover:bg-blue-50 flex items-center py-2"
                         >
-                          <PlusCircle className="mr-2 h-4 w-4 text-orange-500" />
-                          <span className="text-orange-600">Add Project</span>
+                          <PlusCircle className="mr-2 h-4 w-4 text-blue-500" />
+                          <span className="text-blue-600">Add Project</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => navigate("/get-project")}
-                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
+                          className="cursor-pointer hover:bg-blue-50 flex items-center py-2"
                         >
-                          <Building className="mr-2 h-4 w-4 text-orange-500" />
-                          <span className="text-orange-600">Get Project (Mock)</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => navigate("/get-project-api")}
-                          className="cursor-pointer hover:bg-orange-50 flex items-center py-2"
-                        >
-                          <Building className="mr-2 h-4 w-4 text-orange-500" />
-                          <span className="text-orange-600">Get Project (API)</span>
+                          <Building className="mr-2 h-4 w-4 text-blue-500" />
+                          <span className="text-blue-600">My Project</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -397,8 +390,8 @@ export function Navbar() {
                       Panel
                     </Link>
                     {/* Builder dropdown for mobile */}
-                    <div className="border-l-4 border-orange-500 pl-3 ml-3">
-                      <div className="text-sm font-semibold text-orange-600 mb-2 flex items-center">
+                    <div className="border-l-4 border-blue-500 pl-3 ml-3">
+                      <div className="text-sm font-semibold text-blue-600 mb-2 flex items-center">
                         <Hammer className="w-4 h-4 mr-2" />
                         Builder Actions
                       </div>
@@ -408,34 +401,26 @@ export function Navbar() {
                             handleAddBuilderClick();
                             setIsOpen(false);
                           }}
-                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md w-full text-left"
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-md w-full text-left"
                         >
-                          <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
+                          <PlusCircle className="w-4 h-4 mr-2 text-blue-500" />
                           Add Builder
                         </button>
                         <Link
                           to="/add-project"
                           onClick={() => setIsOpen(false)}
-                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-md"
                         >
-                          <PlusCircle className="w-4 h-4 mr-2 text-orange-500" />
+                          <PlusCircle className="w-4 h-4 mr-2 text-blue-500" />
                           Add Project
                         </Link>
                         <Link
                           to="/get-project"
                           onClick={() => setIsOpen(false)}
-                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
+                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-blue-50 rounded-md"
                         >
-                          <Building className="w-4 h-4 mr-2 text-orange-500" />
-                          Get Project (Mock)
-                        </Link>
-                        <Link
-                          to="/get-project-api"
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center p-2 text-sm font-medium text-gray-700 hover:bg-orange-50 rounded-md"
-                        >
-                          <Building className="w-4 h-4 mr-2 text-orange-500" />
-                          Get Project (API)
+                          <Building className="w-4 h-4 mr-2 text-blue-500" />
+                          My Project
                         </Link>
                       </div>
                     </div>
