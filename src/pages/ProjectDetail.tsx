@@ -262,12 +262,16 @@ const ProjectDetail = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <Badge className={`text-sm font-medium border ${getStatusColor(project.status)}`}>
-                {project.status || 'Unknown'}
-              </Badge>
-              <Badge className={`text-sm font-medium border ${getProjectTypeColor(project.projectType)}`}>
-                {project.projectType || 'Unknown'}
-              </Badge>
+              {project.status && (
+                <Badge className={`text-sm font-medium border ${getStatusColor(project.status)}`}>
+                  {project.status}
+                </Badge>
+              )}
+              {project.projectType && (
+                <Badge className={`text-sm font-medium border ${getProjectTypeColor(project.projectType)}`}>
+                  {project.projectType}
+                </Badge>
+              )}
             </div>
           </div>
         </div>

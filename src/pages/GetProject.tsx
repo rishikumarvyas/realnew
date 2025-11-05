@@ -290,12 +290,16 @@ const GetProject = () => {
                       </div>
                     )}
                     <div className="absolute top-4 right-4 flex flex-col space-y-2">
-                      <Badge className={`text-xs font-medium border ${getStatusColor(project.status)}`}>
-                        {project.status || 'Unknown'}
-                      </Badge>
-                      <Badge className={`text-xs font-medium border ${getProjectTypeColor(project.projectType)}`}>
-                        {project.projectType || 'Unknown'}
-                      </Badge>
+                      {project.status && (
+                        <Badge className={`text-xs font-medium border ${getStatusColor(project.status)}`}>
+                          {project.status}
+                        </Badge>
+                      )}
+                      {project.projectType && (
+                        <Badge className={`text-xs font-medium border ${getProjectTypeColor(project.projectType)}`}>
+                          {project.projectType}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -338,7 +342,8 @@ const GetProject = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="pt-4 border-t border-gray-100 space-y-3">
+                        {/* First Row: RERA and OC Badges */}
                         <div className="flex items-center space-x-2">
                           {project.isReraApproved && (
                             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
@@ -351,11 +356,12 @@ const GetProject = () => {
                             </Badge>
                           )}
                         </div>
+                        {/* Second Row: View Details and Update Project Buttons */}
                         <div className="flex space-x-2">
                           <Button
                             size="sm"
-                            onClick={() => navigate(`/project-detail/${project.projectId}`)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => navigate(`/project-detail-api/${project.projectId}`)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View Details
@@ -363,7 +369,7 @@ const GetProject = () => {
                           <Button
                             size="sm"
                             onClick={() => navigate(`/update-project/${project.projectId}`)}
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            className="bg-green-600 hover:bg-green-700 text-white flex-1"
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Update Project
