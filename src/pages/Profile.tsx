@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axiosInstance from "@/axiosCalls/axiosInstance";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ type ProfileResponse = {
 
 const Profile: React.FC = () => {
   const { toast } = useToast();
+  const { updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -220,6 +222,12 @@ const Profile: React.FC = () => {
           description:
             res?.data?.message || "Your profile was updated successfully.",
         });
+        // update AuthContext so navbar/name updates immediately
+        try {
+          updateUser?.({ name: `${payload.firstName} ${payload.lastName}` });
+        } catch (e) {
+          // ignore if updateUser isn't available
+        }
       } else {
         toast({
           title: "Update failed",
