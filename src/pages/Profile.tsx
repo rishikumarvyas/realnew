@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axiosInstance from "@/axiosCalls/axiosInstance";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-// dialog not needed anymore for email validation; we'll use inline error and disable Save
 import {
   Card,
   CardContent,
@@ -20,7 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// tooltip removed for simpler UX
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Loader2, User } from "lucide-react";
 
 type ProfileResponse = {
@@ -44,6 +50,18 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [showEmailInvalidDialog, setShowEmailInvalidDialog] =
+    useState<boolean>(false);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (showEmailInvalidDialog) {
+      // focus the email input when the dialog opens
+      setTimeout(() => {
+        emailRef.current?.focus();
+      }, 50);
+    }
+  }, [showEmailInvalidDialog]);
 
   const [profile, setProfile] = useState({
     firstName: "",
@@ -177,12 +195,8 @@ const Profile: React.FC = () => {
     setSaving(true);
     setError(null);
     if (profile.email && emailError) {
-      // defensive check: show toast and block save
-      toast({
-        title: "Invalid email",
-        description: emailError,
-        variant: "destructive",
-      });
+      // show dialog asking user to enter a valid email; focus will move to the input
+      setShowEmailInvalidDialog(true);
       setSaving(false);
       return;
     }
@@ -236,170 +250,199 @@ const Profile: React.FC = () => {
       ) : error ? (
         <div className="text-center text-red-600 py-6">{error}</div>
       ) : (
-        <Card className="shadow-sm">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-            <div className="flex items-center">
-              <User className="h-5 w-5 text-blue-600 mr-2" />
-              <CardTitle>My Profile</CardTitle>
-            </div>
-            <CardDescription>
-              View and update your profile information.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  First name
-                </label>
-                <input
-                  name="firstName"
-                  value={profile.firstName}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border rounded-md p-2"
-                />
+        <>
+          <Card className="shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
+              <div className="flex items-center">
+                <User className="h-5 w-5 text-blue-600 mr-2" />
+                <CardTitle>My Profile</CardTitle>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Last name
-                </label>
-                <input
-                  name="lastName"
-                  value={profile.lastName}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border rounded-md p-2"
-                />
-              </div>
+              <CardDescription>
+                View and update your profile information.
+              </CardDescription>
+            </CardHeader>
 
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  value={profile.email}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border rounded-md p-2"
-                  type="email"
-                />
-                {emailError && (
-                  <p className="text-red-500 text-xs mt-1">{emailError}</p>
-                )}
-              </div>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    First name
+                  </label>
+                  <input
+                    name="firstName"
+                    value={profile.firstName}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border rounded-md p-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Last name
+                  </label>
+                  <input
+                    name="lastName"
+                    value={profile.lastName}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border rounded-md p-2"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone
-                </label>
-                <input
-                  name="phone"
-                  value={profile.phone}
-                  readOnly
-                  className="mt-1 block w-full border rounded-md p-2 bg-gray-50"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    name="email"
+                    ref={emailRef}
+                    value={profile.email}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border rounded-md p-2"
+                    type="email"
+                  />
+                  {emailError && (
+                    <p className="text-red-500 text-xs mt-1">{emailError}</p>
+                  )}
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Address
-                </label>
-                <textarea
-                  name="address"
-                  value={profile.address}
-                  onChange={handleChange}
-                  className="mt-1 block w-full border rounded-md p-2"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Phone
+                  </label>
+                  <input
+                    name="phone"
+                    value={profile.phone}
+                    readOnly
+                    className="mt-1 block w-full border rounded-md p-2 bg-gray-50"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  State
-                </label>
-                <Select
-                  value={selectedStateId}
-                  onValueChange={(val) => setSelectedStateId(val)}
-                >
-                  <SelectTrigger
-                    id="state"
-                    className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Address
+                  </label>
+                  <textarea
+                    name="address"
+                    value={profile.address}
+                    onChange={handleChange}
+                    className="mt-1 block w-full border rounded-md p-2"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    State
+                  </label>
+                  <Select
+                    value={selectedStateId}
+                    onValueChange={(val) => setSelectedStateId(val)}
                   >
-                    <SelectValue
-                      placeholder={
-                        allStates.length
-                          ? "Select State"
-                          : "No states available"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allStates.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  City
-                </label>
-                <Select
-                  value={cityId}
-                  onValueChange={(val) => setCityId(val)}
-                  disabled={!selectedStateId || cityLoading}
-                >
-                  <SelectTrigger
-                    id="city"
-                    className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                  >
-                    {cityLoading ? (
-                      <span className="flex items-center">
-                        <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                        Loading...
-                      </span>
-                    ) : (
+                    <SelectTrigger
+                      id="state"
+                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    >
                       <SelectValue
                         placeholder={
-                          selectedStateId ? "Select City" : "Select State First"
+                          allStates.length
+                            ? "Select State"
+                            : "No states available"
                         }
                       />
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cityLoading ? (
-                      <div className="flex items-center justify-center p-2">
-                        <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                        Loading cities...
-                      </div>
-                    ) : (
-                      cityList.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.city}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allStates.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.state}
                         </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <CardFooter className="flex justify-center space-x-4">
-            <Button
-              onClick={handleSave}
-              disabled={saving || (!!profile.email && !!emailError)}
-              className="bg-blue-600 text-white"
-            >
-              {saving ? "Saving..." : "Save changes"}
-            </Button>
-            <Button variant="ghost" onClick={() => navigate(-1)}>
-              Cancel
-            </Button>
-          </CardFooter>
-        </Card>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    City
+                  </label>
+                  <Select
+                    value={cityId}
+                    onValueChange={(val) => setCityId(val)}
+                    disabled={!selectedStateId || cityLoading}
+                  >
+                    <SelectTrigger
+                      id="city"
+                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    >
+                      {cityLoading ? (
+                        <span className="flex items-center">
+                          <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                          Loading...
+                        </span>
+                      ) : (
+                        <SelectValue
+                          placeholder={
+                            selectedStateId
+                              ? "Select City"
+                              : "Select State First"
+                          }
+                        />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cityLoading ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                          Loading cities...
+                        </div>
+                      ) : (
+                        cityList.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.city}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex justify-center space-x-4">
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-blue-600 text-white"
+              >
+                {saving ? "Saving..." : "Save changes"}
+              </Button>
+              <Button variant="ghost" onClick={() => navigate(-1)}>
+                Cancel
+              </Button>
+            </CardFooter>
+          </Card>
+          <Dialog
+            open={showEmailInvalidDialog}
+            onOpenChange={setShowEmailInvalidDialog}
+          >
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Invalid Email</DialogTitle>
+                <DialogDescription>
+                  The email you entered doesn't look valid. Please enter a valid
+                  email address or leave the field empty.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setShowEmailInvalidDialog(false);
+                    setTimeout(() => emailRef.current?.focus(), 50);
+                  }}
+                >
+                  OK
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     </div>
   );
