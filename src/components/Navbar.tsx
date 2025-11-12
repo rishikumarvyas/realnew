@@ -190,11 +190,17 @@ export function Navbar() {
                       align="end"
                       className="w-56 p-2 border border-blue-100"
                     >
-                      <div className="px-2 py-2 font-medium text-gray-700">
-                        <div className="flex items-center gap-2">
+                      <div className="px-2 py-2">
+                        <button
+                          onClick={() => {
+                            navigate("/profile");
+                            setIsOpen(false);
+                          }}
+                          className="w-full text-left flex items-center gap-2 font-medium text-gray-700 hover:bg-blue-50 p-2 rounded"
+                        >
                           <User className="h-4 w-4 text-blue-500" />
-                          {user?.name}
-                        </div>
+                          <span>{user?.name}</span>
+                        </button>
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild className="hover:bg-blue-50">
@@ -332,6 +338,13 @@ export function Navbar() {
                   className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
                 >
                   <Home className="w-5 h-5 mr-3 text-gray-500" /> Dashboard
+                </Link>
+                <Link
+                  to="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+                >
+                  <User className="w-5 h-5 mr-3 text-gray-500" /> Profile
                 </Link>
                 {user?.role === "Admin" && (
                   <Link

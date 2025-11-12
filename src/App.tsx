@@ -25,6 +25,7 @@ import AuthModal from "./components/AuthModal"; // Import the AuthModal componen
 import BuilderProjectPost from "./pages/BuilderProjectPost";
 import NewLanching from "./pages/newlanching";
 import BuilderPropertyDetail from "./pages/BuilderPropertyDetail";
+import Profile from "./pages/Profile";
 
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({
@@ -74,6 +75,7 @@ const App = () => (
               />
 
               <Route element={<ProtectedRoute />}>
+                <Route path="profile" element={<Profile />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="post-property" element={<PostProperty />} />
