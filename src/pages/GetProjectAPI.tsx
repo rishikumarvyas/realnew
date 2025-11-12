@@ -544,12 +544,14 @@ const GetProjectAPI = () => {
 
   // Filter projects based on search and filters
   const filteredProjects = projects.filter((project) => {
-    const matchesSearch = 
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.locality.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.builderName.toLowerCase().includes(searchTerm.toLowerCase());
+    // If search term is empty, show all projects (match search)
+    const searchLower = searchTerm.trim().toLowerCase();
+    const matchesSearch = searchLower === "" || 
+      (project.name && project.name.toLowerCase().includes(searchLower)) ||
+      (project.locality && project.locality.toLowerCase().includes(searchLower)) ||
+      (project.city && project.city.toLowerCase().includes(searchLower)) ||
+      (project.state && project.state.toLowerCase().includes(searchLower)) ||
+      (project.builderName && project.builderName.toLowerCase().includes(searchLower));
     
     const matchesStatus = filterStatus ? project.status === filterStatus : true;
     const matchesType = filterType ? project.projectType === filterType : true;

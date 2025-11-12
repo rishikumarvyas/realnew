@@ -1174,12 +1174,12 @@ export const PropertyListing = () => {
       }
 
       // Apply search filter
-      if (searchQuery) {
+      if (searchQuery && searchQuery.trim()) {
         const searchLower = searchQuery.toLowerCase().trim();
         filtered = filtered.filter(
           (property) => {
-            const titleMatch = property.title.toLowerCase().includes(searchLower);
-            const locationMatch = property.location.toLowerCase().includes(searchLower);
+            const titleMatch = property.title && property.title.toLowerCase().includes(searchLower);
+            const locationMatch = property.location && property.location.toLowerCase().includes(searchLower);
             
       // Debug: Log search matching
       if (searchLower === "pune" || searchLower === "delhi" || searchLower === "chandigarh") {

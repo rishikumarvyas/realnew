@@ -76,12 +76,13 @@ const GetProject = () => {
     // Filter projects based on search term and builder
     let filtered = projects;
     
-    if (searchTerm) {
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.trim().toLowerCase();
       filtered = filtered.filter(project => 
-        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.state.toLowerCase().includes(searchTerm.toLowerCase())
+        (project.name && project.name.toLowerCase().includes(searchLower)) ||
+        (project.description && project.description.toLowerCase().includes(searchLower)) ||
+        (project.city && project.city.toLowerCase().includes(searchLower)) ||
+        (project.state && project.state.toLowerCase().includes(searchLower))
       );
     }
     
@@ -343,15 +344,23 @@ const GetProject = () => {
                       </div>
 
                       <div className="pt-4 border-t border-gray-100 space-y-3">
-                        {/* First Row: RERA and OC Badges */}
-                        <div className="flex items-center space-x-2">
-                          {project.isReraApproved && (
+                        {/* First Row: RERA and OC Badges - Fixed height to maintain card uniformity */}
+                        <div className="flex items-center space-x-2 min-h-[24px]">
+                          {project.isReraApproved ? (
                             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                               RERA
                             </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs bg-transparent text-transparent border-transparent opacity-0 pointer-events-none">
+                              RERA
+                            </Badge>
                           )}
-                          {project.isOCApproved && (
+                          {project.isOCApproved ? (
                             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              OC
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs bg-transparent text-transparent border-transparent opacity-0 pointer-events-none">
                               OC
                             </Badge>
                           )}
