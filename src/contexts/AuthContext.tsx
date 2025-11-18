@@ -67,6 +67,8 @@ interface AuthContextType {
     type?: "user" | "property",
     propertyId?: string
   ) => Promise<boolean>;
+  // allow consumers to update the user object (e.g., after profile edits)
+  updateUser: (patch: Partial<User>) => void;
 }
 
 // Create context with default values
@@ -814,6 +816,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     createNotification,
     refreshNotifications,
     markNotificationAsRead,
+    // allow consumers to update the user object (e.g., after profile edits)
+    updateUser: (patch: Partial<User>) => {
+      setUser((prev) => {
+        if (!prev) return patch as User;
+        return { ...prev, ...patch } as User;
+      });
+    },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
