@@ -22,10 +22,15 @@ import ContactUs from "./pages/ContactUs";
 import AdminPage from "./pages/AdminPage";
 import ScrollToTop from "./components/ScrollToTop";
 import AuthModal from "./components/AuthModal"; // Import the AuthModal component
-import BuilderProjectPost from "./pages/BuilderProjectPost";
-import NewLanching from "./pages/newlanching";
 import BuilderPropertyDetail from "./pages/BuilderPropertyDetail";
 import Profile from "./pages/Profile";
+import GetBuilder from "./pages/GetBuilder";
+import GetProject from "./pages/GetProject";
+import ProjectDetail from "./pages/ProjectDetail";
+import UpdateProject from "./pages/UpdateProject";
+import AddProject from "./pages/AddProject";
+import GetProjectAPI from "./pages/GetProjectAPI";
+import ProjectDetailAPI from "./pages/ProjectDetailAPI";
 
 // Initialize QueryClient with better caching options
 const queryClient = new QueryClient({
@@ -68,7 +73,13 @@ const App = () => (
 
               <Route path="properties" element={<PropertyListing />} />
               <Route path="properties/:id" element={<PropertyDetail />} />
-              <Route path="builderpost" element={<BuilderProjectPost />} />
+              <Route path="builder/:builderId" element={<GetBuilder />} />
+              <Route path="project/:projectId" element={<GetProject />} />
+              <Route path="get-project" element={<GetProject />} />
+              <Route path="get-project-api" element={<GetProjectAPI />} />
+              <Route path="project-detail/:projectId" element={<ProjectDetail />} />
+              <Route path="project-detail-api/:projectId" element={<ProjectDetailAPI />} />
+              <Route path="update-project/:projectId" element={<UpdateProject />} />
               <Route
                 path="builder-property/:id"
                 element={<BuilderPropertyDetail />}
@@ -79,7 +90,8 @@ const App = () => (
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="post-property" element={<PostProperty />} />
-                <Route path="newlanching" element={<NewLanching />} />
+              
+                <Route path="add-project" element={<AddProject />} />
                 <Route
                   path="/edit-property/:propertyId"
                   element={<EditProperty />}

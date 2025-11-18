@@ -176,15 +176,7 @@ export const getBuilderProjectSEO = (): SEOConfig => ({
   type: "website"
 });
 
-// Generate SEO config for new launching page
-export const getNewLaunchingSEO = (): SEOConfig => ({
-  title: "New Property Launches | HomeYatra - Latest Real Estate Projects",
-  description: "Discover new property launches and latest real estate projects on HomeYatra. Get early access to upcoming residential and commercial properties with exclusive offers and pre-booking benefits.",
-  keywords: "new launches, property launches, real estate launches, upcoming projects, new projects, property investment, real estate investment, property consultant, real estate broker, property dealer, real estate company, property website, real estate portal, property search, home buying, property investment, real estate agent, property listing, mortgage, home loan, property valuation, real estate market, property prices, real estate investment, residential property, commercial real estate, property management, real estate development, construction projects, property development",
-  image: "https://www.homeyatra.com/opengraph-image-p98pqg.png",
-  url: "https://www.homeyatra.com/newlanching",
-  type: "website"
-});
+// (Removed New Launching SEO; page deprecated)
 
 // Generate SEO config for terms page
 export const getTermsPageSEO = (): SEOConfig => ({
