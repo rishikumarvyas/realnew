@@ -46,28 +46,37 @@ import debounce from "lodash/debounce";
 interface ApiResponse {
   statusCode: number;
   message: string;
+  count: number;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
   propertyInfo: ApiProperty[];
 }
 
 interface ApiProperty {
   propertyId: string;
-  title: string;
-  price: number;
-  city: string;
   superCategory: string;
+  propertyType: string;
+  statusId: string; // 2 for approved
+  title: string;
+  description: string;
+  price: number;
+  area: number;
   bedroom: number;
   bathroom: number;
   balcony: number;
-  area: number;
-  mainImageUrl: string | null;
-  availableFrom?: string; // ISO date string
-  preferenceId?: number; // Tenant preference ID
-  // Removed amenities - only using furnished filter // Array of amenity strings
-  furnished?: string; // "Fully", "Semi", "Not" furnished status
-  likes?: number;
-  isLike?: boolean;
-  propertyType?: string;
-  likeCount?: number;
+  likeCount: number;
+  address: string;
+  locality: string;
+  city: string;
+  state: string;
+  userType: string;
+  createdDt: string; // ISO date string
+  updatedDt: string; // ISO date string
+  availableFrom: string; // ISO date string
+  preferenceId: number[]; // Tenant preference ID
+  amenityIds: string[];
+  mainImageUrl: string;
 }
 
 // Filter options interface
@@ -94,11 +103,12 @@ interface SortOptions {
 
 // Tenant preference mapping
 const preferenceOptions = [
-  { id: "2", label: "Family" },
   { id: "1", label: "Bachelors" },
+  { id: "2", label: "Family" },
   { id: "3", label: "Girls" },
-  { id: "6", label: "Student" },
+  { id: "4", label: "Anyone" },
   { id: "5", label: "Company" },
+  { id: "6", label: "Student" },
 ];
 
 // Furnished status options
@@ -1968,7 +1978,7 @@ export const PropertyListing = () => {
 
   return (
     <>
-      <SEOHead {...seoConfig} />
+      {/* <SEOHead {...seoConfig} /> */}
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         {/* Hero Section with Slider - Compact */}
         <section className="relative h-96 sm:h-[500px] overflow-hidden">
