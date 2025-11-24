@@ -79,6 +79,78 @@ interface ApiProperty {
   mainImageUrl: string;
 }
 
+// Local GetProperty request/response types
+interface GetPropertyRequest {
+  superCategoryId?: number;
+  propertyTypeIds?: number[];
+  statusId?: number;
+  StatusId?: number; // accept either
+  accountId?: string;
+  searchTerm?: string;
+  lastMonth?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  bedroom?: number;
+  balcony?: number;
+  bathroom?: number;
+  availableFrom?: string;
+  minArea?: number;
+  maxArea?: number;
+  cityIds?: string[];
+  amenityIds?: string[];
+  preferenceIds?: number[];
+  pageNumber?: number;
+  pageSize?: number;
+  SortBy?: string;
+  SortOrder?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+// Local helper to call GetProperty and normalize payload keys
+// NOTE: this is a plain async function (not a React hook) so it can be used
+// from anywhere in the module without violating the Rules of Hooks.
+const callGetProperty = async (payload: GetPropertyRequest) => {
+  const normalized: any = { ...payload };
+
+  // Normalize keys (support both camelCase and PascalCase used in this file)
+  if (normalized.StatusId !== undefined) {
+    normalized.statusId = normalized.StatusId;
+    delete normalized.StatusId;
+  }
+  if (normalized.SortBy !== undefined) {
+    normalized.sortBy = normalized.SortBy;
+    delete normalized.SortBy;
+  }
+  if (normalized.SortOrder !== undefined) {
+    normalized.sortOrder = normalized.SortOrder;
+    delete normalized.SortOrder;
+  }
+
+  // Coerce numeric fields just in case
+  if (normalized.pageNumber !== undefined)
+    normalized.pageNumber = Number(normalized.pageNumber);
+  if (normalized.pageSize !== undefined)
+    normalized.pageSize = Number(normalized.pageSize);
+  if (normalized.minPrice !== undefined)
+    normalized.minPrice = Number(normalized.minPrice);
+  if (normalized.maxPrice !== undefined)
+    normalized.maxPrice = Number(normalized.maxPrice);
+
+  // Ensure amenityIds and preferenceIds are arrays if present
+  if (normalized.amenityIds && !Array.isArray(normalized.amenityIds)) {
+    normalized.amenityIds = [normalized.amenityIds];
+  }
+  if (normalized.preferenceIds && !Array.isArray(normalized.preferenceIds)) {
+    normalized.preferenceIds = [normalized.preferenceIds];
+  }
+
+  return axiosInstance.post<ApiResponse>(
+    "/api/Account/GetProperty",
+    normalized
+  );
+};
+
 // Filter options interface
 interface FilterOptions {
   searchTerm: string;
@@ -608,10 +680,7 @@ export const PropertyListing = () => {
         }
         // Removed regular amenities - only furnished filter uses amenityIds
 
-        const response = await axiosInstance.post<ApiResponse>(
-          "/api/Account/GetProperty",
-          requestPayload
-        );
+        const response = await callGetProperty(requestPayload);
 
         // Check if we have properties in the response
         if (
@@ -804,10 +873,7 @@ export const PropertyListing = () => {
           delete requestPayload.amenityIds;
         }
 
-        const response = await axiosInstance.post<ApiResponse>(
-          "/api/Account/GetProperty",
-          requestPayload
-        );
+        const response = await callGetProperty(requestPayload);
 
         // Transform the data to match PropertyCardProps interface
         const transformedData: PropertyCardProps[] =
@@ -963,10 +1029,7 @@ export const PropertyListing = () => {
         }
         // Removed regular amenities - only furnished filter uses amenityIds
 
-        const response = await axiosInstance.post<ApiResponse>(
-          "/api/Account/GetProperty",
-          requestPayload
-        );
+        const response = await callGetProperty(requestPayload);
 
         // Debug: Log preferenceId and amenities data from API response
         if (
