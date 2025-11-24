@@ -1320,7 +1320,7 @@ export const PropertyListing = () => {
       }
 
       // Apply search filter
-      if (searchQuery) {
+      if (searchQuery && searchQuery.trim()) {
         const searchLower = searchQuery.toLowerCase().trim();
         filtered = filtered.filter((property) => {
           const titleMatch = property.title.toLowerCase().includes(searchLower);

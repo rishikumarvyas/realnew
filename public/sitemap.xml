@@ -57,13 +57,7 @@
     <priority>0.7</priority>
   </url>
 
-  <!-- New Launching Page -->
-  <url>
-    <loc>https://www.homeyatra.com/newlanching</loc>
-    <lastmod>2024-12-19</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
+  
 
   <!-- Post Property Page -->
   <url>
