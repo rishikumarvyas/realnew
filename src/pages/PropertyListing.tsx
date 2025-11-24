@@ -450,17 +450,6 @@ export const PropertyListing = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
-      setSearchQuery(value);
-      searchParams.set("search", value);
-      setSearchParams(searchParams);
-      setCurrentPage(1);
-    }, 500),
-    [searchParams, setSearchParams]
-  );
-
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: string) => {
     setSearchTerm(suggestion);
@@ -1783,6 +1772,8 @@ export const PropertyListing = () => {
     e.preventDefault();
     if (searchTerm.trim()) {
       setSearchQuery(searchTerm);
+      searchParams.set("search", searchTerm);
+      setSearchParams(searchParams);
     }
   };
 
@@ -2027,7 +2018,6 @@ export const PropertyListing = () => {
                       onChange={(e) => {
                         const value = e.target.value;
                         setSearchTerm(value);
-                        debouncedSearch(value);
                       }}
                       onFocus={() => setShowSuggestions(true)}
                       onBlur={() =>
