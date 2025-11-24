@@ -107,48 +107,29 @@ interface GetPropertyRequest {
   sortOrder?: string;
 }
 
-// Local helper to call GetProperty and normalize payload keys
+// Local helper to call GetProperty — simple pass-through (no normalization)
 // NOTE: this is a plain async function (not a React hook) so it can be used
 // from anywhere in the module without violating the Rules of Hooks.
 const callGetProperty = async (payload: GetPropertyRequest) => {
-  const normalized: any = { ...payload };
-
-  // Normalize keys (support both camelCase and PascalCase used in this file)
-  if (normalized.StatusId !== undefined) {
-    normalized.statusId = normalized.StatusId;
-    delete normalized.StatusId;
+  try {
+    console.debug("[GetProperty] Request payload:", payload);
+    const response = await axiosInstance.post<ApiResponse>(
+      "/api/Account/GetProperty",
+      payload
+    );
+    console.debug("[GetProperty] Response:", {
+      status: response.status,
+      count: response.data?.count,
+    });
+    return response;
+  } catch (err: any) {
+    console.error(
+      "[GetProperty] Request failed:",
+      err?.response?.status,
+      err?.message || err
+    );
+    throw err;
   }
-  if (normalized.SortBy !== undefined) {
-    normalized.sortBy = normalized.SortBy;
-    delete normalized.SortBy;
-  }
-  if (normalized.SortOrder !== undefined) {
-    normalized.sortOrder = normalized.SortOrder;
-    delete normalized.SortOrder;
-  }
-
-  // Coerce numeric fields just in case
-  if (normalized.pageNumber !== undefined)
-    normalized.pageNumber = Number(normalized.pageNumber);
-  if (normalized.pageSize !== undefined)
-    normalized.pageSize = Number(normalized.pageSize);
-  if (normalized.minPrice !== undefined)
-    normalized.minPrice = Number(normalized.minPrice);
-  if (normalized.maxPrice !== undefined)
-    normalized.maxPrice = Number(normalized.maxPrice);
-
-  // Ensure amenityIds and preferenceIds are arrays if present
-  if (normalized.amenityIds && !Array.isArray(normalized.amenityIds)) {
-    normalized.amenityIds = [normalized.amenityIds];
-  }
-  if (normalized.preferenceIds && !Array.isArray(normalized.preferenceIds)) {
-    normalized.preferenceIds = [normalized.preferenceIds];
-  }
-
-  return axiosInstance.post<ApiResponse>(
-    "/api/Account/GetProperty",
-    normalized
-  );
 };
 
 // Filter options interface
@@ -209,6 +190,24 @@ const FURNISHED_AMENITY_IDS = {
   Semi: "11", // Semi Furnished - change this ID as needed
   Not: "12", // Unfurnished - change this ID as needed
 };
+
+// Default city IDs used when no search term is provided (approved properties only)
+const DEFAULT_CITY_IDS = [
+  "67",
+  "174",
+  "242",
+  "226",
+  "312",
+  "184",
+  "216",
+  "60",
+  "272",
+  "126",
+  "91",
+  "280",
+  "112",
+  "74",
+];
 
 // Only furnished filter - no regular amenity filter needed
 
@@ -621,8 +620,9 @@ export const PropertyListing = () => {
         // Prepare request payload - MODIFIED: Use default values, not URL filter values
         const requestPayload: any = {
           superCategoryId,
-          accountId: "string",
+          accountId: "",
           searchTerm: searchQuery || "", // Ensure searchTerm is always a string
+          StatusId: 2,
           minPrice: filterOptions.minPrice, // Use default 0
           maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
           bedroom: filterOptions.minBedrooms, // Use default 0
@@ -636,6 +636,13 @@ export const PropertyListing = () => {
           SortBy: apiSortBy,
           SortOrder: apiSortOrder,
         };
+
+        // When no search term, fetch only approved properties from default cities
+        if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
+          requestPayload.cityIds = DEFAULT_CITY_IDS;
+        } else {
+          delete requestPayload.cityIds;
+        }
 
         // Only add propertyTypeIds if it's not empty
         if (propertyTypeIds.length > 0) {
@@ -831,7 +838,7 @@ export const PropertyListing = () => {
         const requestPayload: any = {
           superCategoryId: superCategoryId,
           propertyTypeIds: propertyTypeIds,
-          accountId: "string",
+          accountId: "",
           searchTerm: filterOptions.searchTerm,
           StatusId: 2,
           minPrice: filterOptions.minPrice,
@@ -846,6 +853,13 @@ export const PropertyListing = () => {
           SortBy: sortBy,
           SortOrder: sortOrder,
         };
+
+        // When no search term, fetch only approved properties from default cities
+        if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
+          requestPayload.cityIds = DEFAULT_CITY_IDS;
+        } else {
+          delete requestPayload.cityIds;
+        }
 
         // Add availableFrom if provided
         if (filterOptions.availableFrom) {
@@ -970,8 +984,9 @@ export const PropertyListing = () => {
         // Prepare request payload - MODIFIED: Use default values, not URL filter values
         const requestPayload: any = {
           superCategoryId,
-          accountId: "string",
+          accountId: "",
           searchTerm: searchQuery || "", // Ensure searchTerm is always a string
+          StatusId: 2,
           minPrice: filterOptions.minPrice, // Use default 0
           maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
           bedroom: filterOptions.minBedrooms, // Use default 0
@@ -985,6 +1000,13 @@ export const PropertyListing = () => {
           SortBy: apiSortBy,
           SortOrder: apiSortOrder,
         };
+
+        // When no search term, fetch only approved properties from default cities
+        if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
+          requestPayload.cityIds = DEFAULT_CITY_IDS;
+        } else {
+          delete requestPayload.cityIds;
+        }
 
         // Only add propertyTypeIds if it's not empty
         if (propertyTypeIds.length > 0) {
