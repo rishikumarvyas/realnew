@@ -711,7 +711,7 @@ export const PropertyListing = () => {
         isFetchingRef.current = false;
       }
     },
-    [sortBy]
+    [searchQuery, sortBy]
   ); // Depend on sortBy so API receives latest SortBy/SortOrder
 
   // Store fetchProperties in ref to avoid dependency issues
