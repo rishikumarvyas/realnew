@@ -136,13 +136,6 @@ const Index = () => {
     );
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/properties?search=${encodeURIComponent(searchTerm)}`);
-    }
-  };
-
   // OPTIMIZED: Fetch suggestions with better debouncing and caching
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -256,10 +249,7 @@ const Index = () => {
                   </span>
                 </h2>
 
-                <form
-                  onSubmit={handleSearch}
-                  className="mt-4 sm:mt-6 relative mx-auto"
-                >
+                <form className="mt-4 sm:mt-6 relative mx-auto">
                   <div className="relative flex shadow-xl">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none">
                       <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
@@ -278,6 +268,7 @@ const Index = () => {
                     <Button
                       type="submit"
                       className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 rounded-full py-1.5 sm:py-2 md:py-5 px-4 sm:px-6 text-xs sm:text-sm md:text-base shadow-lg"
+                      onClick={() => handleSuggestionClick(searchTerm)}
                     >
                       Search
                     </Button>
