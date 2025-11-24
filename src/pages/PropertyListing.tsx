@@ -1783,9 +1783,19 @@ export const PropertyListing = () => {
   // MODIFIED: Handle search form submission - NO API call, NO URL update
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      setSearchQuery(searchTerm);
-      searchParams.set("search", searchTerm);
+
+    const term = searchTerm.trim();
+    if (!term) return;
+
+    if (term === searchQuery.trim()) {
+      // Same term as last committed search → explicitly refetch
+      if (fetchPropertiesRef.current) {
+        fetchPropertiesRef.current(currentType);
+      }
+    } else {
+      // New term → update state and URL; the [searchQuery, currentType] effect will fire
+      setSearchQuery(term);
+      searchParams.set("search", term);
       setSearchParams(searchParams);
     }
   };
