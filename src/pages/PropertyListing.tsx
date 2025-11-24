@@ -1,13 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import axiosInstance from "@/axiosCalls/axiosInstance";
-import { PropertyCard } from "@/components/PropertyCard";
-import type { PropertyCardProps } from "@/components/PropertyCard";
+import { PropertyCard, PropertyCardProps } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import SEOHead from "@/components/SEOHead";
-import { getPropertyListingSEO } from "@/utils/seoUtils";
 import {
   Search,
   FilterX,
@@ -30,16 +26,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import debounce from "lodash/debounce";
 
 // API interfaces
@@ -148,12 +135,6 @@ interface FilterOptions {
   // Removed amenities - only using furnished filter
 }
 
-// Add sorting interface
-interface SortOptions {
-  sortBy: string;
-  sortOrder: string;
-}
-
 // Tenant preference mapping
 const preferenceOptions = [
   { id: "1", label: "Bachelors" },
@@ -170,17 +151,6 @@ const furnishedOptions = [
   { id: "Semi", label: "Semi Furnished" },
   { id: "Not", label: "Unfurnished" },
   { id: "any", label: "Any" },
-];
-
-// Amenity options for commercial properties
-const commercialAmenityOptions = [
-  "Lift",
-  "Security",
-  "Power Backup",
-  "Parking",
-  "Fully Furnished",
-  "Semi Furnished",
-  "Unfurnished",
 ];
 
 // Configuration for furnished amenity IDs - easily changeable
@@ -283,28 +253,7 @@ const priceRangeConfig = {
   },
 };
 
-// Add plot features configuration
-const plotFeatures = [
-  { id: "corner", label: "Corner Plot" },
-  { id: "mainRoad", label: "Main Road Facing" },
-  { id: "waterSupply", label: "Water Supply" },
-  { id: "electricity", label: "Electricity" },
-  { id: "drainage", label: "Drainage" },
-  { id: "approved", label: "Approved Layout" },
-];
-
-// Add commercial features configuration
-const commercialFeatures = [
-  { id: "parking", label: "Parking Space" },
-  { id: "security", label: "Security" },
-  { id: "powerBackup", label: "Power Backup" },
-  { id: "fireSafety", label: "Fire Safety" },
-  { id: "loading", label: "Loading/Unloading" },
-  { id: "elevator", label: "Elevator" },
-];
-
 export const PropertyListing = () => {
-  const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState<PropertyCardProps[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<
@@ -312,11 +261,6 @@ export const PropertyListing = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // SEO configuration
-  const type = searchParams.get("type") || "all";
-  const city = searchParams.get("city") || "";
-  const seoConfig = getPropertyListingSEO(type, city);
 
   // Mobile filter visibility
   const [mobileFiltersVisible, setMobileFiltersVisible] = useState(false);
@@ -1892,17 +1836,6 @@ export const PropertyListing = () => {
     }
   };
 
-  // MODIFIED: Handle price range change - NO API call, NO URL update
-  const handlePriceRangeChange = (value: number[]) => {
-    setPriceRange(value);
-  };
-
-  // MODIFIED: Handle area range change - NO API call, NO URL update
-  const handleAreaChange = (value: number[]) => {
-    setMinArea(value[0]);
-    setMaxArea(value[1]);
-  };
-
   // MODIFIED: Update when bedroom selection changes - NO API call, NO URL update
   const handleBedroomChange = (value: number) => {
     setMinBedrooms(value);
@@ -2025,18 +1958,6 @@ export const PropertyListing = () => {
 
   // Removed getCurrentAmenityOptions - only using furnished filter
 
-  // Get current property type icon
-  const getCurrentPropertyTypeIcon = () => {
-    const propertyTypes = [
-      { key: "all", icon: "🏘️" },
-      { key: "buy", icon: "🏠" },
-      { key: "rent", icon: "🔑" },
-      { key: "plot", icon: "🏞️" },
-      { key: "commercial", icon: "🏢" },
-    ];
-    return propertyTypes.find((pt) => pt.key === activeTab)?.icon || "🏘️";
-  };
-
   // Slice filteredProperties for current page
   const paginatedProperties = filteredProperties.slice(
     (currentPage - 1) * pageSize,
@@ -2063,7 +1984,6 @@ export const PropertyListing = () => {
 
   return (
     <>
-      {/* <SEOHead {...seoConfig} /> */}
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         {/* Hero Section with Slider - Compact */}
         <section className="relative h-96 sm:h-[500px] overflow-hidden">
