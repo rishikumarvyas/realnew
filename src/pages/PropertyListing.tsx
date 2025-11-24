@@ -484,6 +484,14 @@ export const PropertyListing = () => {
   // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
   const fetchProperties = useCallback(
     async (typeParam: string = "all") => {
+      // If URL has a search param but searchQuery is not yet updated,
+      // skip this call and let the [searchQuery, currentType] effect
+      // trigger the real fetch with the correct searchTerm.
+      const hasSearchInUrl = !!searchParams.get("search");
+      if (hasSearchInUrl && !searchQuery.trim()) {
+        return;
+      }
+
       // Prevent multiple simultaneous API calls
       if (isFetchingRef.current) {
         return;
@@ -711,7 +719,8 @@ export const PropertyListing = () => {
         isFetchingRef.current = false;
       }
     },
-    [searchQuery, sortBy]
+    // add searchParams here so hasSearchInUrl is always correct
+    [searchQuery, sortBy, searchParams]
   ); // Depend on sortBy so API receives latest SortBy/SortOrder
 
   // Store fetchProperties in ref to avoid dependency issues
@@ -1138,7 +1147,7 @@ export const PropertyListing = () => {
   // Ensure initial data fetch and subsequent fetches on type changes
   useEffect(() => {
     const typeParam = searchParams.get("type") || "all";
-
+    const hasSearch = !!searchParams.get("search"); // NEW: check if URL has ?search=
     // Sync tab with URL and reset filters when type changes from external navigation
     if (typeParam !== activeTab) {
       setActiveTab(typeParam);
@@ -1166,16 +1175,26 @@ export const PropertyListing = () => {
       }
     }
 
-    // Always fetch on first mount, even if URL type equals default
-    if (isInitialLoad && fetchPropertiesRef.current) {
-      fetchPropertiesRef.current(typeParam);
-      setLastFetchedType(typeParam);
+    // Always handle first mount
+    if (isInitialLoad) {
       setCurrentType(typeParam);
       setIsInitialLoad(false);
+
+      // Only do the initial fetch when there is NO search param in the URL
+      if (!hasSearch && fetchPropertiesRef.current) {
+        fetchPropertiesRef.current(typeParam);
+        setLastFetchedType(typeParam);
+      }
       return;
     }
 
-    // Fetch when the URL type actually changes thereafter
+    // If URL has a search param, let the searchQuery effect drive the fetch
+    // so we don't fire an extra request with searchTerm: "".
+    if (hasSearch) {
+      return;
+    }
+
+    // Fetch when the URL type actually changes thereafter (no ?search= in URL)
     if (typeParam !== currentType && fetchPropertiesRef.current) {
       if (shouldFetchNewData(typeParam)) {
         fetchPropertiesRef.current(typeParam);
@@ -1224,17 +1243,11 @@ export const PropertyListing = () => {
   useEffect(() => {
     const urlSearch = searchParams.get("search") || "";
     if (urlSearch !== searchQuery) {
-      setSearchQuery(urlSearch);
+      setSearchQuery(urlSearch); // this will drive the fetch via the next effect
       setSearchTerm(urlSearch);
       setCurrentPage(1);
-
-      // Trigger a new API call when search parameter changes from external sources
-      if (fetchPropertiesRef.current) {
-        fetchPropertiesRef.current(currentType);
-      }
     }
-    // Intentionally depends on searchParams to react to URL changes from outside
-  }, [searchParams, currentType]);
+  }, [searchParams, searchQuery]);
 
   // Refetch server data when search term changes (e.g., clicking a footer city)
   useEffect(() => {
