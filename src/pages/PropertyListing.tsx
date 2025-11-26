@@ -211,11 +211,6 @@ const areaSteps = [
 // Property type mapping - Updated to merge shop and commercial, remove land/office
 const propertyTypeMapping = {
   plot: { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
-  commercial: {
-    superCategoryId: 1,
-    propertyTypeIds: [2, 7],
-    label: "Commercial",
-  },
   buy: { superCategoryId: 1, propertyFor: 1, label: "Buy" },
   rent: { superCategoryId: 2, propertyFor: 2, label: "Rent" },
   all: { superCategoryId: 0, label: "All Properties" },
@@ -540,10 +535,18 @@ export const PropertyListing = () => {
           // Plot: Only buy (superCategoryId: 1, propertyType: 4)
           superCategoryId = 1;
           propertyTypeIds = [4];
-        } else if (currentTypeParam === "commercial") {
-          // Commercial: Can be both buy and rent (includes shop)
-          superCategoryId = 0; // Don't filter by superCategory to get both
-          propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
+        } else if (
+          currentTypeParam === "commercial" &&
+          commercialType === "buy"
+        ) {
+          superCategoryId = 1; // Can Buy
+          propertyTypeIds = [2]; // shop for Buy
+        } else if (
+          currentTypeParam === "commercial" &&
+          commercialType === "rent"
+        ) {
+          superCategoryId = 2; // Can Rent
+          propertyTypeIds = [7]; // shop for Rent
         }
 
         // Pagination params - Use defaults to avoid searchParams dependency
@@ -766,10 +769,18 @@ export const PropertyListing = () => {
           // Plot: Only buy (superCategoryId: 1, propertyType: 4)
           superCategoryId = 1;
           propertyTypeIds = [4];
-        } else if (currentTypeParam === "commercial") {
-          // Commercial: Can be both buy and rent (includes shop)
-          superCategoryId = 0; // Don't filter by superCategory to get both
-          propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
+        } else if (
+          currentTypeParam === "commercial" &&
+          commercialType === "buy"
+        ) {
+          superCategoryId = 1; // Can Buy
+          propertyTypeIds = [2]; // shop for Buy
+        } else if (
+          currentTypeParam === "commercial" &&
+          commercialType === "rent"
+        ) {
+          superCategoryId = 2; // Can Rent
+          propertyTypeIds = [7]; // shop for Rent
         }
 
         // Pagination params - Use defaults to avoid searchParams dependency
@@ -905,10 +916,18 @@ export const PropertyListing = () => {
           // Plot: Only buy (superCategoryId: 1, propertyType: 4)
           superCategoryId = 1;
           propertyTypeIds = [4];
-        } else if (currentTypeParam === "commercial") {
-          // Commercial: Can be both buy and rent (includes shop)
-          superCategoryId = 0; // Don't filter by superCategory to get both
-          propertyTypeIds = [2, 7]; // Include both buy and rent commercial types
+        } else if (
+          currentTypeParam === "commercial" &&
+          commercialType === "buy"
+        ) {
+          superCategoryId = 1; // Can Buy
+          propertyTypeIds = [2]; // shop for Buy
+        } else if (
+          currentTypeParam === "commercial" &&
+          commercialType === "rent"
+        ) {
+          superCategoryId = 2; // Can Rent
+          propertyTypeIds = [7]; // shop for Rent
         }
 
         // Pagination params - Use defaults to avoid searchParams dependency
