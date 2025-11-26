@@ -64,6 +64,10 @@ interface ApiProperty {
   preferenceId: number[]; // Tenant preference ID
   amenityIds: string[];
   mainImageUrl: string;
+  // optional from backend
+  furnished?: string;
+  isLike?: boolean;
+  amenities?: any;
 }
 
 // Local GetProperty request/response types
@@ -179,9 +183,8 @@ const DEFAULT_CITY_IDS = [
   "74",
 ];
 
-// Only furnished filter - no regular amenity filter needed
+// Price and area steps
 
-// Price and Area step definitions
 const buyPriceSteps = [
   { id: "buy_1", label: "0-50L", min: 0, max: 5000000 },
   { id: "buy_2", label: "50L-1Cr", min: 5000000, max: 10000000 },
@@ -208,7 +211,8 @@ const areaSteps = [
   { id: "area_5", label: "5000+", min: 5000, max: Number.MAX_SAFE_INTEGER },
 ];
 
-// Property type mapping - Updated to merge shop and commercial, remove land/office
+// Property type mapping
+
 const propertyTypeMapping = {
   plot: { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
   buy: { superCategoryId: 1, propertyTypeIds: [1, 3, 5], label: "Buy" },
@@ -216,7 +220,8 @@ const propertyTypeMapping = {
   all: { superCategoryId: 0, label: "All Properties" },
 };
 
-// Add price range configuration
+// Price range config
+
 const priceRangeConfig = {
   rent: {
     min: 0,
@@ -309,9 +314,6 @@ export const PropertyListing = () => {
 
   // Add flag to prevent multiple API calls
   const isFetchingRef = useRef<boolean>(false);
-
-  // No need to fetch amenities - only using furnished filter
-
   // Define filter visibility types
   type FilterVisibility = {
     showPrice: boolean;
@@ -322,7 +324,6 @@ export const PropertyListing = () => {
     showAvailableFrom: boolean | ((type: string) => boolean);
     showTenantPreference: boolean;
     showFurnished: boolean;
-    // Removed showAmenities - only using furnished filter
   };
 
   // Filter visibility configuration
@@ -336,7 +337,6 @@ export const PropertyListing = () => {
       showAvailableFrom: false,
       showTenantPreference: false,
       showFurnished: false,
-      // Removed showAmenities
     },
     commercial: {
       showPrice: true,
@@ -347,7 +347,6 @@ export const PropertyListing = () => {
       showAvailableFrom: (type: string) => type === "rent",
       showTenantPreference: false,
       showFurnished: false,
-      // Removed showAmenities
     },
     rent: {
       showPrice: true,
@@ -358,7 +357,6 @@ export const PropertyListing = () => {
       showAvailableFrom: true,
       showTenantPreference: true,
       showFurnished: true,
-      // Removed showAmenities
     },
     buy: {
       showPrice: true,
@@ -369,7 +367,6 @@ export const PropertyListing = () => {
       showAvailableFrom: false,
       showTenantPreference: false,
       showFurnished: true,
-      // Removed showAmenities
     },
   };
 
@@ -419,7 +416,6 @@ export const PropertyListing = () => {
   );
   const [preferenceIds, setPreferenceIds] = useState<string[]>([]); // Empty array by default
   const [furnished, setFurnished] = useState<string>("any"); // Default to "Any"
-  // Removed selectedAmenities - only using furnished filter
 
   // Fetch suggestions from API with debounce
   useEffect(() => {
@@ -476,7 +472,135 @@ export const PropertyListing = () => {
     return false;
   };
 
-  // Updated fetchProperties function with StatusId: 2 and min/max values set to 0
+  // UNIFIED PAYLOAD BUILDER
+
+  type FetchOverrides = {
+    availableFrom?: string;
+    furnished?: string;
+    pageNumber?: number;
+    pageSize?: number;
+  };
+
+  const buildGetPropertyPayload = useCallback(
+    (typeParam: string, overrides: FetchOverrides = {}): GetPropertyRequest => {
+      const currentTypeParam = typeParam;
+      const typeConfig =
+        propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
+
+      let superCategoryId = typeConfig.superCategoryId;
+      let propertyTypeIds = typeConfig.propertyTypeIds || [];
+      // Special handling for different property types
+      if (currentTypeParam === "plot") {
+        // Plot: Only buy
+        superCategoryId = 1;
+        propertyTypeIds = [4];
+      } else if (
+        currentTypeParam === "commercial" &&
+        commercialType === "buy"
+      ) {
+        superCategoryId = 1; // Can Buy
+        propertyTypeIds = [2]; // shop for Buy
+      } else if (
+        currentTypeParam === "commercial" &&
+        commercialType === "rent"
+      ) {
+        superCategoryId = 2; // Can Rent
+        propertyTypeIds = [7]; // shop for Rent
+      }
+
+      const filterOptions: FilterOptions = {
+        searchTerm: searchQuery || "",
+        minPrice: priceRange[0] || 0,
+        maxPrice: priceRange[1] > 0 ? priceRange[1] : 0,
+        minBedrooms: minBedrooms || 0,
+        minBathrooms: minBathrooms || 0,
+        minBalcony: minBalcony || 0,
+        minArea: minArea || 0,
+        maxArea: maxArea || 0,
+        availableFrom:
+          overrides.availableFrom ??
+          (availableFrom ? availableFrom.toISOString() : undefined),
+        preferenceIds: preferenceIds || [],
+        furnished: overrides.furnished ?? (furnished || undefined),
+      };
+
+      let pageSize = overrides.pageSize ?? -1;
+      let pageNumber = overrides.pageNumber ?? 0;
+      if (!overrides.pageSize && currentTypeParam !== "all") {
+        pageSize = 10;
+        pageNumber = 0;
+      }
+
+      // Derive API sort parameters from UI state
+      const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
+
+      const payload: GetPropertyRequest = {
+        superCategoryId,
+        accountId: "",
+        searchTerm: filterOptions.searchTerm || "",
+        StatusId: 2,
+        minPrice: filterOptions.minPrice,
+        maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0,
+        bedroom: filterOptions.minBedrooms,
+        bathroom: filterOptions.minBathrooms,
+        balcony: filterOptions.minBalcony,
+        minArea: filterOptions.minArea,
+        maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0,
+        pageNumber,
+        pageSize,
+        SortBy: apiSortBy,
+        SortOrder: apiSortOrder,
+      };
+      // When no search term, fetch only approved properties from default cities
+      if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
+        payload.cityIds = DEFAULT_CITY_IDS;
+      }
+      // Only add propertyTypeIds if it's not empty
+      if (propertyTypeIds.length > 0) {
+        payload.propertyTypeIds = propertyTypeIds;
+      }
+      // Only add optional parameters if they have values
+      if (filterOptions.availableFrom) {
+        payload.availableFrom = filterOptions.availableFrom;
+      }
+      if (
+        filterOptions.preferenceIds &&
+        filterOptions.preferenceIds.length > 0
+      ) {
+        payload.preferenceIds = filterOptions.preferenceIds.map((id) =>
+          parseInt(id, 10)
+        );
+      }
+      // Add furnished filter to request payload as amenityIds
+      if (filterOptions.furnished && filterOptions.furnished !== "any") {
+        // Use the configurable furnished amenity IDs
+        const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
+        if (amenityId) {
+          // Set amenityIds array with the selected furnished amenity ID
+          payload.amenityIds = [amenityId];
+        }
+      }
+
+      return payload;
+    },
+    [
+      searchQuery,
+      priceRange,
+      minBedrooms,
+      minBathrooms,
+      minBalcony,
+      minArea,
+      maxArea,
+      availableFrom,
+      preferenceIds,
+      furnished,
+      sortBy,
+      commercialType,
+    ]
+  );
+
+  //MAIN fetchProperties USING COMMON PAYLOAD
+
   const fetchProperties = useCallback(
     async (typeParam: string = "all") => {
       // If URL has a search param but searchQuery is not yet updated,
@@ -488,144 +612,13 @@ export const PropertyListing = () => {
       }
 
       // Prevent multiple simultaneous API calls
-      if (isFetchingRef.current) {
-        return;
-      }
-
+      if (isFetchingRef.current) return;
       isFetchingRef.current = true;
       setLoading(true);
+
       try {
-        // Get the current type from parameter only, not from searchParams
-        const currentTypeParam = typeParam;
-
-        // Use current filter state values for API call
-        const filterOptions: FilterOptions = {
-          searchTerm: searchQuery || "", // Use current search query
-          minPrice: priceRange[0] || 0, // Use current price range
-          maxPrice: priceRange[1] > 0 ? priceRange[1] : 0, // Only use maxPrice if it's set (not default)
-          minBedrooms: minBedrooms || 0, // Use current bedrooms
-          minBathrooms: minBathrooms || 0, // Use current bathrooms
-          minBalcony: minBalcony || 0, // Use current balcony
-          minArea: minArea || 0, // Use current area
-          maxArea: maxArea || 0, // Use current max area
-          availableFrom: availableFrom
-            ? availableFrom.toISOString()
-            : undefined, // Send availableFrom to API
-          preferenceIds: preferenceIds || [], // Use current preferences
-          furnished: furnished || undefined, // Use current furnished status
-          // Removed amenities - only using furnished filter
-        };
-
-        console.log("availableFrom state:", availableFrom);
-        console.log(
-          "filterOptions.availableFrom:",
-          filterOptions.availableFrom
-        );
-
-        // FIXED: Use current URL type parameter instead of state
-        const typeConfig =
-          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
-
-        let superCategoryId = typeConfig.superCategoryId;
-        let propertyTypeIds = typeConfig.propertyTypeIds || [];
-
-        // Special handling for different property types
-        if (currentTypeParam === "plot") {
-          // Plot: Only buy (superCategoryId: 1, propertyType: 4)
-          superCategoryId = 1;
-          propertyTypeIds = [4];
-        } else if (
-          currentTypeParam === "commercial" &&
-          commercialType === "buy"
-        ) {
-          superCategoryId = 1; // Can Buy
-          propertyTypeIds = [2]; // shop for Buy
-        } else if (
-          currentTypeParam === "commercial" &&
-          commercialType === "rent"
-        ) {
-          superCategoryId = 2; // Can Rent
-          propertyTypeIds = [7]; // shop for Rent
-        }
-
-        // Pagination params - Use defaults to avoid searchParams dependency
-        let pageSize = -1;
-        let pageNumber = 0;
-
-        if (currentTypeParam !== "all") {
-          pageSize = 10;
-          pageNumber = 0; // Always start from page 1
-        }
-
-        // Derive API sort parameters from UI state
-        const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
-
-        // Prepare request payload - MODIFIED: Use default values, not URL filter values
-        const requestPayload: any = {
-          superCategoryId,
-          accountId: "",
-          searchTerm: searchQuery || "", // Ensure searchTerm is always a string
-          StatusId: 2,
-          minPrice: filterOptions.minPrice, // Use default 0
-          maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
-          bedroom: filterOptions.minBedrooms, // Use default 0
-          bathroom: filterOptions.minBathrooms, // Use default 0
-          balcony: filterOptions.minBalcony, // Use default 0
-          minArea: filterOptions.minArea, // Use default 0
-          maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0, // Only use maxArea if it's set
-          pageNumber,
-          pageSize,
-          // Add sorting parameters
-          SortBy: apiSortBy,
-          SortOrder: apiSortOrder,
-        };
-
-        // When no search term, fetch only approved properties from default cities
-        if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
-          requestPayload.cityIds = DEFAULT_CITY_IDS;
-        } else {
-          delete requestPayload.cityIds;
-        }
-
-        // Only add propertyTypeIds if it's not empty
-        if (propertyTypeIds.length > 0) {
-          requestPayload.propertyTypeIds = propertyTypeIds;
-        }
-
-        // Only add optional parameters if they have values
-        if (filterOptions.availableFrom) {
-          requestPayload.availableFrom = filterOptions.availableFrom;
-        }
-        if (
-          filterOptions.preferenceIds &&
-          filterOptions.preferenceIds.length > 0
-        ) {
-          requestPayload.preferenceIds = filterOptions.preferenceIds.map((id) =>
-            parseInt(id, 10)
-          );
-        }
-        // Add furnished filter to request payload as amenityIds
-        if (filterOptions.furnished && filterOptions.furnished !== "any") {
-          // Use the configurable furnished amenity IDs
-          const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
-          if (amenityId) {
-            // Set amenityIds array with the selected furnished amenity ID
-            requestPayload.amenityIds = [amenityId];
-            console.log(
-              "Adding furnished as amenityId to request:",
-              amenityId,
-              "for furnished:",
-              filterOptions.furnished
-            );
-            console.log("Current amenityIds array:", requestPayload.amenityIds);
-          }
-        } else {
-          // If furnished is "any", don't send amenityIds (show all properties)
-          delete requestPayload.amenityIds;
-        }
-        // Removed regular amenities - only furnished filter uses amenityIds
-
-        const response = await callGetProperty(requestPayload);
+        const payload = buildGetPropertyPayload(typeParam);
+        const response = await callGetProperty(payload);
 
         // Check if we have properties in the response
         if (
@@ -676,7 +669,7 @@ export const PropertyListing = () => {
               title: prop.title,
               price: prop.price,
               location: prop.city,
-              type: type,
+              type,
               bedrooms: prop.bedroom,
               bathrooms: prop.bathroom,
               balcony: prop.balcony,
@@ -687,7 +680,6 @@ export const PropertyListing = () => {
               availableFrom: prop.availableFrom,
               preferenceId: prop.preferenceId,
               preferenceIds: prop.preferenceIds,
-              // Removed amenities - only using furnished filter
               furnished: prop.furnished,
               likeCount: prop.likeCount || 0,
               isLike: prop.isLike ?? false,
@@ -698,7 +690,7 @@ export const PropertyListing = () => {
         );
 
         setProperties(transformedData);
-      } catch (err) {
+      } catch (err: any) {
         // Handle 404 error specifically
         if (err.response?.status === 404) {
           setError(
@@ -717,124 +709,23 @@ export const PropertyListing = () => {
       }
     },
     // add searchParams here so hasSearchInUrl is always correct
-    [searchQuery, sortBy, searchParams]
+    [buildGetPropertyPayload, searchParams, searchQuery]
   ); // Depend on sortBy so API receives latest SortBy/SortOrder
-
   // Store fetchProperties in ref to avoid dependency issues
   fetchPropertiesRef.current = fetchProperties;
 
-  // Create a version of fetchProperties that accepts furnished as parameter
+  //fetchPropertiesWithFurnished USING COMMON PAYLOAD
+
   const fetchPropertiesWithFurnished = useCallback(
     async (typeParam: string, furnishedParam: string) => {
-      // Set loading state for this specific call
       setLoading(true);
-
       try {
-        // Get the current type from parameter only, not from searchParams
-        const currentTypeParam = typeParam;
-
-        // Build filter options with the provided furnished value
-        const filterOptions = {
-          searchTerm: searchQuery || "",
-          minPrice: priceRange[0] || 0,
-          maxPrice: priceRange[1] > 0 ? priceRange[1] : 0,
-          minBedrooms: minBedrooms || 0,
-          minBathrooms: minBathrooms || 0,
-          minBalcony: minBalcony || 0,
-          minArea: minArea || 0,
-          maxArea: maxArea || 0,
-          availableFrom: availableFrom
-            ? availableFrom.toISOString()
-            : undefined,
-          preferenceIds: preferenceIds,
-          furnished: furnishedParam, // Use the provided furnished value
-        };
-
-        // FIXED: Use current URL type parameter instead of state
-        const typeConfig =
-          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
-
-        let superCategoryId = typeConfig.superCategoryId;
-        let propertyTypeIds = typeConfig.propertyTypeIds || [];
-
-        // Special handling for different property types
-        if (currentTypeParam === "plot") {
-          // Plot: Only buy (superCategoryId: 1, propertyType: 4)
-          superCategoryId = 1;
-          propertyTypeIds = [4];
-        } else if (
-          currentTypeParam === "commercial" &&
-          commercialType === "buy"
-        ) {
-          superCategoryId = 1; // Can Buy
-          propertyTypeIds = [2]; // shop for Buy
-        } else if (
-          currentTypeParam === "commercial" &&
-          commercialType === "rent"
-        ) {
-          superCategoryId = 2; // Can Rent
-          propertyTypeIds = [7]; // shop for Rent
-        }
-
-        // Pagination params - Use defaults to avoid searchParams dependency
-        const pageNumber = 1;
-        const pageSize = -1;
-
-        // Build request payload
-        const requestPayload: any = {
-          superCategoryId: superCategoryId,
-          propertyTypeIds: propertyTypeIds,
-          accountId: "",
-          searchTerm: filterOptions.searchTerm,
-          StatusId: 2,
-          minPrice: filterOptions.minPrice,
-          maxPrice: filterOptions.maxPrice,
-          bedroom: filterOptions.minBedrooms,
-          bathroom: filterOptions.minBathrooms,
-          balcony: filterOptions.minBalcony,
-          minArea: filterOptions.minArea,
-          maxArea: filterOptions.maxArea,
-          pageNumber: pageNumber,
-          pageSize: pageSize,
-          SortBy: sortBy,
-          SortOrder: sortOrder,
-        };
-
-        // When no search term, fetch only approved properties from default cities
-        if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
-          requestPayload.cityIds = DEFAULT_CITY_IDS;
-        } else {
-          delete requestPayload.cityIds;
-        }
-
-        // Add availableFrom if provided
-        if (filterOptions.availableFrom) {
-          requestPayload.availableFrom = filterOptions.availableFrom;
-        }
-        if (
-          filterOptions.preferenceIds &&
-          filterOptions.preferenceIds.length > 0
-        ) {
-          requestPayload.preferenceIds = filterOptions.preferenceIds.map((id) =>
-            parseInt(id, 10)
-          );
-        }
-
-        // Add furnished filter to request payload as amenityIds
-        if (filterOptions.furnished && filterOptions.furnished !== "any") {
-          // Use the configurable furnished amenity IDs
-          const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
-          if (amenityId) {
-            // Set amenityIds array with the selected furnished amenity ID
-            requestPayload.amenityIds = [amenityId];
-          }
-        } else {
-          // If furnished is "any", don't send amenityIds (show all properties)
-          delete requestPayload.amenityIds;
-        }
-
-        const response = await callGetProperty(requestPayload);
-
+        const payload = buildGetPropertyPayload(typeParam, {
+          furnished: furnishedParam,
+          pageNumber: 1,
+          pageSize: -1,
+        });
+        const response = await callGetProperty(payload);
         // Transform the data to match PropertyCardProps interface
         const transformedData: PropertyCardProps[] =
           response.data.propertyInfo.map((prop) => ({
@@ -843,7 +734,7 @@ export const PropertyListing = () => {
             price: prop.price,
             location: prop.city,
             image: prop.mainImageUrl,
-            type: prop.superCategory.toLowerCase(),
+            type: prop.superCategory.toLowerCase() as any,
             propertyType: prop.propertyType,
             area: prop.area,
             bedrooms: prop.bedroom,
@@ -854,7 +745,7 @@ export const PropertyListing = () => {
             preferenceIds: prop.preferenceIds,
             amenities: prop.amenities || prop.amenityIds,
             furnished: prop.furnished,
-            isLike: false,
+            isLike: prop.isLike ?? false,
             likeCount: prop.likeCount || 0,
           }));
 
@@ -867,178 +758,19 @@ export const PropertyListing = () => {
         setLoading(false);
       }
     },
-    [searchQuery, availableFrom, preferenceIds, sortBy, sortOrder]
+    [buildGetPropertyPayload]
   );
 
-  // Create a version of fetchProperties that accepts availableFrom as parameter
+  //fetchPropertiesWithDate USING COMMON PAYLOAD
+
   const fetchPropertiesWithDate = useCallback(
     async (typeParam: string, dateParam: Date) => {
-      // Set loading state for this specific call
       setLoading(true);
-
       try {
-        // Get the current type from parameter only, not from searchParams
-        const currentTypeParam = typeParam;
-
-        // Use current filter state values for API call, but override availableFrom with the passed date
-        const filterOptions: FilterOptions = {
-          searchTerm: searchQuery || "", // Use current search query
-          minPrice: priceRange[0] || 0, // Use current price range
-          maxPrice: priceRange[1] > 0 ? priceRange[1] : 0, // Only use maxPrice if it's set (not default)
-          minBedrooms: minBedrooms || 0, // Use current bedrooms
-          minBathrooms: minBathrooms || 0, // Use current bathrooms
-          minBalcony: minBalcony || 0, // Use current balcony
-          minArea: minArea || 0, // Use current area
-          maxArea: maxArea || 0, // Use current max area
-          availableFrom: dateParam ? dateParam.toISOString() : undefined, // Use the passed date parameter
-          preferenceIds: preferenceIds || [], // Use current preferences
-          furnished: furnished || undefined, // Use current furnished status
-          // Removed amenities - only using furnished filter
-        };
-
-        // FIXED: Use current URL type parameter instead of state
-        const typeConfig =
-          propertyTypeMapping[currentTypeParam] || propertyTypeMapping.all;
-
-        let superCategoryId = typeConfig.superCategoryId;
-        let propertyTypeIds = typeConfig.propertyTypeIds || [];
-
-        // Special handling for different property types
-        if (currentTypeParam === "plot") {
-          // Plot: Only buy (superCategoryId: 1, propertyType: 4)
-          superCategoryId = 1;
-          propertyTypeIds = [4];
-        } else if (
-          currentTypeParam === "commercial" &&
-          commercialType === "buy"
-        ) {
-          superCategoryId = 1; // Can Buy
-          propertyTypeIds = [2]; // shop for Buy
-        } else if (
-          currentTypeParam === "commercial" &&
-          commercialType === "rent"
-        ) {
-          superCategoryId = 2; // Can Rent
-          propertyTypeIds = [7]; // shop for Rent
-        }
-
-        // Pagination params - Use defaults to avoid searchParams dependency
-        let pageSize = -1;
-        let pageNumber = 0;
-
-        if (currentTypeParam !== "all") {
-          pageSize = 10;
-          pageNumber = 0; // Always start from page 1
-        }
-
-        // Derive API sort parameters from UI state
-        const { apiSortBy, apiSortOrder } = getApiSort(sortBy);
-
-        // Prepare request payload - MODIFIED: Use default values, not URL filter values
-        const requestPayload: any = {
-          superCategoryId,
-          accountId: "",
-          searchTerm: searchQuery || "", // Ensure searchTerm is always a string
-          StatusId: 2,
-          minPrice: filterOptions.minPrice, // Use default 0
-          maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0, // Only use maxPrice if it's set
-          bedroom: filterOptions.minBedrooms, // Use default 0
-          bathroom: filterOptions.minBathrooms, // Use default 0
-          balcony: filterOptions.minBalcony, // Use default 0
-          minArea: filterOptions.minArea, // Use default 0
-          maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0, // Only use maxArea if it's set
-          pageNumber,
-          pageSize,
-          // Add sorting parameters
-          SortBy: apiSortBy,
-          SortOrder: apiSortOrder,
-        };
-
-        // When no search term, fetch only approved properties from default cities
-        if (!filterOptions.searchTerm || !filterOptions.searchTerm.trim()) {
-          requestPayload.cityIds = DEFAULT_CITY_IDS;
-        } else {
-          delete requestPayload.cityIds;
-        }
-
-        // Only add propertyTypeIds if it's not empty
-        if (propertyTypeIds.length > 0) {
-          requestPayload.propertyTypeIds = propertyTypeIds;
-        }
-
-        // Only add optional parameters if they have values
-        if (filterOptions.availableFrom) {
-          requestPayload.availableFrom = filterOptions.availableFrom;
-        }
-        if (
-          filterOptions.preferenceIds &&
-          filterOptions.preferenceIds.length > 0
-        ) {
-          requestPayload.preferenceIds = filterOptions.preferenceIds.map((id) =>
-            parseInt(id, 10)
-          );
-        }
-        // Add furnished filter to request payload as amenityIds
-        if (filterOptions.furnished && filterOptions.furnished !== "any") {
-          // Use the configurable furnished amenity IDs
-          const amenityId = FURNISHED_AMENITY_IDS[filterOptions.furnished];
-          if (amenityId) {
-            // Set amenityIds array with the selected furnished amenity ID
-            requestPayload.amenityIds = [amenityId];
-            console.log(
-              "Adding furnished as amenityId to request:",
-              amenityId,
-              "for furnished:",
-              filterOptions.furnished
-            );
-            console.log("Current amenityIds array:", requestPayload.amenityIds);
-          }
-        } else {
-          // If furnished is "any", don't send amenityIds (show all properties)
-          delete requestPayload.amenityIds;
-        }
-        // Removed regular amenities - only furnished filter uses amenityIds
-
-        const response = await callGetProperty(requestPayload);
-
-        // Debug: Log preferenceId and amenities data from API response
-        if (
-          response.data.propertyInfo &&
-          response.data.propertyInfo.length > 0
-        ) {
-          console.log(
-            "fetchPropertiesWithDate - API Response - Properties with preferenceId and amenities data:"
-          );
-          response.data.propertyInfo.forEach((property: any, index: number) => {
-            console.log(
-              `Property ${index + 1}: ${property.title} - preferenceId: ${
-                property.preferenceId
-              }, preferenceIds: ${property.preferenceIds}, amenities: ${
-                property.amenities
-              }, amenityIds: ${property.amenityIds}`
-            );
-            console.log(`Property ${index + 1} full object:`, property);
-          });
-
-          // Debug: Check if API is filtering correctly for furnished
-          if (
-            requestPayload.amenityIds &&
-            requestPayload.amenityIds.includes("10")
-          ) {
-            console.log("🔍 FURNISHED FILTER DEBUG (fetchPropertiesWithDate):");
-            console.log("Requested amenityIds:", requestPayload.amenityIds);
-            console.log(
-              "Expected: Only fully furnished properties (amenity ID 10)"
-            );
-            console.log(
-              "Actual properties returned:",
-              response.data.propertyInfo.length
-            );
-            console.log(
-              "This means the API is correctly filtering based on furnished status!"
-            );
-          }
-        }
+        const payload = buildGetPropertyPayload(typeParam, {
+          availableFrom: dateParam.toISOString(),
+        });
+        const response = await callGetProperty(payload);
 
         // Check if we have properties in the response
         if (
@@ -1050,15 +782,13 @@ export const PropertyListing = () => {
           return;
         }
 
-        // Transform API data with proper type mapping - Updated to merge shop/commercial
-        const transformedData = response.data.propertyInfo.map(
-          (prop): PropertyCardProps => {
+        // Transform API data with proper type mapping
+        const transformedData: PropertyCardProps[] =
+          response.data.propertyInfo.map((prop) => {
             let type: "buy" | "sell" | "rent" | "plot" | "commercial" = "buy";
-
             const superCategoryLower = prop.superCategory?.toLowerCase() || "";
             const propertyTypeLower = prop.propertyType?.toLowerCase() || "";
 
-            // Map based on API requirements - Updated logic
             if (
               prop.propertyType === "4" ||
               propertyTypeLower.includes("plot")
@@ -1089,7 +819,7 @@ export const PropertyListing = () => {
               title: prop.title,
               price: prop.price,
               location: prop.city,
-              type: type,
+              type,
               bedrooms: prop.bedroom,
               bathrooms: prop.bathroom,
               balcony: prop.balcony,
@@ -1100,18 +830,16 @@ export const PropertyListing = () => {
               availableFrom: prop.availableFrom,
               preferenceId: prop.preferenceId,
               preferenceIds: prop.preferenceIds,
-              // Removed amenities - only using furnished filter
               furnished: prop.furnished,
               likeCount: prop.likeCount || 0,
               isLike: prop.isLike ?? false,
               propertyType: prop.propertyType,
               status: prop.superCategory,
             };
-          }
-        );
+          });
 
         setProperties(transformedData);
-      } catch (err) {
+      } catch (err: any) {
         // Handle 404 error specifically
         if (err.response?.status === 404) {
           setError(
@@ -1120,7 +848,6 @@ export const PropertyListing = () => {
         } else {
           setError("Unable to load properties. Please try again later.");
         }
-
         // Set empty arrays to show no properties
         setProperties([]);
         setFilteredProperties([]);
@@ -1128,18 +855,7 @@ export const PropertyListing = () => {
         setLoading(false);
       }
     },
-    [
-      searchQuery,
-      priceRange,
-      minBedrooms,
-      minBathrooms,
-      minBalcony,
-      minArea,
-      maxArea,
-      preferenceIds,
-      furnished,
-      sortBy,
-    ]
+    [buildGetPropertyPayload]
   );
 
   // Handle retry button click
