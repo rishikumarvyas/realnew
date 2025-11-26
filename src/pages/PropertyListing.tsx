@@ -211,8 +211,8 @@ const areaSteps = [
 // Property type mapping - Updated to merge shop and commercial, remove land/office
 const propertyTypeMapping = {
   plot: { superCategoryId: 1, propertyTypeIds: [4], label: "Plot" },
-  buy: { superCategoryId: 1, propertyFor: 1, label: "Buy" },
-  rent: { superCategoryId: 2, propertyFor: 2, label: "Rent" },
+  buy: { superCategoryId: 1, propertyTypeIds: [1, 3, 5], label: "Buy" },
+  rent: { superCategoryId: 2, propertyTypeIds: [6, 8, 10], label: "Rent" },
   all: { superCategoryId: 0, label: "All Properties" },
 };
 
@@ -528,7 +528,6 @@ export const PropertyListing = () => {
 
         let superCategoryId = typeConfig.superCategoryId;
         let propertyTypeIds = typeConfig.propertyTypeIds || [];
-        let propertyFor = typeConfig.propertyFor;
 
         // Special handling for different property types
         if (currentTypeParam === "plot") {
@@ -591,11 +590,6 @@ export const PropertyListing = () => {
         // Only add propertyTypeIds if it's not empty
         if (propertyTypeIds.length > 0) {
           requestPayload.propertyTypeIds = propertyTypeIds;
-        }
-
-        // Only add propertyFor if it's defined
-        if (propertyFor !== undefined) {
-          requestPayload.propertyFor = propertyFor;
         }
 
         // Only add optional parameters if they have values
@@ -762,7 +756,6 @@ export const PropertyListing = () => {
 
         let superCategoryId = typeConfig.superCategoryId;
         let propertyTypeIds = typeConfig.propertyTypeIds || [];
-        let propertyFor = typeConfig.propertyFor;
 
         // Special handling for different property types
         if (currentTypeParam === "plot") {
@@ -909,7 +902,6 @@ export const PropertyListing = () => {
 
         let superCategoryId = typeConfig.superCategoryId;
         let propertyTypeIds = typeConfig.propertyTypeIds || [];
-        let propertyFor = typeConfig.propertyFor;
 
         // Special handling for different property types
         if (currentTypeParam === "plot") {
@@ -972,11 +964,6 @@ export const PropertyListing = () => {
         // Only add propertyTypeIds if it's not empty
         if (propertyTypeIds.length > 0) {
           requestPayload.propertyTypeIds = propertyTypeIds;
-        }
-
-        // Only add propertyFor if it's defined
-        if (propertyFor !== undefined) {
-          requestPayload.propertyFor = propertyFor;
         }
 
         // Only add optional parameters if they have values
