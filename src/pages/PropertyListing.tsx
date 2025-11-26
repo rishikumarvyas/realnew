@@ -27,7 +27,6 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import debounce from "lodash/debounce";
 
 // API interfaces
 interface ApiResponse {
@@ -1017,24 +1016,6 @@ export const PropertyListing = () => {
           const locationMatch = property.location
             .toLowerCase()
             .includes(searchLower);
-
-          // Debug: Log search matching
-          if (
-            searchLower === "pune" ||
-            searchLower === "delhi" ||
-            searchLower === "chandigarh"
-          ) {
-            console.log(`Searching for: ${searchLower}`);
-            console.log(
-              `Property: ${property.title} | Location: ${property.location}`
-            );
-            console.log(
-              `Title Match: ${titleMatch} | Location Match: ${locationMatch}`
-            );
-            console.log(`Property Object:`, property);
-            console.log(`Will be included: ${titleMatch || locationMatch}`);
-          }
-
           return titleMatch || locationMatch;
         });
       }
@@ -1045,28 +1026,12 @@ export const PropertyListing = () => {
           // For rent properties, check if price is above minimum threshold
           if (currentTypeParam === "rent" && priceRange[0] > 0) {
             const priceInRange = property.price >= priceRange[0];
-
-            // Debug: Log price filtering for Pune
-            if (searchQuery && searchQuery.toLowerCase() === "pune") {
-              console.log(
-                `Price filter (rent) - Property: ${property.title}, Price: ${property.price}, Min: ${priceRange[0]}, InRange: ${priceInRange}`
-              );
-            }
-
             return priceInRange;
           }
 
           // For other cases, use normal range filter
           const priceInRange =
             property.price >= priceRange[0] && property.price <= priceRange[1];
-
-          // Debug: Log price filtering for Pune
-          if (searchQuery && searchQuery.toLowerCase() === "pune") {
-            console.log(
-              `Price filter - Property: ${property.title}, Price: ${property.price}, Range: [${priceRange[0]}, ${priceRange[1]}], InRange: ${priceInRange}`
-            );
-          }
-
           return priceInRange;
         });
       }
@@ -1079,18 +1044,6 @@ export const PropertyListing = () => {
           const areaInRange =
             property.area >= minArea &&
             (!hasMaxAreaFilter || property.area <= maxArea);
-
-          // Debug: Log area filtering for Pune
-          if (searchQuery && searchQuery.toLowerCase() === "pune") {
-            console.log(
-              `Area filter - Property: ${property.title}, Area: ${
-                property.area
-              }, Range: [${minArea}, ${
-                hasMaxAreaFilter ? maxArea : "no max"
-              }], InRange: ${areaInRange}`
-            );
-          }
-
           return areaInRange;
         });
       }
@@ -1157,43 +1110,19 @@ export const PropertyListing = () => {
 
           // Compare dates as strings in YYYY-MM-DD format
           const availabilityMatch = propertyDateStr >= formattedSelectedDate;
-
-          // Debug: Log availability filtering for Pune
-          if (searchQuery && searchQuery.toLowerCase() === "pune") {
-            console.log(
-              `Availability filter - Property: ${property.title}, Available: ${property.availableFrom}, Selected: ${formattedSelectedDate}, Match: ${availabilityMatch}`
-            );
-          }
-
           return availabilityMatch;
         });
       }
 
       // Apply tenant preference filter - ONLY for rent properties and when preferences are selected
       if (preferenceIds.length > 0 && currentTypeParam === "rent") {
-        console.log(
-          "Applying preference filter. Selected preferences:",
-          preferenceIds
-        );
-
         filtered = filtered.filter((property) => {
           // Check both preferenceId and preferenceIds fields
           const propertyPreferenceId = property.preferenceId;
           const propertyPreferenceIds = property.preferenceIds;
 
-          console.log(
-            `Property: ${
-              property.title
-            } - preferenceId: ${propertyPreferenceId}, preferenceIds: ${JSON.stringify(
-              propertyPreferenceIds
-            )}`
-          );
-
           // If property doesn't have any preference data, show it (available to all)
           if (!propertyPreferenceId && !propertyPreferenceIds) {
-            console.log(
-              `Property ${property.title}: No preference data, showing (available to all)`
-            );
             return true;
           }
 
@@ -1203,21 +1132,11 @@ export const PropertyListing = () => {
               const match = preferenceIds.includes(
                 propertyPreferenceId.toString()
               );
-              console.log(
-                `Property ${property.title}: preferenceId ${propertyPreferenceId} match: ${match}`
-              );
               return match;
             }
             if (Array.isArray(propertyPreferenceId)) {
               const match = (propertyPreferenceId as any[]).some((id: any) =>
                 preferenceIds.includes(id.toString())
-              );
-              console.log(
-                `Property ${
-                  property.title
-                }: preferenceId array ${JSON.stringify(
-                  propertyPreferenceId
-                )} match: ${match}`
               );
               return match;
             }
@@ -1230,13 +1149,6 @@ export const PropertyListing = () => {
               const match = propertyPreferenceIds.some((id: any) =>
                 preferenceIds.includes(id.toString())
               );
-              console.log(
-                `Property ${
-                  property.title
-                }: preferenceIds array ${JSON.stringify(
-                  propertyPreferenceIds
-                )} match: ${match}`
-              );
               return match;
             }
             if (typeof propertyPreferenceIds === "string") {
@@ -1247,23 +1159,12 @@ export const PropertyListing = () => {
               const match = idsArray.some((id: string) =>
                 preferenceIds.includes(id)
               );
-              console.log(
-                `Property ${property.title}: preferenceIds string "${propertyPreferenceIds}" match: ${match}`
-              );
               return match;
             }
           }
-
-          console.log(
-            `Property ${property.title}: No match found, filtering out`
-          );
           return false;
         });
       }
-
-      // Furnished filter is now handled by API through amenityIds, no client-side filtering needed
-
-      // Furnished filter is handled by API through amenityIds - no client-side filtering needed
 
       // Apply sorting (client-side) to ensure correct order even if API ignores SortBy
       if (sortBy === "price-low") {
@@ -1278,29 +1179,6 @@ export const PropertyListing = () => {
         filtered = [...filtered].sort((a, b) => (b.area || 0) - (a.area || 0));
       } // "newest" defaults to API order
 
-      // Debug: Log final filtered count for Pune
-      if (searchQuery && searchQuery.toLowerCase() === "pune") {
-        console.log(`Final filtered count for Pune: ${filtered.length}`);
-        console.log(`Final filtered properties:`, filtered);
-        console.log(`Price range: [${priceRange[0]}, ${priceRange[1]}]`);
-        const debugEffectiveMaxArea =
-          maxArea && maxArea > 0 ? maxArea : Number.MAX_SAFE_INTEGER;
-        console.log(`Area range: [${minArea}, ${debugEffectiveMaxArea}]`);
-        console.log(
-          `Min bedrooms: ${minBedrooms}, Min bathrooms: ${minBathrooms}, Min balcony: ${minBalcony}`
-        );
-        console.log(`Current type: ${currentTypeParam}`);
-        console.log(`Sort by: ${sortBy}`);
-        console.log(`Available from: ${availableFrom}`);
-        console.log(`Preference IDs: ${preferenceIds}`);
-        console.log(`Furnished: ${furnished}`);
-        // Removed selectedAmenities logging
-        console.log(`Total properties before filtering: ${data.length}`);
-        console.log(`Properties after search filter: ${filtered.length}`);
-        console.log(`Properties after price filter: ${filtered.length}`);
-        console.log(`Properties after area filter: ${filtered.length}`);
-      }
-
       setFilteredProperties(filtered);
     },
     [
@@ -1314,7 +1192,6 @@ export const PropertyListing = () => {
       maxArea,
       availableFrom,
       preferenceIds,
-      // Removed selectedAmenities
       sortBy,
     ]
   );
@@ -1538,7 +1415,6 @@ export const PropertyListing = () => {
     setAvailableFrom(undefined);
     setPreferenceIds([]);
     setFurnished("any");
-    // Removed selectedAmenities
     // Don't change the active tab - keep current tab
     setSelectedPriceSteps([]);
     setSelectedAreaSteps([]);
@@ -1634,8 +1510,6 @@ export const PropertyListing = () => {
     }, 200);
   };
 
-  // Removed handleAmenityToggle - only using furnished filter
-
   // Handle sort change: update state and reset pagination
   const handleSortChange = (value: string) => {
     setSortBy(value);
@@ -1692,8 +1566,6 @@ export const PropertyListing = () => {
   // Add state for property type section collapse
   const [propertyTypeCollapsed, setPropertyTypeCollapsed] = useState(false);
 
-  // Removed getCurrentAmenityOptions - only using furnished filter
-
   // Slice filteredProperties for current page
   const paginatedProperties = filteredProperties.slice(
     (currentPage - 1) * pageSize,
@@ -1715,7 +1587,6 @@ export const PropertyListing = () => {
     availableFrom,
     preferenceIds,
     furnished,
-    // Removed selectedAmenities
   ]);
 
   return (
