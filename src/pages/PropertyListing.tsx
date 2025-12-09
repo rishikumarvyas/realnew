@@ -719,10 +719,12 @@ export const PropertyListing = () => {
     async (typeParam: string, furnishedParam: string) => {
       setLoading(true);
       try {
+        // Let the payload builder decide pageSize for the current type.
+        // Passing pageSize: -1 forces the API to return all pages; for UI
+        // furnished filtering we want the normal paginated result (pageSize=10
+        // for non-'all' types), so only pass the furnished flag here.
         const payload = buildGetPropertyPayload(typeParam, {
           furnished: furnishedParam,
-          pageNumber: 1,
-          pageSize: -1,
         });
         const response = await callGetProperty(payload);
         // Transform the data to match PropertyCardProps interface
