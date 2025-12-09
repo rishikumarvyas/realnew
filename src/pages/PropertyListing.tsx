@@ -723,8 +723,9 @@ export const PropertyListing = () => {
             };
           }
         );
-
         setProperties(transformedData);
+        // Clear any previous error now that the call succeeded
+        setError(null);
       } catch (err: any) {
         // Handle 404 error specifically
         if (err.response?.status === 404) {
@@ -788,6 +789,8 @@ export const PropertyListing = () => {
 
         setProperties(transformedData);
         setFilteredProperties(transformedData);
+        // Clear any previous error now that the call succeeded
+        setError(null);
       } catch (error) {
         console.error("Error fetching properties:", error);
         setError("Failed to fetch properties");
@@ -876,6 +879,8 @@ export const PropertyListing = () => {
           });
 
         setProperties(transformedData);
+        // Clear any previous error now that the call succeeded
+        setError(null);
       } catch (err: any) {
         // Handle 404 error specifically
         if (err.response?.status === 404) {
@@ -2473,11 +2478,23 @@ export const PropertyListing = () => {
               {/* Error state */}
               {error && (
                 <Card className="bg-red-50 border-red-100 mb-8">
-                  <CardContent className="p-8 text-center">
-                    <X className="h-10 w-10 text-red-500 mx-auto mb-4" />
+                  <CardContent className="p-8 text-center relative">
+                    {/* Make the X a real button so the user can close the error */}
+                    <button
+                      aria-label="Close error"
+                      onClick={() => setError(null)}
+                      className="absolute right-4 top-4 p-1 rounded-full hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+                    >
+                      <X className="h-6 w-6 text-red-500" />
+                    </button>
+
                     <p className="text-red-600 mb-4">{error}</p>
                     <Button
-                      onClick={handleRetry}
+                      onClick={() => {
+                        // clear the error visually and retry
+                        setError(null);
+                        handleRetry();
+                      }}
                       variant="outline"
                       className="bg-white border-red-200 hover:bg-red-50"
                     >
