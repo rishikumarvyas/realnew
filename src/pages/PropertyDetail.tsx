@@ -98,6 +98,12 @@ const PropertyDetail = () => {
           setProperty(propertyData);
           setLikesCount(propertyData.likeCount || 0);
 
+          // Capture numeric/string cityId if provided by the details API
+          const detailCityId =
+            propertyData?.cityId !== undefined && propertyData?.cityId !== null
+              ? String(propertyData.cityId)
+              : null;
+
           // Use correct API field for like status
           const userLikeStatus = propertyData.isLikedByUser || false;
           setIsFavorite(userLikeStatus);
@@ -116,9 +122,11 @@ const PropertyDetail = () => {
               state: propertyData.state,
               title: propertyData.title,
             });
+            // Pass captured cityId to avoid race with setDetailCityId (setState is async)
             fetchSimilarProperties(
               propertyData.city,
-              propertyData.propertyType
+              propertyData.propertyType,
+              detailCityId
             );
           }, 500);
         } else {
@@ -171,7 +179,13 @@ const PropertyDetail = () => {
   }, []);
 
   // Fetch similar properties based on location and property type
-  const fetchSimilarProperties = async (city: string, propertyType: string) => {
+  // Accept an optional cityId so callers can pass the id immediately
+  // (setState is async — passing the id avoids race conditions).
+  const fetchSimilarProperties = async (
+    city: string,
+    propertyType: string,
+    cityId?: string | null
+  ) => {
     if (!city) {
       console.log("No city provided for similar properties");
       return;
@@ -182,7 +196,7 @@ const PropertyDetail = () => {
       console.log("Fetching similar properties for city:", city);
 
       // Use exact same API call structure as PropertyListing
-      const requestPayload = {
+      const requestPayload: any = {
         superCategoryId: 0, // Get all categories
         accountId: "string", // Match PropertyListing
         searchTerm: "", // No search term, get all properties
@@ -199,6 +213,10 @@ const PropertyDetail = () => {
         SortBy: "",
         SortOrder: "desc",
       };
+      // Only use the cityId passed by the caller. Avoid fallback to component state.
+      if (cityId) {
+        requestPayload.cityIds = [cityId];
+      }
 
       console.log("Similar properties API request payload:", requestPayload);
       const response = await axiosInstance.post(
