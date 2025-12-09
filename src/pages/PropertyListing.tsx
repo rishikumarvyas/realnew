@@ -1447,8 +1447,12 @@ export const PropertyListing = () => {
     setSearchParams(newSearchParams);
 
     // Fetch fresh data for the current tab
+    // Delay the fetch slightly so React state updates (setState) and
+    // URL changes (setSearchParams) are applied before building the payload.
     if (fetchPropertiesRef.current) {
-      fetchPropertiesRef.current(currentTab);
+      setTimeout(() => {
+        fetchPropertiesRef.current(currentType);
+      }, 100);
     }
   };
 
@@ -2287,6 +2291,12 @@ export const PropertyListing = () => {
                             setAvailableFrom(undefined);
                             searchParams.delete("availableFrom");
                             setSearchParams(searchParams);
+                            // Trigger API call after state updates
+                            if (fetchPropertiesRef.current) {
+                              setTimeout(() => {
+                                fetchPropertiesRef.current(currentType);
+                              }, 100);
+                            }
                           }}
                         />
                       </Badge>
@@ -2316,6 +2326,12 @@ export const PropertyListing = () => {
                             setFurnished("any"); // Reset to default
                             searchParams.delete("furnished"); // Remove from URL instead of setting
                             setSearchParams(searchParams);
+                            // Trigger API call after state updates
+                            if (fetchPropertiesRef.current) {
+                              setTimeout(() => {
+                                fetchPropertiesRef.current(currentType);
+                              }, 100);
+                            }
                           }}
                         />
                       </Badge>
@@ -2331,10 +2347,22 @@ export const PropertyListing = () => {
                           className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-600"
                           onClick={() => {
                             setSelectedPriceSteps([]);
+                            // Reset priceRange to defaults for the active tab
+                            const cfg =
+                              priceRangeConfig[
+                                activeTab as keyof typeof priceRangeConfig
+                              ] || priceRangeConfig.buy;
+                            setPriceRange([cfg.min, cfg.max]);
                             searchParams.delete("priceSteps");
                             searchParams.delete("minPrice");
                             searchParams.delete("maxPrice");
                             setSearchParams(searchParams);
+                            // Trigger API call after state updates
+                            if (fetchPropertiesRef.current) {
+                              setTimeout(() => {
+                                fetchPropertiesRef.current(currentType);
+                              }, 100);
+                            }
                           }}
                         />
                       </Badge>
