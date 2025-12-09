@@ -106,12 +106,15 @@ const PropertyDetail = () => {
 
           // OPTIMIZED: Fetch similar properties in background to avoid blocking UI
           setTimeout(() => {
-            console.log("Starting similar properties fetch for:", propertyData.city);
+            console.log(
+              "Starting similar properties fetch for:",
+              propertyData.city
+            );
             console.log("Current property data:", {
               id: propertyData.propertyId,
               city: propertyData.city,
               state: propertyData.state,
-              title: propertyData.title
+              title: propertyData.title,
             });
             fetchSimilarProperties(
               propertyData.city,
@@ -177,7 +180,7 @@ const PropertyDetail = () => {
     setLoadingSimilar(true);
     try {
       console.log("Fetching similar properties for city:", city);
-      
+
       // Use exact same API call structure as PropertyListing
       const requestPayload = {
         superCategoryId: 0, // Get all categories
@@ -196,50 +199,89 @@ const PropertyDetail = () => {
         SortBy: "",
         SortOrder: "desc",
       };
-      
+
       console.log("Similar properties API request payload:", requestPayload);
-      const response = await axiosInstance.post("/api/Account/GetProperty", requestPayload);
+      const response = await axiosInstance.post(
+        "/api/Account/GetProperty",
+        requestPayload
+      );
 
       if (response.data.statusCode === 200 && response.data.propertyInfo) {
-        console.log("API response received:", response.data.propertyInfo.length, "properties");
-        console.log("All properties from API:", response.data.propertyInfo.map(p => ({ id: p.propertyId, city: p.city, title: p.title })));
-        
-        // Debug: Check if any properties have "pune" in title or city
-        const puneProperties = response.data.propertyInfo.filter(p => 
-          p.title?.toLowerCase().includes('pune') || p.city?.toLowerCase().includes('pune')
+        console.log(
+          "API response received:",
+          response.data.propertyInfo.length,
+          "properties"
         );
-        console.log("Properties with 'pune' in title or city:", puneProperties.length);
-        console.log("Pune properties details:", puneProperties.map(p => ({ id: p.propertyId, city: p.city, title: p.title })));
-        
+        console.log(
+          "All properties from API:",
+          response.data.propertyInfo.map((p) => ({
+            id: p.propertyId,
+            city: p.city,
+            title: p.title,
+          }))
+        );
+
+        // Debug: Check if any properties have "pune" in title or city
+        const puneProperties = response.data.propertyInfo.filter(
+          (p) =>
+            p.title?.toLowerCase().includes("pune") ||
+            p.city?.toLowerCase().includes("pune")
+        );
+        console.log(
+          "Properties with 'pune' in title or city:",
+          puneProperties.length
+        );
+        console.log(
+          "Pune properties details:",
+          puneProperties.map((p) => ({
+            id: p.propertyId,
+            city: p.city,
+            title: p.title,
+          }))
+        );
+
         // Filter properties from the same city and exclude current property
         const currentPropertyId = property?.propertyId || id;
         console.log("Current property ID:", currentPropertyId);
         console.log("Searching for city:", city);
-        
+
         // Use exact same filtering logic as PropertyListing page
         const cityProperties = response.data.propertyInfo.filter(
           (prop: any) => {
-            console.log(`Checking property ${prop.propertyId}: city="${prop.city}", title="${prop.title}", currentId="${currentPropertyId}"`);
-            
+            console.log(
+              `Checking property ${prop.propertyId}: city="${prop.city}", title="${prop.title}", currentId="${currentPropertyId}"`
+            );
+
             // Exclude current property
             if (prop.propertyId === currentPropertyId) {
               console.log(`Excluding current property: ${prop.propertyId}`);
               return false;
             }
-            
+
             // Use exact same search logic as PropertyListing page
             const searchLower = city.toLowerCase().trim();
-            const titleMatch = prop.title?.toLowerCase().includes(searchLower) || false;
-            const locationMatch = prop.city?.toLowerCase().includes(searchLower) || false;
-            
-            console.log(`Search match for ${prop.propertyId}: title="${titleMatch}", location="${locationMatch}"`);
+            const titleMatch =
+              prop.title?.toLowerCase().includes(searchLower) || false;
+            const locationMatch =
+              prop.city?.toLowerCase().includes(searchLower) || false;
+
+            console.log(
+              `Search match for ${prop.propertyId}: title="${titleMatch}", location="${locationMatch}"`
+            );
             return titleMatch || locationMatch;
           }
         );
 
         console.log("Filtered properties for city:", cityProperties.length);
-        console.log("City properties:", cityProperties.map(p => ({ id: p.propertyId, city: p.city, title: p.title })));
-        
+        console.log(
+          "City properties:",
+          cityProperties.map((p) => ({
+            id: p.propertyId,
+            city: p.city,
+            title: p.title,
+          }))
+        );
+
         // Debug: Show what we're searching for
         console.log("Search term being used:", `"${city}"`);
         console.log("Search term lowercase:", `"${city.toLowerCase().trim()}"`);
@@ -306,7 +348,7 @@ const PropertyDetail = () => {
               status: prop.superCategory,
             };
           });
-        
+
         console.log("Transformed properties:", transformedProperties.length);
         setSimilarProperties(transformedProperties);
       } else {
