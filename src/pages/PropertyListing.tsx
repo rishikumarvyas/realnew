@@ -1371,10 +1371,14 @@ export const PropertyListing = () => {
       setMinArea(0);
       setMaxArea(0);
 
-      // Trigger API call to fetch fresh data when all area steps are cleared
-      const currentTab = searchParams.get("type") || activeTab;
+      // Trigger API call to fetch fresh data when all area steps are cleared.
+      // Use a short timeout so React has applied the state updates (minArea/maxArea)
+      // before we build the payload in the fetch. Also use the stable currentType
+      // state rather than reading from searchParams to avoid races.
       if (fetchPropertiesRef.current) {
-        fetchPropertiesRef.current(currentTab);
+        setTimeout(() => {
+          fetchPropertiesRef.current(currentType);
+        }, 100);
       }
     }
   };
@@ -2261,11 +2265,11 @@ export const PropertyListing = () => {
                             searchParams.delete("maxArea");
                             setSearchParams(searchParams);
 
-                            // Trigger API call to fetch fresh data
-                            const currentTab =
-                              searchParams.get("type") || activeTab;
+                            // Trigger API call to fetch fresh data after state updates
                             if (fetchPropertiesRef.current) {
-                              fetchPropertiesRef.current(currentTab);
+                              setTimeout(() => {
+                                fetchPropertiesRef.current(currentType);
+                              }, 100);
                             }
                           }}
                         />
@@ -2349,11 +2353,11 @@ export const PropertyListing = () => {
                             searchParams.delete("maxArea");
                             setSearchParams(searchParams);
 
-                            // Trigger API call to fetch fresh data
-                            const currentTab =
-                              searchParams.get("type") || activeTab;
+                            // Trigger API call to fetch fresh data after state updates
                             if (fetchPropertiesRef.current) {
-                              fetchPropertiesRef.current(currentTab);
+                              setTimeout(() => {
+                                fetchPropertiesRef.current(currentType);
+                              }, 100);
                             }
                           }}
                         />
