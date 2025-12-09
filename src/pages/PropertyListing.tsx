@@ -1530,14 +1530,16 @@ export const PropertyListing = () => {
     }
   }, [sortBy]);
 
-  // Refetch from server when preference filters change (skip first mount to avoid duplicate)
+  // Refetch from server when preference filters change (skip first mount).
   // NOTE: furnished changes are now handled directly in handleFurnishedChange
+  // Keep `availableFrom` out of this dependency list so selecting a date
+  // is handled exclusively by `handleDateChange` (prevents duplicate fetches).
   useEffect(() => {
     if (isInitialLoad) return;
     if (fetchPropertiesRef.current) {
       fetchPropertiesRef.current(currentType);
     }
-  }, [preferenceIds, availableFrom]);
+  }, [preferenceIds]);
 
   // Refetch from server when other filters change (skip first mount to avoid duplicate)
   useEffect(() => {
