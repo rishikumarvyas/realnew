@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useState } from "react";
 
 interface DatePickerProps {
   date?: Date;
@@ -18,15 +19,17 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ date, setDate, className }: DatePickerProps) {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className={className}>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
             className={cn(
               "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground",
+              !date && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -37,7 +40,11 @@ export function DatePicker({ date, setDate, className }: DatePickerProps) {
           <Calendar
             mode="single"
             selected={date}
-            onSelect={setDate}
+            onSelect={(d) => {
+              setDate(d as Date | undefined);
+              // close popover after selection
+              setOpen(false);
+            }}
             initialFocus
             className="p-3 pointer-events-auto"
           />
