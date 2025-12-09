@@ -313,6 +313,8 @@ export const PropertyListing = () => {
 
   // Add flag to prevent multiple API calls
   const isFetchingRef = useRef<boolean>(false);
+  // Cache profile cityId for the session to avoid repeated profile calls
+  const profileCityIdRef = useRef<string | null>(null);
   // Define filter visibility types
   type FilterVisibility = {
     showPrice: boolean;
@@ -616,7 +618,41 @@ export const PropertyListing = () => {
       setLoading(true);
 
       try {
+        // Build payload; if there's no search term, enrich default cityIds
+        // with the user's cityId from /api/Account/GetProfile (if available)
         const payload = buildGetPropertyPayload(typeParam);
+
+        if (!searchQuery || !searchQuery.trim()) {
+          try {
+            // Only call GetProfile once per session — cache cityId in ref
+            if (!profileCityIdRef.current) {
+              const profileRes = await axiosInstance.get(
+                "/api/Account/GetProfile"
+              );
+              profileCityIdRef.current = profileRes?.data?.cityId || null;
+            }
+
+            const profileCityId = profileCityIdRef.current;
+            if (profileCityId) {
+              const base = Array.isArray(payload.cityIds)
+                ? payload.cityIds
+                : DEFAULT_CITY_IDS;
+              // Ensure profileCityId is first and remove duplicates from the rest
+              const combined = [
+                profileCityId,
+                ...base.filter((id) => id !== profileCityId),
+              ];
+              payload.cityIds = combined;
+            } else {
+              payload.cityIds = payload.cityIds || DEFAULT_CITY_IDS;
+            }
+          } catch (err) {
+            // On error, fall back to defaults and leave the cached value null
+            payload.cityIds = payload.cityIds || DEFAULT_CITY_IDS;
+            profileCityIdRef.current = profileCityIdRef.current || null;
+          }
+        }
+
         const response = await callGetProperty(payload);
 
         // Check if we have properties in the response
