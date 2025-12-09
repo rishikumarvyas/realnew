@@ -208,7 +208,7 @@ const PropertyDetail = () => {
         balcony: 0,
         minArea: 0,
         maxArea: 0, // 0 means no area filter
-        pageNumber: 1, // API uses 1-based indexing
+        pageNumber: 0,
         pageSize: -1, // Get all properties like PropertyListing
         SortBy: "",
         SortOrder: "desc",
