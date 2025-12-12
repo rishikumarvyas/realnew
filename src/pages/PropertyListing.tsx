@@ -294,7 +294,12 @@ export const PropertyListing = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 6;
+  // Server-side pagination configuration for "View More"
+  const SERVER_PAGE_SIZE = 6;
+  const [serverPageNumber, setServerPageNumber] = useState<number>(1); // 1-based
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const pageSize = 6; // used for client-side display chunk size
   const totalPages = Math.ceil(filteredProperties.length / pageSize);
 
   // NEW: Track if this is the initial load
@@ -308,7 +313,12 @@ export const PropertyListing = () => {
 
   // Use ref to store fetchProperties function to avoid dependency issues
   const fetchPropertiesRef = useRef<
-    ((typeParam: string) => Promise<void>) | null
+    | ((
+        typeParam: string,
+        pageNumber?: number,
+        append?: boolean
+      ) => Promise<void>)
+    | null
   >(null);
 
   // Add flag to prevent multiple API calls
@@ -603,7 +613,11 @@ export const PropertyListing = () => {
   //MAIN fetchProperties USING COMMON PAYLOAD
 
   const fetchProperties = useCallback(
-    async (typeParam: string = "all") => {
+    async (
+      typeParam: string = "all",
+      pageNumber: number = 1,
+      append: boolean = false
+    ) => {
       // If URL has a search param but searchQuery is not yet updated,
       // skip this call and let the [searchQuery, currentType] effect
       // trigger the real fetch with the correct searchTerm.
@@ -620,7 +634,14 @@ export const PropertyListing = () => {
       try {
         // Build payload; if there's no search term, enrich default cityIds
         // with the user's cityId from /api/Account/GetProfile (if available)
-        const payload = buildGetPropertyPayload(typeParam);
+        // Ask for a fixed page size (SERVER_PAGE_SIZE) and convert 1-based
+        // pageNumber to 0-based index expected by the payload builder.
+        const payload = buildGetPropertyPayload(typeParam, {
+          // Treat pageNumber as 1-based externally and pass it through so
+          // the API receives pageNumber: 1 on first load.
+          pageNumber: pageNumber > 0 ? pageNumber : 1,
+          pageSize: SERVER_PAGE_SIZE,
+        });
 
         if (!searchQuery || !searchQuery.trim()) {
           try {
@@ -723,7 +744,32 @@ export const PropertyListing = () => {
             };
           }
         );
-        setProperties(transformedData);
+        if (append) {
+          // Append while avoiding duplicates
+          setProperties((prev) => {
+            const existing = new Set(prev.map((p) => p.id));
+            const deduped = transformedData.filter((p) => !existing.has(p.id));
+            return [...prev, ...deduped];
+          });
+          // Also append to filteredProperties so UI shows newly loaded items immediately.
+          setFilteredProperties((prev) => {
+            const existing = new Set(prev.map((p) => p.id));
+            const deduped = transformedData.filter((p) => !existing.has(p.id));
+            return [...prev, ...deduped];
+          });
+        } else {
+          setProperties(transformedData);
+        }
+
+        // Determine whether more pages are available (simple heuristic)
+        setHasMore(
+          Array.isArray(response.data.propertyInfo) &&
+            response.data.propertyInfo.length === SERVER_PAGE_SIZE
+        );
+
+        // If this was a fresh load (not append), reset server page number
+        if (!append) setServerPageNumber(1);
+
         // Clear any previous error now that the call succeeded
         setError(null);
       } catch (err: any) {
@@ -1619,10 +1665,10 @@ export const PropertyListing = () => {
   // Add state for property type section collapse
   const [propertyTypeCollapsed, setPropertyTypeCollapsed] = useState(false);
 
-  // Slice filteredProperties for current page
+  // Slice filteredProperties for current cumulative server pages (show pages 1..serverPageNumber)
   const paginatedProperties = filteredProperties.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    0,
+    serverPageNumber * SERVER_PAGE_SIZE
   );
 
   useEffect(() => {
@@ -1641,6 +1687,25 @@ export const PropertyListing = () => {
     preferenceIds,
     furnished,
   ]);
+
+  // Handler to load next page from server and append results
+  const loadMore = useCallback(async () => {
+    // Prevent concurrent loads or loading when there is no more data
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = serverPageNumber + 1;
+    try {
+      if (fetchPropertiesRef.current) {
+        await fetchPropertiesRef.current(currentType, nextPage, true);
+        setServerPageNumber(nextPage);
+      }
+    } catch (err) {
+      // preserve existing error handling elsewhere
+      console.error("Error loading more properties:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, serverPageNumber, currentType]);
 
   return (
     <>
@@ -2607,42 +2672,17 @@ export const PropertyListing = () => {
                 )}
               </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-8 flex justify-center">
-                  <div className="inline-flex rounded-md space-x-2">
-                    <Button
-                      variant="outline"
-                      size="default"
-                      className="rounded-full"
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                    >
-                      {"<"}
-                    </Button>
-                    {[...Array(totalPages)].map((_, idx) => (
-                      <Button
-                        key={idx + 1}
-                        variant={
-                          currentPage === idx + 1 ? "default" : "outline"
-                        }
-                        size="default"
-                        className="rounded-full"
-                        onClick={() => setCurrentPage(idx + 1)}
-                      >
-                        {idx + 1}
-                      </Button>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="default"
-                      className="rounded-full"
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                    >
-                      {">"}
-                    </Button>
-                  </div>
+              {/* View More (server-side paging) */}
+              {hasMore && (
+                <div className="text-center mt-6">
+                  <Button
+                    onClick={loadMore}
+                    className="inline-flex items-center bg-blue-500 rounded-full hover:bg-blue-700 text-white"
+                    variant="default"
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? "Loading..." : "View More"}
+                  </Button>
                 </div>
               )}
             </div>
