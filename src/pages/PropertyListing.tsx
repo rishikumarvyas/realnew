@@ -182,6 +182,11 @@ const DEFAULT_CITY_IDS = [
   "74",
 ];
 
+// Session key and toggle to persist profile cityId across navigations within the browser session.
+// Set PERSIST_PROFILE_CITYID = true to store the cityId in sessionStorage so it survives
+// route changes and reloads during the browser session. Set to false to keep it in-memory only.
+const PROFILE_CITYID_SESSION_KEY = "profileCityId";
+const PERSIST_PROFILE_CITYID = true;
 // Price and area steps
 
 const buyPriceSteps = [
@@ -325,6 +330,9 @@ export const PropertyListing = () => {
   const isFetchingRef = useRef<boolean>(false);
   // Cache profile cityId for the session to avoid repeated profile calls
   const profileCityIdRef = useRef<string | null>(null);
+  // Track whether we've already attempted to fetch the profile during this session
+  // so we don't repeatedly call the profile endpoint when it returns no usable cityId.
+  const profileCityFetchTriedRef = useRef<boolean>(false);
   // Define filter visibility types
   type FilterVisibility = {
     showPrice: boolean;
@@ -645,12 +653,64 @@ export const PropertyListing = () => {
 
         if (!searchQuery || !searchQuery.trim()) {
           try {
-            // Only call GetProfile once per session — cache cityId in ref
-            if (!profileCityIdRef.current) {
-              const profileRes = await axiosInstance.get(
-                "/api/Account/GetProfile"
-              );
-              profileCityIdRef.current = profileRes?.data?.cityId || null;
+            // If we've already tried fetching profile and found no usable id,
+            // skip re-fetch to avoid repeated calls.
+            if (profileCityFetchTriedRef.current) {
+              // nothing to do here
+            } else {
+              // Try to read cached profile cityId from sessionStorage first (if enabled)
+              if (PERSIST_PROFILE_CITYID && !profileCityIdRef.current) {
+                try {
+                  const saved = sessionStorage.getItem(
+                    PROFILE_CITYID_SESSION_KEY
+                  );
+                  if (saved) profileCityIdRef.current = saved || null;
+                } catch (e) {
+                  // ignore sessionStorage errors
+                }
+              }
+
+              // If still not present, fetch once and cache (in-memory and optionally session)
+              if (!profileCityIdRef.current) {
+                // Only call GetProfile if we have an auth token (profile likely requires auth)
+                const maybeToken = (() => {
+                  try {
+                    return localStorage.getItem("token");
+                  } catch (e) {
+                    return null;
+                  }
+                })();
+
+                if (maybeToken) {
+                  const profileRes = await axiosInstance.get(
+                    "/api/Account/GetProfile"
+                  );
+                  // The profile endpoint may return city as a name (profile.city)
+                  // or as an id (profile.cityId). Try both, but prefer numeric id-like values.
+                  const data = profileRes?.data || {};
+                  let fetchedId = null;
+                  if (data.cityId) fetchedId = String(data.cityId);
+                  else if (data.city && /^[0-9]+$/.test(String(data.city)))
+                    fetchedId = String(data.city);
+
+                  profileCityIdRef.current = fetchedId;
+
+                  if (PERSIST_PROFILE_CITYID) {
+                    try {
+                      // store empty string when no id to mark we've tried
+                      sessionStorage.setItem(
+                        PROFILE_CITYID_SESSION_KEY,
+                        String(fetchedId || "")
+                      );
+                    } catch (e) {
+                      // ignore sessionStorage write errors
+                    }
+                  }
+                }
+
+                // mark that we've attempted fetch (so we don't loop on repeated failures)
+                profileCityFetchTriedRef.current = true;
+              }
             }
 
             const profileCityId = profileCityIdRef.current;
