@@ -741,8 +741,10 @@ export const PropertyListing = () => {
           !response.data.propertyInfo ||
           response.data.propertyInfo.length === 0
         ) {
+          // No properties returned for this query - clear lists and mark no more pages
           setProperties([]);
           setFilteredProperties([]);
+          setHasMore(false);
           return;
         }
 
@@ -845,6 +847,8 @@ export const PropertyListing = () => {
         // Set empty arrays to show no properties
         setProperties([]);
         setFilteredProperties([]);
+        // Ensure view-more is hidden when there are no results or on error
+        setHasMore(false);
       } finally {
         setLoading(false);
         isFetchingRef.current = false;
