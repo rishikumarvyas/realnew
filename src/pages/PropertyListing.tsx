@@ -741,7 +741,14 @@ export const PropertyListing = () => {
           !response.data.propertyInfo ||
           response.data.propertyInfo.length === 0
         ) {
-          // No properties returned for this query - clear lists and mark no more pages
+          // No properties returned for this query.
+          // If this was an append request, keep existing items and simply mark no more pages.
+          if (append) {
+            setHasMore(false);
+            return;
+          }
+
+          // Fresh load with no results: clear lists and mark no more pages
           setProperties([]);
           setFilteredProperties([]);
           setHasMore(false);
@@ -843,12 +850,16 @@ export const PropertyListing = () => {
         } else {
           setError("Unable to load properties. Please try again later.");
         }
-
-        // Set empty arrays to show no properties
-        setProperties([]);
-        setFilteredProperties([]);
-        // Ensure view-more is hidden when there are no results or on error
-        setHasMore(false);
+        // If this was an append, preserve existing items and just hide View More.
+        if (append) {
+          setHasMore(false);
+        } else {
+          // Set empty arrays to show no properties
+          setProperties([]);
+          setFilteredProperties([]);
+          // Ensure view-more is hidden when there are no results or on error
+          setHasMore(false);
+        }
       } finally {
         setLoading(false);
         isFetchingRef.current = false;
