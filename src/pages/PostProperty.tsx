@@ -275,14 +275,31 @@ const PostProperty = () => {
   };
 
   const mapPropertyTypeToId = (type) => {
-    const propertyTypeMap = {
+    // The API uses different property type IDs depending on whether the
+    // listing is being posted for Sale (Buy) or for Rent. Use the current
+    // `propertyType` state (Buy | Rent) to decide which mapping to use.
+    //
+    // For Buy (Sale): House=3, Flat=1, Bunglow=5, Plot=4, Shop=2
+    // For Rent (treated here as "Sell type" in older naming):
+    //   House=8, Flat=6, Bunglow=10, Plot=9, Shop=7
+    const buyMap: Record<string, number> = {
       House: 3,
-      Shop: 2,
-      Plot: 4,
-      Bunglow: 5,
       Flat: 1,
+      Bunglow: 5,
+      Plot: 4,
+      Shop: 2,
     };
-    return propertyTypeMap[type] || null;
+
+    const rentMap: Record<string, number> = {
+      House: 8,
+      Flat: 6,
+      Bunglow: 10,
+      Shop: 7,
+    };
+
+    // propertyType state holds "Buy" or "Rent"
+    if (propertyType === "Buy") return buyMap[type] || null;
+    return rentMap[type] || null;
   };
 
   const mapOwnerTypeToId = (type) => {
