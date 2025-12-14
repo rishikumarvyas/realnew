@@ -793,7 +793,11 @@ export const PropertyListing = () => {
               id: prop.propertyId,
               title: prop.title,
               price: prop.price,
-              location: prop.city,
+              // Include locality/address/city in the searchable location string so
+              // searches for localities (e.g., "Bommasandra") match correctly.
+              location: [prop.locality, prop.address, prop.city]
+                .filter(Boolean)
+                .join(" "),
               type,
               bedrooms: prop.bedroom,
               bathrooms: prop.bathroom,
