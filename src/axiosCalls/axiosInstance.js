@@ -63,8 +63,10 @@ axiosInstance.interceptors.response.use(
 
             if (newRefreshToken) {
               // Replace our stored token with the new refreshToken
-              axiosInstance.deflocalStorage.setItem("token", newRefreshToken);
-              aults.headers.Authorization = `Bearer ${newRefreshToken}`;
+              localStorage.setItem("token", newRefreshToken);
+              originalRequest.headers.Authorization = `Bearer ${newRefreshToken}`;
+              // Update default headers for future requests
+              axiosInstance.defaults.headers.Authorization = `Bearer ${newRefreshToken}`;
 
               // notify queued requests with the new token
               axiosInstance._refreshSubscribers.forEach((cb) =>

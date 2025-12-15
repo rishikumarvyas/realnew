@@ -74,12 +74,22 @@ const Profile: React.FC = () => {
     city: "",
     state: "",
   });
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   const [allStates, setAllStates] = useState<any[]>([]);
   const [selectedStateId, setSelectedStateId] = useState<string>("");
   const [cityId, setCityId] = useState<string>("");
   const [cityList, setCityList] = useState<any[]>([]);
   const [cityLoading, setCityLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("profileImage");
+      if (stored) setProfileImage(stored);
+    } catch {
+      setProfileImage(null);
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -193,6 +203,28 @@ const Profile: React.FC = () => {
     return re.test(value.toLowerCase());
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (typeof result === "string") {
+        setProfileImage(result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    try {
+      localStorage.removeItem("profileImage");
+    } catch {
+      /* ignore */
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -222,6 +254,15 @@ const Profile: React.FC = () => {
           description:
             res?.data?.message || "Your profile was updated successfully.",
         });
+        try {
+          if (profileImage) {
+            localStorage.setItem("profileImage", profileImage);
+          } else {
+            localStorage.removeItem("profileImage");
+          }
+        } catch {
+          /* ignore */
+        }
         // update AuthContext so navbar/name updates immediately
         try {
           updateUser?.({ name: `${payload.firstName} ${payload.lastName}` });
@@ -251,181 +292,269 @@ const Profile: React.FC = () => {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const initials =
+    (profile.firstName?.[0] || "").toUpperCase() +
+    (profile.lastName?.[0] || "").toUpperCase();
+
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6">
+    <div className="min-h-[calc(100vh-120px)] bg-gradient-to-b from-slate-50 via-white to-slate-50">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
       {loading ? (
-        <div className="py-16 text-center">Loading...</div>
+        <div className="py-24 text-center text-slate-500">Loading...</div>
       ) : error ? (
-        <div className="text-center text-red-600 py-6">{error}</div>
+        <div className="py-10 text-center text-red-600">{error}</div>
       ) : (
-        <>
-          <Card className="shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b">
-              <div className="flex items-center">
-                <User className="h-5 w-5 text-blue-600 mr-2" />
-                <CardTitle>My Profile</CardTitle>
-              </div>
-              <CardDescription>
-                View and update your profile information.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    First name
-                  </label>
-                  <input
-                    name="firstName"
-                    value={profile.firstName}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border rounded-md p-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Last name
-                  </label>
-                  <input
-                    name="lastName"
-                    value={profile.lastName}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border rounded-md p-2"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
-                  <input
-                    name="email"
-                    ref={emailRef}
-                    value={profile.email}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border rounded-md p-2"
-                    type="email"
-                  />
-                  {emailError && (
-                    <p className="text-red-500 text-xs mt-1">{emailError}</p>
-                  )}
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Phone
-                  </label>
-                  <input
-                    name="phone"
-                    value={profile.phone}
-                    readOnly
-                    className="mt-1 block w-full border rounded-md p-2 bg-gray-50"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Address
-                  </label>
-                  <textarea
-                    name="address"
-                    value={profile.address}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border rounded-md p-2"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    State
-                  </label>
-                  <Select
-                    value={selectedStateId}
-                    onValueChange={(val) => setSelectedStateId(val)}
-                  >
-                    <SelectTrigger
-                      id="state"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
-                    >
-                      <SelectValue
-                        placeholder={
-                          allStates.length
-                            ? "Select State"
-                            : "No states available"
-                        }
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mt-8 grid gap-6 lg:grid-cols-[0.4fr_0.6fr]">
+            <Card className="border border-slate-200 bg-white/90 shadow-xl">
+              <CardContent className="space-y-4 px-6 py-6 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    {profileImage ? (
+                      <img
+                        src={profileImage}
+                        alt="Profile"
+                        className="h-36 w-36 rounded-full border-4 border-white object-cover shadow-lg"
                       />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allStates.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    City
-                  </label>
-                  <Select
-                    value={cityId}
-                    onValueChange={(val) => setCityId(val)}
-                    disabled={!selectedStateId || cityLoading}
-                  >
-                    <SelectTrigger
-                      id="city"
-                      className="bg-white border-2 focus:ring-2 focus:ring-blue-100"
+                    ) : (
+                      <div className="flex h-36 w-36 items-center justify-center rounded-full bg-slate-100 text-4xl font-semibold uppercase text-slate-700">
+                        {initials.trim() || <User className="h-12 w-12" />}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 rounded-full border border-white bg-blue-600 p-3 text-white shadow-lg"
+                      title="Upload photo"
                     >
-                      {cityLoading ? (
-                        <span className="flex items-center">
-                          <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                          Loading...
-                        </span>
-                      ) : (
+                      +
+                    </button>
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl font-semibold text-slate-900 leading-tight">
+                      {profile.firstName ? profile.firstName : "Add your name"}
+                    </CardTitle>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2 text-[11px]">
+                    <span className="rounded-full border border-pink-200 bg-pink-50 px-3 py-0.5 font-medium text-pink-600">
+                      {profile.firstName || profile.lastName ? "Complete" : "New"}
+                    </span>
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-0.5 font-medium text-emerald-600">
+                      Verified
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      size="default"
+                      className="rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-6 h-11 text-white shadow"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Upload photo
+                    </Button>
+                    {profileImage && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full border-slate-200 px-6 text-slate-600"
+                        onClick={handleRemoveImage}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-6">
+              <Card className="border border-slate-200 bg-white/90 shadow-lg">
+              <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center">
+                    <div className="mr-3 rounded-full bg-blue-100 p-2 text-blue-600">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle>Profile details</CardTitle>
+                      <CardDescription>
+                        Update your personal information below.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      First name
+                    </label>
+                    <input
+                      name="firstName"
+                      value={profile.firstName}
+                      onChange={handleChange}
+                      className="block w-full rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Last name
+                    </label>
+                    <input
+                      name="lastName"
+                      value={profile.lastName}
+                      onChange={handleChange}
+                      className="block w-full rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Email
+                    </label>
+                    <input
+                      name="email"
+                      ref={emailRef}
+                      value={profile.email}
+                      onChange={handleChange}
+                      className="block w-full rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      type="email"
+                    />
+                    {emailError && (
+                      <p className="mt-1 text-xs text-red-500">{emailError}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Phone
+                    </label>
+                    <input
+                      name="phone"
+                      value={profile.phone}
+                      readOnly
+                      className="block w-full rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-slate-500 shadow-inner"
+                    />
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Address
+                    </label>
+                    <textarea
+                      name="address"
+                      value={profile.address}
+                      onChange={handleChange}
+                      className="block w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      State
+                    </label>
+                    <Select
+                      value={selectedStateId}
+                      onValueChange={(val) => setSelectedStateId(val)}
+                    >
+                      <SelectTrigger
+                        id="state"
+                        className="rounded-xl border-2 border-slate-200 bg-white/80 focus:ring-2 focus:ring-blue-100"
+                      >
                         <SelectValue
                           placeholder={
-                            selectedStateId
-                              ? "Select City"
-                              : "Select State First"
+                            allStates.length
+                              ? "Select State"
+                              : "No states available"
                           }
                         />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cityLoading ? (
-                        <div className="flex items-center justify-center p-2">
-                          <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                          Loading cities...
-                        </div>
-                      ) : (
-                        cityList.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.city}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allStates.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.state}
                           </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <CardFooter className="flex justify-center space-x-4">
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-blue-600 text-white"
-              >
-                {saving ? "Saving..." : "Save changes"}
-              </Button>
-              <Button variant="ghost" onClick={() => navigate(-1)}>
-                Cancel
-              </Button>
-            </CardFooter>
-          </Card>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      City
+                    </label>
+                    <Select
+                      value={cityId}
+                      onValueChange={(val) => setCityId(val)}
+                      disabled={!selectedStateId || cityLoading}
+                    >
+                      <SelectTrigger
+                        id="city"
+                        className="rounded-xl border-2 border-slate-200 bg-white/80 focus:ring-2 focus:ring-blue-100"
+                      >
+                        {cityLoading ? (
+                          <span className="flex items-center">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                          </span>
+                        ) : (
+                          <SelectValue
+                            placeholder={
+                              selectedStateId
+                                ? "Select City"
+                                : "Select State First"
+                            }
+                          />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cityLoading ? (
+                          <div className="flex items-center justify-center p-2">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading cities...
+                          </div>
+                        ) : (
+                          cityList.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.city}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="min-w-[150px] rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transition hover:shadow-xl disabled:opacity-70"
+                >
+                  {saving ? "Saving..." : "Save changes"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate(-1)}
+                  className="rounded-2xl border border-slate-200 bg-white px-6 text-slate-600 shadow-sm hover:text-slate-800"
+                >
+                  Cancel
+                </Button>
+              </CardFooter>
+              </Card>
+            </div>
+          </div>
+
           <Dialog
             open={showEmailInvalidDialog}
             onOpenChange={setShowEmailInvalidDialog}
@@ -450,7 +579,7 @@ const Profile: React.FC = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </>
+        </div>
       )}
     </div>
   );

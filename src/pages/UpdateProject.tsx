@@ -33,7 +33,6 @@ import {
   Check,
 } from "lucide-react";
 import axiosInstance from "@/axiosCalls/axiosInstance";
-import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAmenity } from "@/utils/UtilityFunctions";
@@ -102,15 +101,12 @@ const UpdateProject = () => {
   const [projectImages, setProjectImages] = useState([]);
   const [projectImageURLs, setProjectImageURLs] = useState([]);
   const [projectMainIndex, setProjectMainIndex] = useState(null);
-  const [existingProjectImageURLs, setExistingProjectImageURLs] = useState([]); // Track existing images from API
   const [amenityImages, setAmenityImages] = useState([]);
   const [amenityImageURLs, setAmenityImageURLs] = useState([]);
   const [amenityMainIndex, setAmenityMainIndex] = useState(null);
-  const [existingAmenityImageURLs, setExistingAmenityImageURLs] = useState([]); // Track existing images from API
   const [floorImages, setFloorImages] = useState([]);
   const [floorImageURLs, setFloorImageURLs] = useState([]);
   const [floorMainIndex, setFloorMainIndex] = useState(null);
-  const [existingFloorImageURLs, setExistingFloorImageURLs] = useState([]); // Track existing images from API
 
   // Amenities
   const [amenities, setAmenities] = useState([]);
@@ -194,7 +190,9 @@ const UpdateProject = () => {
 
   // Image upload handlers
   const handleImageUpload = async (imageType, e) => {
-    const imageFile = e.target.files[0];
+    const incomingFiles = Array.from(e.target.files || []);
+    if (incomingFiles.length === 0) return;
+
     const options = {
       maxSizeMB: 0.2,
       maxWidthOrHeight: 1920,
@@ -202,60 +200,40 @@ const UpdateProject = () => {
     };
 
     try {
-      const compressedFile = await imageCompression(imageFile, options);
-      const convertedfile = new File([compressedFile], "example.jpg", {
-        type: compressedFile.type,
-      });
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(convertedfile);
-      const fileList = dataTransfer.files;
+      const processedFiles = await Promise.all(
+        incomingFiles.map(async (file) => {
+          const compressedFile = await imageCompression(file, options);
+          const finalName = file.name || `upload-${Date.now()}.jpg`;
+          return new File([compressedFile], finalName, {
+            type: compressedFile.type || file.type || "image/jpeg",
+          });
+        })
+      );
 
-      if (fileList && fileList.length > 0) {
-        const newFiles = Array.from(fileList);
-        
-        if (imageType === 'project') {
-          if (projectImages.length + newFiles.length > 10) {
-            toast({
-              title: "Maximum 10 images allowed",
-              description: "You can upload up to 10 project images.",
-              variant: "destructive",
-            });
-            return;
-          }
-          const newImages = [...projectImages, ...newFiles];
-          setProjectImages(newImages);
-          const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-          setProjectImageURLs([...projectImageURLs, ...newImageURLs]);
-          if (projectMainIndex === null && newImages.length > 0) {
-            setProjectMainIndex(projectImages.length);
-          }
+      const appendFiles = (currentFiles, setter, currentURLsSetter, currentURLs, mainIndexSetter, currentMainIndex) => {
+        if (currentFiles.length + processedFiles.length > 10) {
+          toast({
+            title: "Maximum 10 images allowed",
+            description: "You can upload up to 10 images in this section.",
+            variant: "destructive",
+          });
+          return;
         }
-        if (imageType === 'amenity') {
-          if (amenityImages.length + newFiles.length > 10) {
-            toast({ title: "Maximum 10 images allowed", description: "You can upload up to 10 amenity images.", variant: "destructive" });
-            return;
-          }
-          const newImages = [...amenityImages, ...newFiles];
-          setAmenityImages(newImages);
-          const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-          setAmenityImageURLs([...amenityImageURLs, ...newImageURLs]);
-          if (amenityMainIndex === null && newImages.length > 0) {
-            setAmenityMainIndex(amenityImages.length);
-          }
+        const newImages = [...currentFiles, ...processedFiles];
+        setter(newImages);
+        const newImageURLs = processedFiles.map((file) => URL.createObjectURL(file));
+        currentURLsSetter([...currentURLs, ...newImageURLs]);
+        if (currentMainIndex === null && newImages.length > 0) {
+          mainIndexSetter(currentFiles.length);
         }
-        if (imageType === 'floor') {
-          if (floorImages.length + newFiles.length > 10) {
-            toast({ title: "Maximum 10 images allowed", description: "You can upload up to 10 floor plan images.", variant: "destructive" });
-            return;
-          }
-          const newImages = [...floorImages, ...newFiles];
-          setFloorImages(newImages);
-          const newImageURLs = newFiles.map((file) => URL.createObjectURL(file));
-          setFloorImageURLs([...floorImageURLs, ...newImageURLs]);
-          if (floorMainIndex === null && newImages.length > 0) {
-            setFloorMainIndex(floorImages.length);
-          }
-        }
+      };
+
+      if (imageType === "project") {
+        appendFiles(projectImages, setProjectImages, setProjectImageURLs, projectImageURLs, setProjectMainIndex, projectMainIndex);
+      } else if (imageType === "amenity") {
+        appendFiles(amenityImages, setAmenityImages, setAmenityImageURLs, amenityImageURLs, setAmenityMainIndex, amenityMainIndex);
+      } else if (imageType === "floor") {
+        appendFiles(floorImages, setFloorImages, setFloorImageURLs, floorImageURLs, setFloorMainIndex, floorMainIndex);
       }
     } catch (error) {
       // Handle image compression error silently
@@ -472,24 +450,26 @@ const UpdateProject = () => {
             }
           }
 
-          // Prefill image preview URLs and main indices for all image groups
+          // Prefill image objects, preview URLs and main indices for all image groups
           try {
             const projImages = Array.isArray(projectData.projectImages) ? projectData.projectImages : [];
             const amenImages = Array.isArray(projectData.amenityImages) ? projectData.amenityImages : [];
             const flrImages = Array.isArray(projectData.floorImages) ? projectData.floorImages : [];
 
-            const projURLs = projImages.map((img: any) => img?.url).filter(Boolean);
-            const amenURLs = amenImages.map((img: any) => img?.url).filter(Boolean);
-            const floorURLs = flrImages.map((img: any) => img?.url).filter(Boolean);
+            // Support both url / imageUrl keys from API
+            const extractUrl = (img: any) => img?.url || img?.imageUrl;
+            const projURLs = projImages.map(extractUrl).filter(Boolean);
+            const amenURLs = amenImages.map(extractUrl).filter(Boolean);
+            const floorURLs = flrImages.map(extractUrl).filter(Boolean);
+
+            // Keep full objects so we can send ImageUrl for existing images
+            setProjectImages(projImages);
+            setAmenityImages(amenImages);
+            setFloorImages(flrImages);
 
             setProjectImageURLs(projURLs);
             setAmenityImageURLs(amenURLs);
             setFloorImageURLs(floorURLs);
-            
-            // Store existing image URLs separately
-            setExistingProjectImageURLs(projURLs);
-            setExistingAmenityImageURLs(amenURLs);
-            setExistingFloorImageURLs(floorURLs);
 
             const projMainIdx = projImages.findIndex((img: any) => img?.isMain);
             const amenMainIdx = amenImages.findIndex((img: any) => img?.isMain);
@@ -592,68 +572,35 @@ const UpdateProject = () => {
     }));
   };
 
-  // Helper function to resolve image URL (handle relative URLs)
-  const resolveImageUrl = (url: string): string => {
-    if (!url) return "";
-    if (/^https?:\/\//i.test(url)) return url;
-    try {
-      const base = (axiosInstance as any)?.defaults?.baseURL || "";
-      if (!base) return url;
-      return `${base}${url.startsWith("/") ? url : `/${url}`}`;
-    } catch {
-      return url;
-    }
-  };
+  // Resolve URL from API object or local list
+  const resolveUrl = (item: any, idx: number, urlList: string[]) =>
+    (item && typeof item === "object" && ("url" in item || "imageUrl" in item) && (item.url || item.imageUrl)) ||
+    urlList[idx];
 
-  // Helper function to convert image URL to File
-  const urlToFile = async (url: string, filename: string): Promise<File | null> => {
-    try {
-      const resolvedUrl = resolveImageUrl(url);
-      
-      // Check if URL is absolute (external blob storage)
-      const isAbsoluteUrl = /^https?:\/\//i.test(resolvedUrl);
-      
-      if (isAbsoluteUrl) {
-        // For absolute URLs (like Azure Blob Storage), use axios directly (no baseURL)
-        try {
-          const response = await axios.get(resolvedUrl, {
-            responseType: 'blob',
-            headers: {
-              'Accept': 'image/*',
-            },
-          });
-          const blob = response.data;
-          return new File([blob], filename, { type: blob.type || 'image/jpeg' });
-        } catch (axiosError: any) {
-          // If axios fails (likely CORS), try native fetch as fallback
-          try {
-            const fetchResponse = await fetch(resolvedUrl, {
-              mode: 'cors',
-              credentials: 'omit',
-            });
-            if (!fetchResponse.ok) {
-              throw new Error(`Failed to fetch: ${fetchResponse.statusText}`);
-            }
-            const blob = await fetchResponse.blob();
-            return new File([blob], filename, { type: blob.type || 'image/jpeg' });
-          } catch (fetchError) {
-            // Both methods failed (likely CORS), return null to send URL instead
-            console.warn(`CORS blocked for ${resolvedUrl}, will send URL to API instead`);
-            return null;
-          }
-        }
+  // For update-project API: send each image entry with either file or existing URL
+  const appendImagesForGroup = (
+    form: FormData,
+    baseKey: string,
+    items: any[],
+    urlList: string[],
+    mainIndex: number | null
+  ) => {
+    items.forEach((item, idx) => {
+      const keyPrefix = `${baseKey}[${idx}]`;
+      const isMain = mainIndex === idx;
+      const resolvedUrl = resolveUrl(item, idx, urlList);
+
+      form.append(`${keyPrefix}.IsMain`, isMain ? "true" : "false");
+
+      if (item instanceof File) {
+        form.append(`${keyPrefix}.file`, item);
+        form.append(`${keyPrefix}.ImageUrl`, "");
+      } else if (resolvedUrl) {
+        form.append(`${keyPrefix}.ImageUrl`, resolvedUrl);
       } else {
-        // For relative URLs, use axiosInstance (goes through backend)
-        const response = await axiosInstance.get(resolvedUrl, {
-          responseType: 'blob',
-        });
-        const blob = response.data;
-        return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+        form.append(`${keyPrefix}.ImageUrl`, "");
       }
-    } catch (error) {
-      console.error("Error converting URL to File:", error);
-      return null; // Return null on error so we can send URL instead
-    }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -689,129 +636,35 @@ const UpdateProject = () => {
       formDataToSend.append("ExpectedCompletionDate", formData.expectedCompletionDate);
       formDataToSend.append("OCDate", formData.ocDate);
 
-      // Add amenity IDs as comma-separated (matches working Postman format)
-      const amenityIds = selectedOption === "" ? amenities : [...amenities, selectedOption];
-      console.log("Amenities checkbox state:", amenities);
-      console.log("Selected radio option:", selectedOption);
-      console.log("Final amenity IDs to send:", amenityIds);
-      if (amenityIds && amenityIds.length > 0) {
-        formDataToSend.append("AmenityIds", amenityIds.join(","));
+      // Add amenity IDs in indexed format expected by API
+      const amenitySet = new Set<string>(amenities.map((id: any) => String(id)));
+      if (selectedOption) {
+        amenitySet.add(selectedOption);
       }
-      console.log("FormData AmenityIds:", formDataToSend.get("AmenityIds"));
+
+      if (amenitySet.size === 0) {
+        formDataToSend.append("AmenityIds", "");
+      } else {
+        Array.from(amenitySet).forEach((amenityId, index) => {
+          formDataToSend.append(`AmenityIds[${index}]`, amenityId);
+        });
+      }
 
       // Add exclusive features
-      formData.exclusiveFeatures.forEach(feature => {
-        formDataToSend.append("ExclusiveFeatures", feature);
+      formData.exclusiveFeatures.forEach((feature, index) => {
+        formDataToSend.append(`ExclusiveFeatures[${index}]`, feature);
       });
 
       // Add plan details
       formData.planDetails.forEach((plan, index) => {
-        formDataToSend.append(`PlanDetails[${index}].Type`, plan.type);
+        formDataToSend.append(`PlanDetails[${index}].PlanType`, plan.type);
         formDataToSend.append(`PlanDetails[${index}].Area`, plan.area);
         formDataToSend.append(`PlanDetails[${index}].Price`, plan.price);
       });
 
-      // Helper function to combine existing and new images
-      const combineImages = async (imageURLs: string[], existingURLs: string[], newFiles: File[], imageType: string): Promise<{ files: File[], existingUrls: string[] }> => {
-        const allImages: File[] = [];
-        const existingImageUrls: string[] = []; // URLs for existing images that couldn't be fetched
-        let newFileIndex = 0; // Track index in newFiles array
-        
-        for (let i = 0; i < imageURLs.length; i++) {
-          const url = imageURLs[i];
-          
-          // Check if this URL is an existing image (from API)
-          if (existingURLs.includes(url)) {
-            // This is an existing image, try to fetch it as File
-            try {
-              const file = await urlToFile(url, `${imageType}-image-${i}.jpg`);
-              if (file) {
-                allImages.push(file);
-              } else {
-                // CORS blocked, store URL to send separately
-                existingImageUrls.push(url);
-              }
-            } catch (error) {
-              console.error(`Failed to fetch existing ${imageType} image ${i}:`, error);
-              // Store URL to send separately
-              existingImageUrls.push(url);
-            }
-          } else {
-            // This is a new image (blob URL), use the corresponding File
-            if (newFiles[newFileIndex]) {
-              allImages.push(newFiles[newFileIndex]);
-              newFileIndex++;
-            }
-          }
-        }
-        
-        return { files: allImages, existingUrls: existingImageUrls };
-      };
-
-      // Helper to calculate main index in combined array
-      const calculateMainIndex = (originalIndex: number | null, imageURLs: string[], existingURLs: string[], combinedData: { files: File[], existingUrls: string[] }): number => {
-        if (originalIndex === null || originalIndex >= imageURLs.length) return 0;
-        
-        let combinedIndex = 0;
-        for (let i = 0; i < originalIndex; i++) {
-          const url = imageURLs[i];
-          if (existingURLs.includes(url)) {
-            // Existing image - only count if it was successfully fetched (not in existingUrls)
-            if (!combinedData.existingUrls.includes(url)) {
-              combinedIndex++;
-            }
-          } else {
-            // New image - always counted
-            combinedIndex++;
-          }
-        }
-        return combinedIndex;
-      };
-
-      // Combine existing and new project images
-      const projectImageData = await combineImages(projectImageURLs, existingProjectImageURLs, projectImages, 'project');
-      const combinedProjectIndex = calculateMainIndex(projectMainIndex, projectImageURLs, existingProjectImageURLs, projectImageData);
-      
-      // Add all project images (existing + new)
-      projectImageData.files.forEach((image, index) => {
-        formDataToSend.append(`ProjectImages[${index}].File`, image);
-        formDataToSend.append(`ProjectImages[${index}].IsMain`, (index === combinedProjectIndex).toString());
-      });
-      
-      // Add existing project image URLs (if any couldn't be fetched due to CORS)
-      projectImageData.existingUrls.forEach((url, index) => {
-        formDataToSend.append(`ExistingProjectImageUrls[${index}]`, url);
-      });
-
-      // Combine existing and new amenity images
-      const amenityImageData = await combineImages(amenityImageURLs, existingAmenityImageURLs, amenityImages, 'amenity');
-      const combinedAmenityIndex = calculateMainIndex(amenityMainIndex, amenityImageURLs, existingAmenityImageURLs, amenityImageData);
-      
-      // Add all amenity images (existing + new)
-      amenityImageData.files.forEach((image, index) => {
-        formDataToSend.append(`AmenityImages[${index}].File`, image);
-        formDataToSend.append(`AmenityImages[${index}].IsMain`, (index === combinedAmenityIndex).toString());
-      });
-      
-      // Add existing amenity image URLs (if any couldn't be fetched due to CORS)
-      amenityImageData.existingUrls.forEach((url, index) => {
-        formDataToSend.append(`ExistingAmenityImageUrls[${index}]`, url);
-      });
-
-      // Combine existing and new floor images
-      const floorImageData = await combineImages(floorImageURLs, existingFloorImageURLs, floorImages, 'floor');
-      const combinedFloorIndex = calculateMainIndex(floorMainIndex, floorImageURLs, existingFloorImageURLs, floorImageData);
-      
-      // Add all floor images (existing + new)
-      floorImageData.files.forEach((image, index) => {
-        formDataToSend.append(`FloorImages[${index}].File`, image);
-        formDataToSend.append(`FloorImages[${index}].IsMain`, (index === combinedFloorIndex).toString());
-      });
-      
-      // Add existing floor image URLs (if any couldn't be fetched due to CORS)
-      floorImageData.existingUrls.forEach((url, index) => {
-        formDataToSend.append(`ExistingFloorImageUrls[${index}]`, url);
-      });
+      appendImagesForGroup(formDataToSend, "ProjectImages", projectImages, projectImageURLs, projectMainIndex);
+      appendImagesForGroup(formDataToSend, "AmenityImages", amenityImages, amenityImageURLs, amenityMainIndex);
+      appendImagesForGroup(formDataToSend, "FloorImages", floorImages, floorImageURLs, floorMainIndex);
 
       const response = await axiosInstance.post("/api/Builder/UpdateProject", formDataToSend, {
         headers: {
@@ -834,6 +687,10 @@ const UpdateProject = () => {
       }
     } catch (error: any) {
       console.error("Error updating project:", error);
+      // Log full server response (if available) for easier debugging
+      if (error?.response) {
+        console.log("UpdateProject server response:", error.response.data);
+      }
       toast({
         title: "Error",
         description: error.response?.data?.message || "Failed to update project.",
@@ -1393,6 +1250,7 @@ const UpdateProject = () => {
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={(e) => handleImageUpload('project', e)}
                       className="hidden"
                     />
@@ -1439,7 +1297,7 @@ const UpdateProject = () => {
                 ))}
                 {amenityImageURLs.length < 10 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload('amenity', e)} className="hidden" />
+                    <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload('amenity', e)} className="hidden" />
                     <Upload className="h-8 w-8 text-blue-500 mb-2" />
                     <span className="text-sm text-blue-600 font-medium">Upload Image</span>
                     <span className="text-xs text-gray-500 mt-1">{amenityImageURLs.length}/10 images</span>
@@ -1479,7 +1337,7 @@ const UpdateProject = () => {
                 ))}
                 {floorImageURLs.length < 10 && (
                   <label className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload('floor', e)} className="hidden" />
+                    <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload('floor', e)} className="hidden" />
                     <Upload className="h-8 w-8 text-blue-500 mb-2" />
                     <span className="text-sm text-blue-600 font-medium">Upload Image</span>
                     <span className="text-xs text-gray-500 mt-1">{floorImageURLs.length}/10 images</span>

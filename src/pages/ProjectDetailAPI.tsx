@@ -728,9 +728,14 @@ const ProjectDetailAPI = () => {
     );
   }
 
-  const mainImage = project.projectImages?.find(img => img.isMain)?.url || 
-                   project.projectImages?.[0]?.url || 
-                   "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=1200&q=80";
+  const heroImages = project.projectImages && project.projectImages.length > 0
+    ? project.projectImages
+    : [
+        {
+          url: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=90",
+          isMain: true,
+        },
+      ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -809,17 +814,29 @@ const ProjectDetailAPI = () => {
         </div>
       </div>
 
-      {/* Hero Section */}
+      {/* Hero Section with carousel and dark-on-light text */}
       <div className="relative h-[60vh] w-full">
-        <img
-          src={mainImage}
-          alt={project.name}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <Carousel className="h-full">
+          <CarouselContent>
+            {heroImages.map((img, idx) => (
+              <CarouselItem key={idx} className="h-[60vh]">
+                <div className="relative h-full">
+                  <img
+                    src={img.url}
+                    alt={`${project.name} hero ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-white/40 to-white/10" />
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="left-4" />
+          <CarouselNext className="right-4" />
+        </Carousel>
 
         {/* Favorite Button */}
-        <div className="absolute top-20 right-4 z-10">
+        <div className="absolute top-6 right-4 z-10">
           <Button
             variant="outline"
             size="sm"
@@ -831,16 +848,16 @@ const ProjectDetailAPI = () => {
         </div>
 
         {/* Project Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+        <div className="absolute bottom-0 left-0 right-0 p-6 text-black">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               {project.status && (
-                <Badge className={`${getStatusColor(project.status)} text-white`}>
+                <Badge className={`${getStatusColor(project.status)} text-black bg-white/80 border-none`}>
                   {project.status}
                 </Badge>
               )}
               {project.projectType && (
-                <Badge className="bg-white/20 text-white border-white/30">
+                <Badge className="bg-white/80 text-black border border-black/10">
                   {project.projectType}
                 </Badge>
               )}
@@ -1120,24 +1137,30 @@ const ProjectDetailAPI = () => {
               </CardContent>
             </Card>
 
-            {/* Amenity Images */}
+            {/* Amenity Images (slider) */}
             {project.amenityImages && project.amenityImages.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Amenity Gallery</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {project.amenityImages.map((image, index) => (
-                      <div key={index} className="aspect-square overflow-hidden rounded-lg">
-                        <img
-                          src={image.url}
-                          alt={`Amenity ${index + 1}`}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <Carousel className="w-full">
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                      {project.amenityImages.map((image, index) => (
+                        <CarouselItem key={index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                          <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
+                            <img
+                              src={image.url}
+                              alt={`Amenity ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious />
+                    <CarouselNext />
+                  </Carousel>
                 </CardContent>
               </Card>
             )}

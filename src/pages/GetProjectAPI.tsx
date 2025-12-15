@@ -70,6 +70,7 @@ const GetProjectAPI = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [lastSuccessfulProjects, setLastSuccessfulProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [projectImagesMap, setProjectImagesMap] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -114,13 +115,13 @@ const GetProjectAPI = () => {
   };
 
   // Fetch projects from API
-  const fetchProjects = async () => {
+  const fetchProjects = async (search: string = "") => {
     try {
       setLoading(true);
       const response = await axiosInstance.post("/api/Builder/GetProjects", {
         builderId: "",
         projectId: "",
-        searchTerm: "",
+        searchTerm: search,
         pageNumber: 0,
         pageSize: 100
       });
@@ -140,6 +141,7 @@ const GetProjectAPI = () => {
         
         console.log("Transformed projects with amenities:", transformedList);
         setProjects(transformedList);
+        setLastSuccessfulProjects(transformedList);
         // Fetch main image for projects that don't include images in list API
         try {
           const targets = transformedList
@@ -166,20 +168,39 @@ const GetProjectAPI = () => {
         } catch {}
       } else {
         toast.error("Failed to fetch projects");
-        setProjects([]);
       }
     } catch (error: any) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to fetch projects. Please try again.");
-      setProjects([]);
+      if (lastSuccessfulProjects.length) {
+        setProjects(lastSuccessfulProjects);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial load
   useEffect(() => {
-    fetchProjects();
+    fetchProjects("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Search with debounce + min length to avoid noisy network errors
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (term === "") {
+      fetchProjects("");
+      return;
+    }
+    if (term.length < 2) return;
+
+    const handle = setTimeout(() => {
+      fetchProjects(term);
+    }, 400);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   // Handler for interest button click
   const handleInterestClick = async (project: Project) => {
@@ -618,7 +639,7 @@ const GetProjectAPI = () => {
   };
 
   // Banner image: use a beautiful property/home image
-  const bannerImage = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80";
+  const bannerImage = "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1920&q=90&sat=-10";
 
   if (loading) {
     return (
@@ -642,81 +663,6 @@ const GetProjectAPI = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 via-blue-800/30 to-blue-600/20" />
         
-        {/* Animated Flash Line with Offers */}
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 py-3 overflow-hidden z-20">
-          <div className="animate-marquee whitespace-nowrap flex items-center">
-            <div className="flex items-center space-x-8 mx-4">
-              <div className="flex items-center space-x-2">
-                <Gift className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">🎉 EXTRA 5% DISCOUNT with HomeYatra Reference</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">⭐ FREE Registration + No GST for HomeYatra Users</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Zap className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">⚡ Instant Approval + Priority Booking</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Award className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">🏆 Exclusive VIP Access to Pre-Launch Projects</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">📞 Call +91 98765 43210 for Special HomeYatra Offers</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">📧 Email support@homeyatra.com for Best Deals</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">👥 Refer Friends & Get ₹50,000 Cashback</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">📅 Limited Time: Book Now & Save Up to ₹10 Lakh</span>
-              </div>
-            </div>
-            {/* Duplicate for seamless loop */}
-            <div className="flex items-center space-x-8 mx-4">
-              <div className="flex items-center space-x-2">
-                <Gift className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">🎉 EXTRA 5% DISCOUNT with HomeYatra Reference</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">⭐ FREE Registration + No GST for HomeYatra Users</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Zap className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">⚡ Instant Approval + Priority Booking</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Award className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">🏆 Exclusive VIP Access to Pre-Launch Projects</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">📞 Call +91 98765 43210 for Special HomeYatra Offers</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">📧 Email support@homeyatra.com for Best Deals</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white font-bold text-sm">👥 Refer Friends & Get ₹50,000 Cashback</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-white animate-bounce" />
-                <span className="text-white font-bold text-sm">📅 Limited Time: Book Now & Save Up to ₹10 Lakh</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
         <div className="relative z-10 text-center px-4 animate-fade-in-up flex flex-col items-center w-full">
           <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-4">
             Discover All Projects with{" "}
@@ -728,33 +674,6 @@ const GetProjectAPI = () => {
             your city!
           </p>
           
-          {/* Additional Offer Highlights */}
-          <div className="flex flex-wrap justify-center gap-4 mb-6">
-            <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
-              <span className="text-white font-semibold text-sm flex items-center">
-                <Gift className="h-4 w-4 mr-2 text-yellow-300" />
-                Extra 5% Discount
-              </span>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
-              <span className="text-white font-semibold text-sm flex items-center">
-                <Star className="h-4 w-4 mr-2 text-yellow-300" />
-                Free Registration
-              </span>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
-              <span className="text-white font-semibold text-sm flex items-center">
-                <Zap className="h-5 w-5 mr-2 text-yellow-300" />
-                Priority Booking
-              </span>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 border border-white/30">
-              <span className="text-white font-semibold text-sm flex items-center">
-                <Award className="h-4 w-4 mr-2 text-yellow-300" />
-                VIP Access
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -844,7 +763,7 @@ const GetProjectAPI = () => {
               const mainImage = projectImagesMap[project.projectId] ||
                                resolveImageUrl(project.projectImages?.find(img => img.isMain)?.url) || 
                                resolveImageUrl(project.projectImages?.[0]?.url) || 
-                               "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=600&q=80";
+                               "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80";
               
               return (
                 <div
@@ -864,57 +783,8 @@ const GetProjectAPI = () => {
                     >
                       {project.status?.toUpperCase() || "AVAILABLE"}
                     </span>
-                    {/* Overlay strictly within image */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-start bg-black/70 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 p-4">
-                      <div className="mb-4 space-y-2 text-white w-full">
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
-                            <rect width="16" height="8" x="4" y="10" rx="2" />
-                          </svg>
-                          <span className="font-semibold">Beds</span>
-                          <span className="ml-auto">{project.beds || "Available on Request"}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <rect width="20" height="8" x="2" y="8" rx="2" />
-                            <path d="M12 8v8" />
-                          </svg>
-                          <span className="font-semibold">Area</span>
-                          <span className="ml-auto">{project.area || "Available on Request"}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M12 1v22M17 5H7m10 4H7m10 4H7m10 4H7" />
-                          </svg>
-                          <span className="font-semibold">Price</span>
-                          <span className="ml-auto">{formatPrice(project.price)}</span>
-                        </div>
-                      </div>
-                    </div>
                     {/* Expand overlay icon */}
-                    <button className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow-lg group-hover:opacity-0 transition-opacity duration-300 z-10 border border-gray-200">
+                    <button className="absolute bottom-3 right-3 bg-white rounded-full p-2 shadow-lg z-10 border border-gray-200">
                       <svg
                         width="20"
                         height="20"
