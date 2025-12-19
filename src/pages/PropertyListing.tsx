@@ -574,7 +574,17 @@ export const PropertyListing = () => {
         bathroom: filterOptions.minBathrooms,
         balcony: filterOptions.minBalcony,
         minArea: filterOptions.minArea,
-        maxArea: filterOptions.maxArea > 0 ? filterOptions.maxArea : 0,
+        // Cap extremely large maxArea values (e.g. Number.MAX_SAFE_INTEGER from the "5000+" area step)
+        // to a realistic API upper bound. When users select the top "5000+" step the
+        // frontend may produce Number.MAX_SAFE_INTEGER; map that to 100000 sq.ft for the API.
+        maxArea: (() => {
+          const MAX_AREA_CAP = 100000; // 100,000 sq.ft cap for the top range
+          const computed =
+            filterOptions.maxArea >= Number.MAX_SAFE_INTEGER
+              ? MAX_AREA_CAP
+              : filterOptions.maxArea;
+          return computed > 0 ? computed : 0;
+        })(),
         pageNumber,
         pageSize,
         SortBy: apiSortBy,
