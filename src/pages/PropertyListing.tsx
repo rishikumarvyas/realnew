@@ -559,7 +559,17 @@ export const PropertyListing = () => {
         searchTerm: filterOptions.searchTerm || "",
         StatusId: 2,
         minPrice: filterOptions.minPrice,
-        maxPrice: filterOptions.maxPrice > 0 ? filterOptions.maxPrice : 0,
+        // Cap extremely large maxPrice values (e.g. Number.MAX_SAFE_INTEGER from UI steps)
+        // to a realistic API upper bound. When users select the top "5Cr+" step the
+        // frontend may produce Number.MAX_SAFE_INTEGER; map that to 990000000 for the API.
+        maxPrice: (() => {
+          const MAX_PRICE_CAP = 990000000; // ₹99 Crore as requested
+          const computed =
+            filterOptions.maxPrice >= Number.MAX_SAFE_INTEGER
+              ? MAX_PRICE_CAP
+              : filterOptions.maxPrice;
+          return computed > 0 ? computed : 0;
+        })(),
         bedroom: filterOptions.minBedrooms,
         bathroom: filterOptions.minBathrooms,
         balcony: filterOptions.minBalcony,
