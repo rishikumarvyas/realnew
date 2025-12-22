@@ -212,20 +212,20 @@ const UpdateProject = () => {
 
       const appendFiles = (currentFiles, setter, currentURLsSetter, currentURLs, mainIndexSetter, currentMainIndex) => {
         if (currentFiles.length + processedFiles.length > 10) {
-          toast({
-            title: "Maximum 10 images allowed",
+            toast({
+              title: "Maximum 10 images allowed",
             description: "You can upload up to 10 images in this section.",
-            variant: "destructive",
-          });
-          return;
-        }
+              variant: "destructive",
+            });
+            return;
+          }
         const newImages = [...currentFiles, ...processedFiles];
         setter(newImages);
         const newImageURLs = processedFiles.map((file) => URL.createObjectURL(file));
         currentURLsSetter([...currentURLs, ...newImageURLs]);
         if (currentMainIndex === null && newImages.length > 0) {
           mainIndexSetter(currentFiles.length);
-        }
+          }
       };
 
       if (imageType === "project") {
@@ -597,7 +597,7 @@ const UpdateProject = () => {
         form.append(`${keyPrefix}.ImageUrl`, "");
       } else if (resolvedUrl) {
         form.append(`${keyPrefix}.ImageUrl`, resolvedUrl);
-      } else {
+        } else {
         form.append(`${keyPrefix}.ImageUrl`, "");
       }
     });
@@ -677,7 +677,7 @@ const UpdateProject = () => {
           title: "Success",
           description: "Project updated successfully!",
         });
-        navigate(`/project-detail-api/${projectId}`);
+        navigate(`/project-detail/${projectId}`);
       } else {
         toast({
           title: "Error",

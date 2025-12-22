@@ -140,7 +140,7 @@ export function Navbar() {
                 </Link>
               ))}
               <Link
-                to="/get-project-api"
+                to="/new-launching"
                 className={cn(
                   "text-gray-800 hover:text-blue-600 px-3 py-2 text-sm font-medium border-b-2 border-transparent hover:border-blue-600 transition-all duration-200"
                 )}
@@ -440,7 +440,7 @@ export function Navbar() {
                   </>
                 )}
                 <Link
-                  to="/get-project-api"
+                  to="/new-launching"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center p-3 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-md"
                 >

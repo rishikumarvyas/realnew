@@ -76,9 +76,8 @@ const App = () => (
               <Route path="builder/:builderId" element={<GetBuilder />} />
               <Route path="project/:projectId" element={<GetProject />} />
               <Route path="get-project" element={<GetProject />} />
-              <Route path="get-project-api" element={<GetProjectAPI />} />
-              <Route path="project-detail/:projectId" element={<ProjectDetail />} />
-              <Route path="project-detail-api/:projectId" element={<ProjectDetailAPI />} />
+              <Route path="new-launching" element={<GetProjectAPI />} />
+              <Route path="project-detail/:projectId" element={<ProjectDetailAPI />} />
               <Route path="update-project/:projectId" element={<UpdateProject />} />
               <Route
                 path="builder-property/:id"

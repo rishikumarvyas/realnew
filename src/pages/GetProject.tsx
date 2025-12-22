@@ -369,7 +369,7 @@ const GetProject = () => {
                         <div className="flex space-x-2">
                           <Button
                             size="sm"
-                            onClick={() => navigate(`/project-detail-api/${project.projectId}`)}
+                            onClick={() => navigate(`/project-detail/${project.projectId}`)}
                             className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
                           >
                             <Eye className="h-4 w-4 mr-1" />

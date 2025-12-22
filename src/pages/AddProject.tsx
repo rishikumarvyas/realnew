@@ -258,7 +258,7 @@ const AddProject = () => {
         });
         
         // Navigate back or to projects list
-        navigate("/get-project-api");
+        navigate("/new-launching");
       } else {
         // If direct submission fails, try OTP flow
         console.log("🔍 Direct submission failed, trying OTP flow...");
@@ -376,7 +376,7 @@ const AddProject = () => {
         setStep("form");
         
         // Navigate back or to projects list
-        navigate("/get-project-api");
+        navigate("/new-launching");
       } else {
         toast.error(response.data.message || "Failed to add project");
       }

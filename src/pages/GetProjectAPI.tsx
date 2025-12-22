@@ -661,20 +661,6 @@ const GetProjectAPI = () => {
           alt="All Projects Banner"
           className="absolute inset-0 w-full h-full object-cover object-center scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 via-blue-800/30 to-blue-600/20" />
-        
-        <div className="relative z-10 text-center px-4 animate-fade-in-up flex flex-col items-center w-full">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-4">
-            Discover All Projects with{" "}
-            <span className="text-yellow-300">Home Yatra</span>
-          </h1>
-          <p className="text-lg md:text-2xl text-blue-100 max-w-2xl mx-auto mb-6 font-medium drop-shadow">
-            Find the most attractive and modern builder projects, handpicked for
-            you. Filter by your preferences and explore the best projects in
-            your city!
-          </p>
-          
-        </div>
       </div>
 
       {/* Modern Search Bar and Filter Section - moved below banner */}
@@ -694,11 +680,22 @@ const GetProjectAPI = () => {
           </svg>
           <input
             type="text"
-            placeholder="Enter Project Name"
+            placeholder="Search by Project Name, City or Builder..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                fetchProjects(searchTerm);
+              }
+            }}
             className="w-full bg-transparent outline-none text-lg placeholder-gray-400"
           />
+          <Button 
+            className="ml-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6"
+            onClick={() => fetchProjects(searchTerm)}
+          >
+            SEARCH
+          </Button>
         </div>
         <div className="w-full max-w-6xl mx-auto mb-2">
           <div className="flex flex-col gap-3">
@@ -768,7 +765,7 @@ const GetProjectAPI = () => {
               return (
                 <div
                   key={project.projectId}
-                  onClick={() => navigate(`/project-detail-api/${project.projectId}`)}
+                  onClick={() => navigate(`/project-detail/${project.projectId}`)}
                   className="group bg-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer animate-fade-in relative flex flex-col w-full"
                 >
                   {/* Card Image */}
@@ -809,7 +806,7 @@ const GetProjectAPI = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/project-detail-api/${project.projectId}`);
+                            navigate(`/project-detail/${project.projectId}`);
                           }}
                           className="text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200 text-left"
                         >

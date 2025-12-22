@@ -38,7 +38,9 @@ import {
   Rocket,
   TrendingUp,
   Zap,
-  Mail
+  Mail,
+  LayoutGrid,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   Carousel,
@@ -133,12 +135,13 @@ const ProjectDetailAPI = () => {
     budget: 0.0,
     agreeToTerms: false
   });
+  const [zoomImage, setZoomImage] = useState<{ url: string; alt: string } | null>(null);
 
   // Fetch project details from API
   const fetchProjectDetails = async () => {
     if (!projectId) {
       toast.error("Project ID not found");
-      navigate("/get-project-api");
+      navigate("/new-launching");
       return;
     }
 
@@ -168,12 +171,12 @@ const ProjectDetailAPI = () => {
         setProject(projectData);
       } else {
         toast.error("Project not found");
-        navigate("/get-project-api");
+        navigate("/new-launching");
       }
     } catch (error: any) {
       console.error("Error fetching project details:", error);
       toast.error("Failed to fetch project details. Please try again.");
-      navigate("/get-project-api");
+      navigate("/new-launching");
     } finally {
       setLoading(false);
     }
@@ -324,8 +327,29 @@ const ProjectDetailAPI = () => {
     }
   };
 
-  const getAmenityIcon = (category: string) => {
-    switch (category?.toLowerCase()) {
+  const getAmenityIcon = (category: string, name?: string) => {
+    const lowerCategory = category?.toLowerCase() || "";
+    const lowerName = name?.toLowerCase() || "";
+
+    if (lowerName.includes("gym") || lowerName.includes("fitness")) {
+      return <Dumbbell className="h-6 w-6" />;
+    }
+    if (lowerName.includes("pool") || lowerName.includes("swimming")) {
+      return <Waves className="h-6 w-6" />;
+    }
+    if (lowerName.includes("lift") || lowerName.includes("elevator")) {
+      return <TrendingUp className="h-6 w-6" />;
+    }
+    if (lowerName.includes("power") || lowerName.includes("backup")) {
+      return <Zap className="h-6 w-6" />;
+    }
+    if (lowerName.includes("parking") || lowerName.includes("car")) {
+      return <Car className="h-6 w-6" />;
+    }
+    if (lowerName.includes("wifi") || lowerName.includes("internet")) {
+      return <Wifi className="h-6 w-6" />;
+    }
+    switch (lowerCategory) {
       case "sports":
         return <Dumbbell className="h-6 w-6" />;
       case "recreation":
@@ -345,6 +369,29 @@ const ProjectDetailAPI = () => {
       default:
         return <Award className="h-6 w-6" />;
     }
+  };
+
+  const getFeatureIcon = (feature: string) => {
+    const lower = feature?.toLowerCase() || "";
+    if (lower.includes("car") || lower.includes("parking")) {
+      return <Car className="h-6 w-6" />;
+    }
+    if (lower.includes("gym") || lower.includes("fitness")) {
+      return <Dumbbell className="h-6 w-6" />;
+    }
+    if (lower.includes("pool") || lower.includes("swimming")) {
+      return <Waves className="h-6 w-6" />;
+    }
+    if (lower.includes("security") || lower.includes("gated")) {
+      return <Shield className="h-6 w-6" />;
+    }
+    if (lower.includes("view") || lower.includes("sky")) {
+      return <Rocket className="h-6 w-6" />;
+    }
+    if (lower.includes("club") || lower.includes("lounge")) {
+      return <Gamepad2 className="h-6 w-6" />;
+    }
+    return <Zap className="h-6 w-6" />;
   };
 
   // Resolve image URL: if API returns relative path, prefix with API baseURL
@@ -720,7 +767,7 @@ const ProjectDetailAPI = () => {
           <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Project not found</h3>
           <p className="text-gray-600 mb-4">The project you're looking for doesn't exist.</p>
-          <Button onClick={() => navigate("/get-project-api")}>
+          <Button onClick={() => navigate("/new-launching")}>
             Back to Projects
           </Button>
         </div>
@@ -747,7 +794,7 @@ const ProjectDetailAPI = () => {
         <div className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3">
           {/* Back Button */}
           <button
-            onClick={() => navigate("/get-project-api")}
+            onClick={() => navigate("/new-launching")}
             className="flex items-center gap-2 text-black hover:text-gray-700 transition-colors uppercase text-sm font-medium"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -814,7 +861,7 @@ const ProjectDetailAPI = () => {
         </div>
       </div>
 
-      {/* Hero Section with carousel and dark-on-light text */}
+      {/* Hero Section with clean image and badge overlays */}
       <div className="relative h-[60vh] w-full">
         <Carousel className="h-full">
           <CarouselContent>
@@ -826,7 +873,6 @@ const ProjectDetailAPI = () => {
                     alt={`${project.name} hero ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-white/40 to-white/10" />
                 </div>
               </CarouselItem>
             ))}
@@ -848,31 +894,33 @@ const ProjectDetailAPI = () => {
         </div>
 
         {/* Project Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-black">
+        <div className="absolute bottom-0 left-0 right-0 p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               {project.status && (
-                <Badge className={`${getStatusColor(project.status)} text-black bg-white/80 border-none`}>
+                <Badge className="bg-black/70 text-white border border-white/20">
                   {project.status}
                 </Badge>
               )}
               {project.projectType && (
-                <Badge className="bg-white/80 text-black border border-black/10">
+                <Badge className="bg-black/60 text-white border border-white/20">
                   {project.projectType}
                 </Badge>
               )}
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">{project.name}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-lg">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                <span>{project.locality}, {project.city}, {project.state}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
+              <Badge className="bg-black/60 text-white border border-white/20 flex items-center gap-1">
+                <Building className="h-3 w-3" />
                 <span>{project.builderName}</span>
-              </div>
+              </Badge>
+              <Badge className="bg-black/60 text-white border border-white/20 flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span>
+                  {project.locality}, {project.city}, {project.state}
+                </span>
+              </Badge>
             </div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-lg">
+              {project.name}
+            </h1>
           </div>
         </div>
       </div>
@@ -894,13 +942,19 @@ const ProjectDetailAPI = () => {
             </div>
 
             <div className="space-y-8">
-            {/* Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle>About {project.name}</CardTitle>
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <div className="p-2 bg-white/20 rounded-lg mr-3">
+                    <Home className="h-6 w-6" />
+                  </div>
+                  About {project.name}
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 leading-relaxed">{project.description}</p>
+              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                <p className="text-gray-700 leading-relaxed text-base md:text-lg">
+                  {project.description}
+                </p>
               </CardContent>
             </Card>
 
@@ -1077,16 +1131,33 @@ const ProjectDetailAPI = () => {
 
             {/* Exclusive Features */}
             {project.exclusiveFeatures && project.exclusiveFeatures.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Exclusive Features</CardTitle>
+              <Card className="overflow-hidden border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                  <CardTitle className="text-2xl font-bold flex items-center">
+                    <div className="p-2 bg-white/20 rounded-lg mr-3">
+                      <Star className="h-6 w-6" />
+                    </div>
+                    Exclusive Features
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {project.exclusiveFeatures.map((feature, index) => (
-                      <div key={index} className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                        <Star className="h-5 w-5 text-blue-600" />
-                        <span className="font-medium">{feature}</span>
+                      <div
+                        key={index}
+                        className="group bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex items-center gap-3"
+                      >
+                        <div className="p-2 rounded-lg bg-blue-50 group-hover:bg-blue-100 text-blue-600">
+                          {getFeatureIcon(feature)}
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                            Feature
+                          </p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {feature}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1112,27 +1183,39 @@ const ProjectDetailAPI = () => {
             </div>
 
             <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Amenities</CardTitle>
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <div className="p-2 bg-white/20 rounded-lg mr-3">
+                    <Award className="h-6 w-6" />
+                  </div>
+                  Project Amenities
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
                 {project.amenities && project.amenities.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {project.amenities.map((amenity) => (
-                      <div key={amenity.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:shadow-md transition-shadow">
-                        <div className="text-blue-600">
-                          {getAmenityIcon(amenity.category)}
+                      <div
+                        key={amenity.id}
+                        className="group bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300 flex items-center gap-4"
+                      >
+                        <div className="p-3 rounded-lg bg-blue-50 group-hover:bg-blue-100 text-blue-600">
+                          {getAmenityIcon(amenity.category, amenity.name)}
                         </div>
                         <div>
-                          <h4 className="font-medium">{amenity.name}</h4>
-                          <p className="text-sm text-gray-600">{amenity.category}</p>
+                          <h4 className="font-semibold text-gray-900">{amenity.name}</h4>
+                          <p className="text-xs font-medium text-gray-500 mt-1">
+                            {amenity.category}
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-600 text-center py-8">No amenities information available.</p>
+                  <p className="text-gray-600 text-center py-8">
+                    No amenities information available.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -1147,8 +1230,19 @@ const ProjectDetailAPI = () => {
                   <Carousel className="w-full">
                     <CarouselContent className="-ml-2 md:-ml-4">
                       {project.amenityImages.map((image, index) => (
-                        <CarouselItem key={index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
-                          <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
+                        <CarouselItem
+                          key={index}
+                          className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3"
+                        >
+                          <div
+                            className="aspect-square overflow-hidden rounded-lg bg-gray-100 cursor-zoom-in"
+                            onClick={() =>
+                              setZoomImage({
+                                url: image.url,
+                                alt: `Amenity ${index + 1}`,
+                              })
+                            }
+                          >
                             <img
                               src={image.url}
                               alt={`Amenity ${index + 1}`}
@@ -1183,61 +1277,93 @@ const ProjectDetailAPI = () => {
             </div>
 
             <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Floor Plans</CardTitle>
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <div className="p-2 bg-white/20 rounded-lg mr-3">
+                    <LayoutGrid className="h-6 w-6" />
+                  </div>
+                  Floor Plans
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
                 {project.planDetails && project.planDetails.length > 0 ? (
-                  <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {project.planDetails.map((plan, index) => (
-                      <div key={index} className="border rounded-lg p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div
+                        key={index}
+                        className="group bg-white rounded-xl p-5 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
+                      >
+                        <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="text-sm text-gray-600">Type</p>
-                            <p className="text-lg font-semibold">{plan.type}</p>
+                            <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                              Type
+                            </p>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {plan.type}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-4">
+                              <span className="font-medium">{plan.area}</span> sq ft
+                            </p>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Area</p>
-                            <p className="text-lg font-semibold">{plan.area} sq ft</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Price</p>
-                            <p className="text-lg font-semibold">{formatPrice(plan.price)}</p>
+                          <div className="flex flex-col items-end text-right">
+                            <span className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                              Starting From
+                            </span>
+                            <span className="text-xl font-bold text-blue-600">
+                              {formatPrice(plan.price)}
+                            </span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-600 text-center py-8">No floor plan information available.</p>
+                  <p className="text-gray-600 text-center py-8">
+                    No floor plan information available.
+                  </p>
                 )}
               </CardContent>
             </Card>
 
-            {/* Floor Plan Images */}
             {project.floorImages && project.floorImages.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Floor Plan Images</CardTitle>
+              <Card className="overflow-hidden border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                  <CardTitle className="text-2xl font-bold flex items-center">
+                    <div className="p-2 bg-white/20 rounded-lg mr-3">
+                      <ImageIcon className="h-6 w-6" />
+                    </div>
+                    Floor Plan Images
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
                   <Carousel className="w-full">
-                    <CarouselContent>
+                    <CarouselContent className="-ml-2 md:-ml-4">
                       {project.floorImages.map((image, index) => (
-                        <CarouselItem key={index}>
-                          <div className="aspect-[4/3] overflow-hidden rounded-lg">
+                        <CarouselItem
+                          key={index}
+                          className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/2"
+                        >
+                          <div
+                            className="aspect-[4/3] overflow-hidden rounded-lg bg-gray-100 cursor-zoom-in"
+                            onClick={() =>
+                              setZoomImage({
+                                url: image.url,
+                                alt: `Floor Plan ${index + 1}`,
+                              })
+                            }
+                          >
                             <img
                               src={image.url}
                               alt={`Floor Plan ${index + 1}`}
-                              className="w-full h-full object-contain bg-gray-100"
+                              className="w-full h-full object-contain"
                             />
                           </div>
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
+                    <CarouselPrevious className="left-2 md:left-4 bg-white/90 hover:bg-white border-gray-300" />
+                    <CarouselNext className="right-2 md:right-4 bg-white/90 hover:bg-white border-gray-300" />
                   </Carousel>
                 </CardContent>
               </Card>
@@ -1261,62 +1387,66 @@ const ProjectDetailAPI = () => {
             </div>
 
             <div className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Location Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Address</p>
-                    <p className="font-medium">{project.address}</p>
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <div className="p-2 bg-white/20 rounded-lg mr-3">
+                    <MapPin className="h-6 w-6" />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Locality</p>
-                    <p className="font-medium">{project.locality}, {project.city}, {project.state}</p>
+                  Location Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="group bg-white rounded-xl p-5 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                        <Home className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-1 font-medium">Address</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {project.address}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-white rounded-xl p-5 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                        <MapPin className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-1 font-medium">Locality</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {project.locality}, {project.city}, {project.state}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Location Map */}
-            <Card className="overflow-hidden">
-              {/* Map Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-blue-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-blue-600 p-2 rounded-lg mr-3">
-                      <MapPin className="text-white" size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        Project Location
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Interactive map with precise location
-                      </p>
-                    </div>
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <div className="p-2 bg-white/20 rounded-lg mr-3">
+                    <MapPin className="h-6 w-6" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 rounded-full">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                      <span className="text-xs font-medium text-blue-700">
-                        Live Location
-                      </span>
-                    </div>
-                  </div>
+                  Location Map
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 bg-gradient-to-br from-gray-50 to-white">
+                <div className="rounded-b-2xl overflow-hidden">
+                  <PropertyMap
+                    address={project.address || ""}
+                    city={project.city || ""}
+                    state={project.state || ""}
+                    className="h-[400px]"
+                  />
                 </div>
-              </div>
-
-              {/* Map Container */}
-              <div className="p-6">
-                <PropertyMap
-                  address={project.address || ""}
-                  city={project.city || ""}
-                  state={project.state || ""}
-                  className="h-[400px]"
-                />
-              </div>
+              </CardContent>
             </Card>
             </div>
           </div>
@@ -1336,26 +1466,21 @@ const ProjectDetailAPI = () => {
               </p>
             </div>
 
-            {/* Gallery Images Carousel - Combined: Project, Amenity, and Floor Plan Images */}
             {(() => {
-              // Combine all images into a single array
               const allImages: Array<{ url: string; type: string; index: number }> = [];
               
-              // Add project images
               if (project.projectImages && project.projectImages.length > 0) {
                 project.projectImages.forEach((img, idx) => {
                   allImages.push({ url: img.url, type: 'Project', index: idx });
                 });
               }
               
-              // Add amenity images
               if (project.amenityImages && project.amenityImages.length > 0) {
                 project.amenityImages.forEach((img, idx) => {
                   allImages.push({ url: img.url, type: 'Amenity', index: idx });
                 });
               }
               
-              // Add floor plan images
               if (project.floorImages && project.floorImages.length > 0) {
                 project.floorImages.forEach((img, idx) => {
                   allImages.push({ url: img.url, type: 'Floor Plan', index: idx });
@@ -1363,76 +1488,120 @@ const ProjectDetailAPI = () => {
               }
 
               return allImages.length > 0 ? (
-                <div className="w-full">
-                  <Carousel className="w-full">
-                    <CarouselContent className="-ml-2 md:-ml-4">
-                      {allImages.map((image, index) => (
-                        <CarouselItem key={`${image.type}-${image.index}-${index}`} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
-                          <div className="aspect-[4/3] overflow-hidden rounded-lg group cursor-pointer bg-gray-100 relative">
-                            <img
-                              src={image.url}
-                              alt={`${project.name} - ${image.type} ${image.index + 1}`}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                            {/* Image Type Badge */}
-                            <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                              {image.type}
-                            </div>
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="left-2 md:left-4 bg-white/90 hover:bg-white border-gray-300" />
-                    <CarouselNext className="right-2 md:right-4 bg-white/90 hover:bg-white border-gray-300" />
-                  </Carousel>
-
-                  {/* Additional Gallery Grid View */}
-                  {allImages.length > 3 && (
-                    <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {allImages.slice(0, 4).map((image, index) => (
-                        <div key={`grid-${image.type}-${image.index}-${index}`} className="aspect-square overflow-hidden rounded-lg group cursor-pointer bg-gray-100 relative">
-                          <img
-                            src={image.url}
-                            alt={`${project.name} - ${image.type} Thumbnail ${image.index + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
-                          {/* Image Type Badge */}
-                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                            {image.type}
-                          </div>
-                        </div>
-                      ))}
+                <Card className="overflow-hidden border-0 shadow-lg">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                    <CardTitle className="text-2xl font-bold flex items-center">
+                      <div className="p-2 bg-white/20 rounded-lg mr-3">
+                        <ImageIcon className="h-6 w-6" />
+                      </div>
+                      Project Gallery
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                    <div className="w-full">
+                      <Carousel className="w-full">
+                        <CarouselContent className="-ml-2 md:-ml-4">
+                          {allImages.map((image, index) => (
+                            <CarouselItem
+                              key={`${image.type}-${image.index}-${index}`}
+                              className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3"
+                            >
+                              <div
+                                className="aspect-[4/3] overflow-hidden rounded-lg group cursor-zoom-in bg-gray-100 relative"
+                                onClick={() =>
+                                  setZoomImage({
+                                    url: image.url,
+                                    alt: `${project.name} - ${image.type} ${image.index + 1}`,
+                                  })
+                                }
+                              >
+                                <img
+                                  src={image.url}
+                                  alt={`${project.name} - ${image.type} ${image.index + 1}`}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {image.type}
+                                </div>
+                              </div>
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="left-2 md:left-4 bg-white/90 hover:bg-white border-gray-300" />
+                        <CarouselNext className="right-2 md:right-4 bg-white/90 hover:bg-white border-gray-300" />
+                      </Carousel>
                     </div>
-                  )}
-                </div>
+                  </CardContent>
+                </Card>
               ) : (
-                <div className="text-center py-16">
-                  <p className="text-gray-600 text-lg">No images available.</p>
-                </div>
+                <Card className="overflow-hidden border-0 shadow-lg">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
+                    <CardTitle className="text-2xl font-bold flex items-center">
+                      <div className="p-2 bg-white/20 rounded-lg mr-3">
+                        <ImageIcon className="h-6 w-6" />
+                      </div>
+                      Project Gallery
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-10 bg-gradient-to-br from-gray-50 to-white">
+                    <div className="text-center">
+                      <p className="text-gray-600 text-lg">
+                        No images available.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })()}
           </div>
         </div>
       </div>
 
-      {/* I'm Interested Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center space-y-6">
-          <h2 className="text-3xl font-bold mb-4">Interested in This Project?</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Fill out the form below and our team will get in touch with you soon.
-          </p>
-          <Button
-            onClick={handleInterestClick}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-6 px-12 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg text-lg"
-          >
-            <Zap className="h-5 w-5 mr-2" />
-            I'm Interested
-          </Button>
-        </div>
+        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          <CardContent className="px-6 py-10 md:px-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="text-center md:text-left space-y-3">
+              <p className="text-xs md:text-sm font-semibold uppercase tracking-[0.2em] text-blue-100 flex items-center justify-center md:justify-start gap-2">
+                <Zap className="h-4 w-4" />
+                Express Your Interest
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold">
+                Interested in This Project?
+              </h2>
+              <p className="text-blue-100 max-w-xl mx-auto md:mx-0 text-sm md:text-base">
+                Fill out the form below and our team will get in touch with you soon.
+              </p>
+            </div>
+            <div className="flex flex-col items-center md:items-end gap-3">
+              <Button
+                onClick={handleInterestClick}
+                className="bg-white text-blue-700 hover:bg-blue-50 font-semibold py-3 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-md text-base md:text-lg flex items-center gap-2"
+              >
+                <Zap className="h-5 w-5" />
+                I'm Interested
+              </Button>
+              <p className="text-xs text-blue-100">
+                No charges. Our team will call you back.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Interest Modal */}
+      <Dialog open={!!zoomImage} onOpenChange={(open) => { if (!open) setZoomImage(null); }}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          {zoomImage && (
+            <div className="w-full h-full flex items-center justify-center">
+              <img
+                src={zoomImage.url}
+                alt={zoomImage.alt}
+                className="max-h-[80vh] w-auto object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isInterestModalOpen} onOpenChange={setIsInterestModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
