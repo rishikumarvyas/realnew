@@ -144,8 +144,9 @@
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <!-- Removed an external debugging script (was: https://cdn.gpteng.co/gptengineer.js)
+         that can block app loading in dev if it fails to load. If you intentionally
+         use that script, re-add it or ensure the CDN is reachable. -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
