@@ -575,7 +575,7 @@ const GetProjectAPI = () => {
       (project.builderName && project.builderName.toLowerCase().includes(searchLower));
     
     const matchesStatus = filterStatus ? project.status === filterStatus : true;
-    const matchesType = filterType ? project.projectType === filterType : true;
+    const matchesType = (filterType && filterType !== "All") ? project.projectType === filterType : true;
     
     return matchesSearch && matchesStatus && matchesType;
   });
@@ -691,7 +691,7 @@ const GetProjectAPI = () => {
             className="w-full bg-transparent outline-none text-lg placeholder-gray-400"
           />
           <Button 
-            className="ml-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6"
+            className="ml-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 h-12"
             onClick={() => fetchProjects(searchTerm)}
           >
             SEARCH
@@ -699,28 +699,32 @@ const GetProjectAPI = () => {
         </div>
         <div className="w-full max-w-6xl mx-auto mb-2">
           <div className="flex flex-col gap-3">
-            <div className="flex items-center border border-blue-400 rounded-lg shadow-sm bg-white overflow-x-auto px-4 py-3 gap-3">
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="min-w-[160px] h-12 border-none focus:ring-0 focus:border-none bg-transparent text-base"
-              >
-                <option value="">RESIDENTIAL</option>
-                <option value="Residential">Residential</option>
-                <option value="Commercial">Commercial</option>
-                <option value="Both">Both</option>
-              </select>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="min-w-[160px] h-12 border-none focus:ring-0 focus:border-none text-base px-4 mr-2"
-              >
-                <option value="">STATUS</option>
-                <option value="New Launch">New Launch</option>
-                <option value="Under Construction">Under Construction</option>
-                <option value="Completed">Completed</option>
-                <option value="Ready to Move">Ready to Move</option>
-              </select>
+            <div className="flex items-center border border-blue-400 rounded-lg shadow-sm bg-white overflow-x-auto px-4 py-3 gap-6">
+              <div className="flex items-center gap-2 px-2 border-r border-gray-200">
+                <span className="text-sm font-semibold text-gray-500 whitespace-nowrap uppercase">Project Type:</span>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="min-w-[140px] h-12 border-none focus:ring-0 focus:border-none bg-transparent text-base font-medium"
+                >
+                  <option value="">All</option>
+                  <option value="Residential">Residential</option>
+                  <option value="Commercial">Commercial</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 px-2">
+                <span className="text-sm font-semibold text-gray-500 whitespace-nowrap uppercase">Status:</span>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="min-w-[140px] h-12 border-none focus:ring-0 focus:border-none text-base font-medium bg-transparent"
+                >
+                  <option value="">All</option>
+                  <option value="New Launch">New Launch</option>
+                  <option value="Under Construction">Under Construction</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
               <Button
                 className="h-12 px-8 bg-gray-900 text-white rounded-md font-semibold text-base shadow-none hover:bg-gray-700"
                 onClick={(e) => {

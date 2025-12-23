@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -791,7 +792,7 @@ const ProjectDetailAPI = () => {
         {/* White line at top */}
         <div className="h-0.5 bg-black/20"></div>
         
-        <div className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3">
+        <div className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-2">
           {/* Back Button */}
           <button
             onClick={() => navigate("/new-launching")}
@@ -862,11 +863,11 @@ const ProjectDetailAPI = () => {
       </div>
 
       {/* Hero Section with clean image and badge overlays */}
-      <div className="relative h-[60vh] w-full">
+      <div className="relative h-[80vh] w-full">
         <Carousel className="h-full">
           <CarouselContent>
             {heroImages.map((img, idx) => (
-              <CarouselItem key={idx} className="h-[60vh]">
+              <CarouselItem key={idx} className="h-[80vh]">
                 <div className="relative h-full">
                   <img
                     src={img.url}
@@ -926,32 +927,24 @@ const ProjectDetailAPI = () => {
       </div>
 
       {/* Content - Sequential Sections */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Overview Section */}
         <div 
           ref={overviewRef}
-          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+          className="opacity-0 transform translate-y-8 mb-4 scroll-mt-20"
         >
-          <div className="space-y-12 py-12">
-            {/* Overview Title */}
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl font-bold mb-4">OVERVIEW</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Discover Your Dream Home in Every Detail
-              </p>
-            </div>
-
-            <div className="space-y-8">
+          <div className="space-y-4 py-4">
+            <div className="space-y-4">
             <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                <CardTitle className="text-2xl font-bold flex items-center">
-                  <div className="p-2 bg-white/20 rounded-lg mr-3">
-                    <Home className="h-6 w-6" />
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                    <Home className="h-5 w-5" />
                   </div>
                   About {project.name}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                 <p className="text-gray-700 leading-relaxed text-base md:text-lg">
                   {project.description}
                 </p>
@@ -960,15 +953,15 @@ const ProjectDetailAPI = () => {
 
             {/* Project Information */}
             <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                <CardTitle className="text-2xl font-bold flex items-center">
-                  <div className="p-2 bg-white/20 rounded-lg mr-3">
-                    <FileText className="h-6 w-6" />
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                    <FileText className="h-5 w-5" />
                   </div>
                   Project Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* RERA Number */}
                   <div className="group bg-white rounded-xl p-5 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
@@ -1132,10 +1125,10 @@ const ProjectDetailAPI = () => {
             {/* Exclusive Features */}
             {project.exclusiveFeatures && project.exclusiveFeatures.length > 0 && (
               <Card className="overflow-hidden border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                  <CardTitle className="text-2xl font-bold flex items-center">
-                    <div className="p-2 bg-white/20 rounded-lg mr-3">
-                      <Star className="h-6 w-6" />
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                      <Star className="h-5 w-5" />
                     </div>
                     Exclusive Features
                   </CardTitle>
@@ -1171,28 +1164,20 @@ const ProjectDetailAPI = () => {
         {/* Amenities Section */}
         <div 
           ref={amenitiesRef}
-          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+          className="opacity-0 transform translate-y-8 mb-4 scroll-mt-20"
         >
-          <div className="space-y-12 py-12">
-            {/* Amenities Title */}
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl font-bold mb-4">AMENITIES</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Experience Luxury Living with Premium Amenities
-              </p>
-            </div>
-
-            <div className="space-y-8">
+          <div className="space-y-4 py-4">
+            <div className="space-y-4">
             <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                <CardTitle className="text-2xl font-bold flex items-center">
-                  <div className="p-2 bg-white/20 rounded-lg mr-3">
-                    <Award className="h-6 w-6" />
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                    <Award className="h-5 w-5" />
                   </div>
                   Project Amenities
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                 {project.amenities && project.amenities.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {project.amenities.map((amenity) => (
@@ -1222,11 +1207,16 @@ const ProjectDetailAPI = () => {
 
             {/* Amenity Images (slider) */}
             {project.amenityImages && project.amenityImages.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Amenity Gallery</CardTitle>
+              <Card className="overflow-hidden border-0 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                    Amenity Gallery
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                   <Carousel className="w-full">
                     <CarouselContent className="-ml-2 md:-ml-4">
                       {project.amenityImages.map((image, index) => (
@@ -1265,28 +1255,20 @@ const ProjectDetailAPI = () => {
         {/* Floor Plans Section */}
         <div 
           ref={plansRef}
-          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+          className="opacity-0 transform translate-y-8 mb-4 scroll-mt-20"
         >
-          <div className="space-y-12 py-12">
-            {/* Floor Plans Title */}
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl font-bold mb-4">FLOOR PLANS</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Explore Your Perfect Living Space Layout
-              </p>
-            </div>
-
-            <div className="space-y-8">
+          <div className="space-y-4 py-4">
+            <div className="space-y-4">
             <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                <CardTitle className="text-2xl font-bold flex items-center">
-                  <div className="p-2 bg-white/20 rounded-lg mr-3">
-                    <LayoutGrid className="h-6 w-6" />
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                    <LayoutGrid className="h-5 w-5" />
                   </div>
                   Floor Plans
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                 {project.planDetails && project.planDetails.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {project.planDetails.map((plan, index) => (
@@ -1328,15 +1310,15 @@ const ProjectDetailAPI = () => {
 
             {project.floorImages && project.floorImages.length > 0 && (
               <Card className="overflow-hidden border-0 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                  <CardTitle className="text-2xl font-bold flex items-center">
-                    <div className="p-2 bg-white/20 rounded-lg mr-3">
-                      <ImageIcon className="h-6 w-6" />
+                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                  <CardTitle className="text-xl font-bold flex items-center">
+                    <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                      <ImageIcon className="h-5 w-5" />
                     </div>
                     Floor Plan Images
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                   <Carousel className="w-full">
                     <CarouselContent className="-ml-2 md:-ml-4">
                       {project.floorImages.map((image, index) => (
@@ -1375,28 +1357,20 @@ const ProjectDetailAPI = () => {
         {/* Location Section */}
         <div 
           ref={locationRef}
-          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+          className="opacity-0 transform translate-y-8 mb-4 scroll-mt-20"
         >
-          <div className="space-y-12 py-12">
-            {/* Location Title */}
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl font-bold mb-4">LOCATION</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Find Your Perfect Place in the Heart of the City
-              </p>
-            </div>
-
-            <div className="space-y-8">
+          <div className="space-y-4 py-4">
+            <div className="space-y-4">
             <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                <CardTitle className="text-2xl font-bold flex items-center">
-                  <div className="p-2 bg-white/20 rounded-lg mr-3">
-                    <MapPin className="h-6 w-6" />
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                <CardTitle className="text-xl font-bold flex items-center">
+                  <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                    <MapPin className="h-5 w-5" />
                   </div>
                   Location Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="group bg-white rounded-xl p-5 border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
                     <div className="flex items-start gap-4">
@@ -1455,17 +1429,9 @@ const ProjectDetailAPI = () => {
         {/* Gallery Section */}
         <div 
           ref={galleryRef}
-          className="opacity-0 transform translate-y-8 mb-16 scroll-mt-20"
+          className="opacity-0 transform translate-y-8 mb-4 scroll-mt-20"
         >
-          <div className="space-y-12 py-12">
-            {/* Gallery Title */}
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-3xl font-bold mb-4">GALLERY</h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Experience Luxury Living Through Every Frame
-              </p>
-            </div>
-
+          <div className="space-y-4 py-4">
             {(() => {
               const allImages: Array<{ url: string; type: string; index: number }> = [];
               
@@ -1489,15 +1455,15 @@ const ProjectDetailAPI = () => {
 
               return allImages.length > 0 ? (
                 <Card className="overflow-hidden border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                    <CardTitle className="text-2xl font-bold flex items-center">
-                      <div className="p-2 bg-white/20 rounded-lg mr-3">
-                        <ImageIcon className="h-6 w-6" />
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                    <CardTitle className="text-xl font-bold flex items-center">
+                      <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                        <ImageIcon className="h-5 w-5" />
                       </div>
                       Project Gallery
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 bg-gradient-to-br from-gray-50 to-white">
+                  <CardContent className="p-4 bg-gradient-to-br from-gray-50 to-white">
                     <div className="w-full">
                       <Carousel className="w-full">
                         <CarouselContent className="-ml-2 md:-ml-4">
@@ -1535,10 +1501,10 @@ const ProjectDetailAPI = () => {
                 </Card>
               ) : (
                 <Card className="overflow-hidden border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-4">
-                    <CardTitle className="text-2xl font-bold flex items-center">
-                      <div className="p-2 bg-white/20 rounded-lg mr-3">
-                        <ImageIcon className="h-6 w-6" />
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3">
+                    <CardTitle className="text-xl font-bold flex items-center">
+                      <div className="p-1.5 bg-white/20 rounded-lg mr-3">
+                        <ImageIcon className="h-5 w-5" />
                       </div>
                       Project Gallery
                     </CardTitle>
@@ -1557,36 +1523,81 @@ const ProjectDetailAPI = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-          <CardContent className="px-6 py-10 md:px-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="text-center md:text-left space-y-3">
-              <p className="text-xs md:text-sm font-semibold uppercase tracking-[0.2em] text-blue-100 flex items-center justify-center md:justify-start gap-2">
-                <Zap className="h-4 w-4" />
-                Express Your Interest
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold">
-                Interested in This Project?
-              </h2>
-              <p className="text-blue-100 max-w-xl mx-auto md:mx-0 text-sm md:text-base">
-                Fill out the form below and our team will get in touch with you soon.
-              </p>
-            </div>
-            <div className="flex flex-col items-center md:items-end gap-3">
-              <Button
-                onClick={handleInterestClick}
-                className="bg-white text-blue-700 hover:bg-blue-50 font-semibold py-3 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-md text-base md:text-lg flex items-center gap-2"
+      <motion.div 
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
+        <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 text-white rounded-3xl group">
+          {/* Animated Background Elements */}
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+              opacity: [0.1, 0.2, 0.1]
+            }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-24 -right-24 w-96 h-96 bg-white rounded-full blur-[100px] z-0" 
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.3, 1],
+              x: [0, 50, 0],
+              opacity: [0.1, 0.3, 0.1]
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-indigo-400 rounded-full blur-[120px] z-0" 
+          />
+          
+          <CardContent className="relative px-6 py-8 md:px-16 flex flex-col lg:flex-row items-center justify-between gap-10 z-10">
+            <div className="text-center lg:text-left space-y-6 max-w-2xl">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 shadow-inner"
               >
-                <Zap className="h-5 w-5" />
-                I'm Interested
-              </Button>
-              <p className="text-xs text-blue-100">
-                No charges. Our team will call you back.
-              </p>
+                <Zap className="h-4 w-4 text-yellow-300 animate-pulse" />
+                <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-blue-50">
+                  Exclusive Opportunity
+                </span>
+              </motion.div>
+              
+              <div className="space-y-3">
+                <motion.h2 
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="text-2xl md:text-4xl font-black tracking-tighter leading-none"
+                  >
+                    Ready to secure your <br className="hidden md:block" />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-indigo-200">future home?</span>
+                  </motion.h2>
+              </div>
+            </div>
+            
+            <div className="flex flex-col items-center lg:items-end gap-6 shrink-0 w-full lg:w-auto">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                    onClick={handleInterestClick}
+                    className="relative group bg-white text-blue-700 hover:text-white hover:bg-transparent border-2 border-white font-black py-6 px-10 rounded-2xl transition-all duration-500 overflow-hidden shadow-[0_20px_50px_rgba(255,255,255,0.2)] text-base md:text-lg flex items-center gap-4"
+                  >
+                    <span className="relative z-10 flex items-center gap-3">
+                      <Zap className="h-5 w-5 fill-current" />
+                      GET EARLY ACCESS
+                    </span>
+                  <div className="absolute inset-0 bg-blue-600 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out z-0" />
+                </Button>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       <Dialog open={!!zoomImage} onOpenChange={(open) => { if (!open) setZoomImage(null); }}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
