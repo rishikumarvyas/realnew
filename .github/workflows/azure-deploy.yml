@@ -1,0 +1,71 @@
+name: Deploy HomeYatra to Azure App Service
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  AZURE_WEBAPP_NAME: 'homeyatra-app'  # Replace with your actual app name
+  AZURE_WEBAPP_PACKAGE_PATH: './dist'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Build for Azure
+      run: npm run build:azure
+    
+    - name: Verify build output
+      run: |
+        echo "📁 Build output contents:"
+        ls -la dist/
+        echo "🔍 Checking for web.config:"
+        ls -la dist/web.config || echo "❌ web.config not found"
+        echo "🔍 Checking for index.html:"
+        ls -la dist/index.html || echo "❌ index.html not found"
+    
+    - name: Create deployment package
+      run: |
+        cd dist
+        zip -r ../deployment-package.zip .
+        cd ..
+        echo "📦 Created deployment package:"
+        ls -la deployment-package.zip
+    
+    - name: Deploy to Azure App Service
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+        package: './deployment-package.zip'
+    
+    - name: Verify deployment
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      run: |
+        echo "🚀 Deployment completed successfully!"
+        echo "🌐 Your app should be available at: https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+        echo "🧪 Test these URLs to verify routing works:"
+        echo "  - https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/"
+        echo "  - https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/properties"
+        echo "  - https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/dashboard"
